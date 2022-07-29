@@ -18,7 +18,7 @@ from utils import (
     compute_error_single_shooting,
 )
 
-out_path_raw = "../../robot-leg-results/raw_28-07-22"
+out_path_raw = "../../dms-vs-dc-results/raw_28-07-22"
 model_path = "../robot_leg/models/hexapod_leg.bioMod"
 
 # open files

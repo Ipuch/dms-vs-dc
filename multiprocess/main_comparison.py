@@ -19,11 +19,11 @@ def main():
     Date = Date.strftime("%d-%m-%y")
     model = Models.ARM.value
 
-    out_path_raw = Path(Path(__file__).parent.__str__() + f"/../../robot-leg-results/arm_{Date}")
+    out_path_raw = Path(Path(__file__).parent.__str__() + f"/../../dms-vs-dc-results/arm_{Date}")
     try:
         os.mkdir(out_path_raw)
     except:
-        print("../robot-leg-results/raw_" + Date + " is already created ")
+        print("../dms-vs-dc-results/raw_" + Date + " is already created ")
 
     cpu_number = cpu_count()
     n_thread = 2
