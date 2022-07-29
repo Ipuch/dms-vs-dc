@@ -1,0 +1,100 @@
+version 4
+
+segment Corps
+    mass 0.5
+    inertia
+        1 0 0
+        0 1 0
+        0 0 1
+    com 0 0 0
+    mesh	0.07425     -0.0325     -0.022
+    mesh	0.07425      0.0325		-0.022
+    mesh	0       	 0.077     	-0.022
+    mesh	-0.07825      0.0325    -0.022
+    mesh	-0.07825     -0.0325    -0.022
+    mesh	0      		-0.077      -0.022
+	mesh	0.07425     -0.0325     -0.022
+	mesh    0			0			0
+	mesh	0.07425     -0.0325     -0.022
+	mesh    0			0			0
+    mesh	0.07425      0.0325		-0.022
+	mesh    0			0			0
+    mesh	0       	 0.077     	-0.022
+	mesh    0			0			0
+    mesh	-0.07825      0.0325    -0.022
+	mesh    0			0			0
+    mesh	-0.07825     -0.0325    -0.022
+	mesh    0			0			0
+    mesh	0      		-0.077      -0.022
+endsegment
+
+segment Femur_Leg1
+	parent	Corps
+	rtinmatrix 0
+    rt 0 0 0 xyz 0.07425     -0.0325     -0.022
+    rotations	z
+    ranges 	-pi/2 pi/2
+    mass 0.0078
+    inertia
+        3.4616e-06 0 0
+        0 1.3116e-06 0
+        0 0 3.0779e-06
+    com 0.01092 0 0
+    mesh	0    	0     	0
+    mesh	0.01092 0 		0
+    mesh	0.0497293 0		0
+	mesh	0.01092 0 		-0.01
+	mesh	0    	0     	0
+endsegment
+
+segment Shank_Leg1
+	parent	Femur_Leg1
+	rtinmatrix 0
+    rt 0 0 0 xyz 0.0497293     0     0
+    rotations	y
+    ranges 	-pi/2 pi/2
+    mass 0.07552
+    inertia
+        6.3445e-05	0	0
+		0	5.3630e-05	0
+		0	0	1.4709e-05
+    com 0.01512 0 0
+    mesh	0    	0     	0
+    mesh	0.01512 0 		0
+    mesh	0.0654866 0		0
+	mesh	0.01512 0 		-0.01
+	mesh	0    	0     	0
+endsegment
+
+segment Foot_Leg1
+	parent	Shank_Leg1
+	rtinmatrix 0
+    rt 0 pi/2 0 xyz 0.0654866 0		0
+    rotations	y
+    ranges 	-pi/2 pi/2
+    mass 0.07552
+    inertia
+        6.3445e-05	0	0
+		0	5.3630e-05	0
+		0	0	1.4709e-05
+    com 0.04051 0 0
+    mesh	0    	0     	0
+    mesh	0.04051 0 		0
+    mesh	0.0922961 0		0
+	mesh	0.04051 0 		-0.01
+	mesh	0    	0     	0
+endsegment
+
+// Contact
+contact    contact_Leg1
+    parent    Foot_Leg1
+    position  0.0922961 0		0
+    axis    xyz
+endcontact
+
+// Marker
+marker    marker_Leg1
+    parent    Foot_Leg1
+    position  0.0922961 0		0
+    axis    xyz
+endmarker
