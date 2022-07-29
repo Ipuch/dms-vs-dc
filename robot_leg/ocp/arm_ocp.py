@@ -97,7 +97,9 @@ class ArmOCP:
                     initial_guess=self.x_init[0],
                     bounds=self.x_bounds[0],
                     noise_magnitude=1,
-                    n_shooting=self.n_shooting if self.ode_solver.is_direct_shooting else self.n_shooting * (self.ode_solver.polynomial_degree + 1),
+                    n_shooting=self.n_shooting
+                    if self.ode_solver.is_direct_shooting
+                    else self.n_shooting * (self.ode_solver.polynomial_degree + 1),
                     bound_push=0.1,
                     seed=seed,
                 )
@@ -131,9 +133,7 @@ class ArmOCP:
             )
 
     def _set_dynamics(self):
-        self.dynamics.add(
-            DynamicsFcn.TORQUE_DRIVEN, rigidbody_dynamics=self.rigidbody_dynamics, phase=0
-        )
+        self.dynamics.add(DynamicsFcn.TORQUE_DRIVEN, rigidbody_dynamics=self.rigidbody_dynamics, phase=0)
 
     def _set_objective_functions(self):
 
@@ -164,12 +164,18 @@ class ArmOCP:
             The z-axis in global frame of the last segment
             """
 
-            rotation_matrix = all_pn.nlp.model.globalJCS(all_pn.nlp.states["q"].cx,
-                                                         all_pn.nlp.model.nbSegment() - 1).to_mx()
+            rotation_matrix = all_pn.nlp.model.globalJCS(
+                all_pn.nlp.states["q"].cx, all_pn.nlp.model.nbSegment() - 1
+            ).to_mx()
 
-
-            return vertcat(rotation_matrix[2, 0], rotation_matrix[2, 1], rotation_matrix[0, 2], rotation_matrix[0, 2],
-                rotation_matrix[1, 2], (1 - rotation_matrix[2, 2]))
+            return vertcat(
+                rotation_matrix[2, 0],
+                rotation_matrix[2, 1],
+                rotation_matrix[0, 2],
+                rotation_matrix[0, 2],
+                rotation_matrix[1, 2],
+                (1 - rotation_matrix[2, 2]),
+            )
 
         # --- Constraints --- #
         # Contact force in Z are positive
@@ -185,7 +191,9 @@ class ArmOCP:
         self.constraints.add(last_segment_vertical, node=node, phase=0)
 
         # self.objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_QDDOT, target=np.zeros(self.n_q), node=Node.PENULTIMATE, phase=0, weight=10)
-        self.objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_QDDOT, target=np.zeros(self.n_q), node=Node.END, phase=0, weight=10)
+        self.objective_functions.add(
+            ObjectiveFcn.Mayer.MINIMIZE_QDDOT, target=np.zeros(self.n_q), node=Node.END, phase=0, weight=10
+        )
         # self.constraints.add(ConstraintFcn.TRACK_QDDOT, node=node, phase=0)
 
     def _set_boundary_conditions(self):
@@ -197,19 +205,17 @@ class ArmOCP:
             else QAndQDotBounds(self.biorbd_model)
         )
         nq = self.n_q
-        self.x_bounds[0].max[:self.n_q, 0] = 0
-        self.x_bounds[0].min[:self.n_q, 0] = 0
-        self.x_bounds[0].max[self.n_q:, 0] = 0
-        self.x_bounds[0].min[self.n_q:, 0] = 0
-        self.x_bounds[0].max[self.n_q:, -1] = 0
-        self.x_bounds[0].min[self.n_q:, -1] = 0
+        self.x_bounds[0].max[: self.n_q, 0] = 0
+        self.x_bounds[0].min[: self.n_q, 0] = 0
+        self.x_bounds[0].max[self.n_q :, 0] = 0
+        self.x_bounds[0].min[self.n_q :, 0] = 0
+        self.x_bounds[0].max[self.n_q :, -1] = 0
+        self.x_bounds[0].min[self.n_q :, -1] = 0
 
         if self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS:
             self.u_bounds.add(
-                [self.tau_min] * self.n_tau
-                + [self.qddot_min] * self.n_qddot,
-                [self.tau_max] * self.n_tau
-                + [self.qddot_max] * self.n_qddot,
+                [self.tau_min] * self.n_tau + [self.qddot_min] * self.n_qddot,
+                [self.tau_max] * self.n_tau + [self.qddot_max] * self.n_qddot,
             )
         elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS:
             self.u_bounds.add(
@@ -218,10 +224,8 @@ class ArmOCP:
             )
         elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK:
             self.u_bounds.add(
-                [self.tau_min] * self.n_tau
-                + [self.qdddot_min] * self.n_qddot,
-                [self.tau_max] * self.n_tau
-                + [self.qdddot_max] * self.n_qddot,
+                [self.tau_min] * self.n_tau + [self.qdddot_min] * self.n_qddot,
+                [self.tau_max] * self.n_tau + [self.qdddot_max] * self.n_qddot,
             )
         elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK:
             self.u_bounds.add(
@@ -262,15 +266,9 @@ class ArmOCP:
     def _set_initial_controls(self, U0: np.array = None):
         if U0 is None:
             if self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS:
-                self.u_init.add(
-                    [self.tau_init] * self.n_tau
-                    + [self.qddot_init] * self.n_qddot
-                )
+                self.u_init.add([self.tau_init] * self.n_tau + [self.qddot_init] * self.n_qddot)
             elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK:
-                self.u_init.add(
-                    [self.tau_init] * self.n_tau
-                    + [self.qdddot_init] * self.n_qdddot
-                )
+                self.u_init.add([self.tau_init] * self.n_tau + [self.qdddot_init] * self.n_qdddot)
             elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK:
                 self.u_init.add([self.tau_init] * self.n_tau + [self.qdddot_init] * self.n_qdddot)
             elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS:

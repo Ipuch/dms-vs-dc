@@ -94,7 +94,9 @@ class LegOCP:
                     initial_guess=self.x_init[0],
                     bounds=self.x_bounds[0],
                     noise_magnitude=1,
-                    n_shooting=self.n_shooting if self.ode_solver.is_direct_shooting else self.n_shooting * (self.ode_solver.polynomial_degree + 1),
+                    n_shooting=self.n_shooting
+                    if self.ode_solver.is_direct_shooting
+                    else self.n_shooting * (self.ode_solver.polynomial_degree + 1),
                     bound_push=0.1,
                     seed=seed,
                 )
@@ -128,9 +130,7 @@ class LegOCP:
             )
 
     def _set_dynamics(self):
-        self.dynamics.add(
-            DynamicsFcn.TORQUE_DRIVEN, rigidbody_dynamics=self.rigidbody_dynamics, phase=0
-        )
+        self.dynamics.add(DynamicsFcn.TORQUE_DRIVEN, rigidbody_dynamics=self.rigidbody_dynamics, phase=0)
 
     def _set_objective_functions(self):
         # --- Objective function --- #
@@ -165,18 +165,16 @@ class LegOCP:
             or self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK
             else QAndQDotBounds(self.biorbd_model)
         )
-        self.x_bounds[0].max[self.n_q:self.n_q+self.n_qdot, 0] = 0
-        self.x_bounds[0].min[self.n_q:self.n_q+self.n_qdot, 0] = 0
-        self.x_bounds[0].max[self.n_q:self.n_q+self.n_qdot, -1] = 0
-        self.x_bounds[0].min[self.n_q:self.n_q+self.n_qdot, -1] = 0
+        self.x_bounds[0].max[self.n_q : self.n_q + self.n_qdot, 0] = 0
+        self.x_bounds[0].min[self.n_q : self.n_q + self.n_qdot, 0] = 0
+        self.x_bounds[0].max[self.n_q : self.n_q + self.n_qdot, -1] = 0
+        self.x_bounds[0].min[self.n_q : self.n_q + self.n_qdot, -1] = 0
         nq = self.n_q
 
         if self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS:
             self.u_bounds.add(
-                [self.tau_min] * self.n_tau
-                + [self.qddot_min] * self.n_qddot,
-                [self.tau_max] * self.n_tau
-                + [self.qddot_max] * self.n_qddot,
+                [self.tau_min] * self.n_tau + [self.qddot_min] * self.n_qddot,
+                [self.tau_max] * self.n_tau + [self.qddot_max] * self.n_qddot,
             )
         elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS:
             self.u_bounds.add(
@@ -185,10 +183,8 @@ class LegOCP:
             )
         elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK:
             self.u_bounds.add(
-                [self.tau_min] * self.n_tau
-                + [self.qdddot_min] * self.n_qddot,
-                [self.tau_max] * self.n_tau
-                + [self.qdddot_max] * self.n_qddot,
+                [self.tau_min] * self.n_tau + [self.qdddot_min] * self.n_qddot,
+                [self.tau_max] * self.n_tau + [self.qdddot_max] * self.n_qddot,
             )
         elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK:
             self.u_bounds.add(
@@ -232,15 +228,9 @@ class LegOCP:
     def _set_initial_controls(self, U0: np.array = None):
         if U0 is None:
             if self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS:
-                self.u_init.add(
-                    [self.tau_init] * self.n_tau
-                    + [self.qddot_init] * self.n_qddot
-                )
+                self.u_init.add([self.tau_init] * self.n_tau + [self.qddot_init] * self.n_qddot)
             elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK:
-                self.u_init.add(
-                    [self.tau_init] * self.n_tau
-                    + [self.qdddot_init] * self.n_qdddot
-                )
+                self.u_init.add([self.tau_init] * self.n_tau + [self.qdddot_init] * self.n_qdddot)
             elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK:
                 self.u_init.add([self.tau_init] * self.n_tau + [self.qdddot_init] * self.n_qdddot)
             elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS:

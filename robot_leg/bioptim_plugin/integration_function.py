@@ -67,14 +67,14 @@ class Integration:
     """
 
     def __init__(
-            self,
-            ocp: OptimalControlProgram,
-            solution: Solution,
-            state_keys: list = None,
-            control_keys: list = None,
-            fext_keys: list = None,
-            function: Callable = None,
-            **extra_variables,
+        self,
+        ocp: OptimalControlProgram,
+        solution: Solution,
+        state_keys: list = None,
+        control_keys: list = None,
+        fext_keys: list = None,
+        function: Callable = None,
+        **extra_variables,
     ):
         """
         Parameters
@@ -171,12 +171,12 @@ class Integration:
         return self._controls[0] if len(self._controls) == 1 else self._controls
 
     def integrate(
-            self,
-            shooting_type: Shooting = Shooting.SINGLE_CONTINUOUS,
-            keep_intermediate_points: bool = False,
-            merge_phases: bool = False,
-            continuous: bool = True,
-            integrator: SolutionIntegrator = SolutionIntegrator.DEFAULT,
+        self,
+        shooting_type: Shooting = Shooting.SINGLE_CONTINUOUS,
+        keep_intermediate_points: bool = False,
+        merge_phases: bool = False,
+        continuous: bool = True,
+        integrator: SolutionIntegrator = SolutionIntegrator.DEFAULT,
     ) -> Any:
         """
         Integrate the states
@@ -232,12 +232,12 @@ class Integration:
         return out
 
     def _generate_time_vector(
-            self,
-            time_phase,
-            keep_intermediate_points: bool,
-            continuous: bool,
-            merge_phases: bool,
-            integrator: SolutionIntegrator,
+        self,
+        time_phase,
+        keep_intermediate_points: bool,
+        continuous: bool,
+        merge_phases: bool,
+        integrator: SolutionIntegrator,
     ):
         """
         Generate time integration vector, at which the points from intagrate are evaluated
@@ -315,12 +315,12 @@ class Integration:
         return new
 
     def __perform_integration(
-            self,
-            shooting_type: Shooting,
-            keep_intermediate_points: bool,
-            continuous: bool,
-            merge_phases: bool,
-            integrator: SolutionIntegrator,
+        self,
+        shooting_type: Shooting,
+        keep_intermediate_points: bool,
+        continuous: bool,
+        merge_phases: bool,
+        integrator: SolutionIntegrator,
     ):
         n_direct_collocation = sum([nlp.ode_solver.is_direct_collocation for nlp in self.ocp.nlp])
 
@@ -387,14 +387,14 @@ class Integration:
             for s in range(self.ns[p]):
                 # print(s)
                 # if s == self.ns[p] - 1:
-                    # print(self._controls[p]["all"][:, s: s + 2])
-                    # print("stop")
+                # print(self._controls[p]["all"][:, s: s + 2])
+                # print("stop")
 
                 if self.mode is not None:
-                    if self.mode=="constant_control":
+                    if self.mode == "constant_control":
                         u = self._controls[p]["all"][:, s]
-                    elif self.mode=="linear_control":
-                        u = self._controls[p]["all"][:, s: s + 2]
+                    elif self.mode == "linear_control":
+                        u = self._controls[p]["all"][:, s : s + 2]
                         if np.isnan(u[:, 1]).all():
                             u[:, 1] = 0
                     else:
@@ -404,13 +404,18 @@ class Integration:
                     if nlp.control_type == ControlType.CONSTANT:
                         u = self._controls[p]["all"][:, s]
                     elif nlp.control_type == ControlType.LINEAR_CONTINUOUS:
-                        u = self._controls[p]["all"][:, s: s + 2]
+                        u = self._controls[p]["all"][:, s : s + 2]
                         # check if the last colmuns is full of nans
                     else:
-                        raise NotImplementedError(f"ControlType {nlp.control_type} " f"not yet implemented in integrating")
+                        raise NotImplementedError(
+                            f"ControlType {nlp.control_type} " f"not yet implemented in integrating"
+                        )
 
-                fext = self._fext[p]["all"][:, s] if self._fext is not None and self._fext[p]["all"].shape != (
-                0, 0) else None
+                fext = (
+                    self._fext[p]["all"][:, s]
+                    if self._fext is not None and self._fext[p]["all"].shape != (0, 0)
+                    else None
+                )
 
                 if integrator != SolutionIntegrator.DEFAULT:
                     t_init = sum(out.phase_time[:p]) / nlp.ns
@@ -419,9 +424,7 @@ class Integration:
                     t_eval = np.linspace(t_init, t_end, n_points) if keep_intermediate_points else [t_init, t_end]
 
                     if self.mode == "constant_control":
-                        f_lambda = lambda t, x: np.array(
-                            self.function(self.model[p], x, u, params, fext)
-                        )
+                        f_lambda = lambda t, x: np.array(self.function(self.model[p], x, u, params, fext))
                     else:
                         f_lambda = lambda t, x: np.array(
                             self.function(self.model[p], x, get_u(u, t, [t_init, t_end]), params, fext)
@@ -549,7 +552,7 @@ class Integration:
                 if key == "all":
                     continue
                 n_elements = data_states[p][key].shape[0]
-                out._states[p][key] = out._states[p]["all"][offset: offset + n_elements]
+                out._states[p][key] = out._states[p]["all"][offset : offset + n_elements]
                 offset += n_elements
 
         out.is_interpolated = True

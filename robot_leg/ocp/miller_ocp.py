@@ -156,7 +156,10 @@ class MillerOcp:
                 or self.rigidbody_dynamics == MillerDynamics.ROOT_IMPLICIT_QDDDOT
             ):
                 self.n_qddot = self.biorbd_model[0].nbQddot()
-            elif self.rigidbody_dynamics == RigidBodyDynamics.ODE or self.rigidbody_dynamics == MillerDynamics.ROOT_EXPLICIT:
+            elif (
+                self.rigidbody_dynamics == RigidBodyDynamics.ODE
+                or self.rigidbody_dynamics == MillerDynamics.ROOT_EXPLICIT
+            ):
                 self.n_qddot = self.biorbd_model[0].nbQddot() - self.biorbd_model[0].nbRoot()
 
             self.n_tau = self.biorbd_model[0].nbGeneralizedTorque() - self.biorbd_model[0].nbRoot()
@@ -276,7 +279,9 @@ class MillerOcp:
         """
         for phase in range(len(self.n_shooting)):
             if self.rigidbody_dynamics == RigidBodyDynamics.ODE:
-                self.dynamics.add(DynamicsFcn.TORQUE_DRIVEN, with_contact=False, rigidbody_dynamics=RigidBodyDynamics.ODE)
+                self.dynamics.add(
+                    DynamicsFcn.TORQUE_DRIVEN, with_contact=False, rigidbody_dynamics=RigidBodyDynamics.ODE
+                )
             # elif self.rigidbody_dynamics == MillerDynamics.ROOT_EXPLICIT:
             #     self.dynamics.add(custom_configure_root_explicit, dynamic_function=root_explicit_dynamic)
             # elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS:
@@ -371,7 +376,10 @@ class MillerOcp:
                     self.objective_functions.add(
                         ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="qdddot", phase=i, weight=1e-8
                     )
-                if self.rigidbody_dynamics == MillerDynamics.IMPLICIT or self.rigidbody_dynamics == MillerDynamics.ROOT_IMPLICIT:
+                if (
+                    self.rigidbody_dynamics == MillerDynamics.IMPLICIT
+                    or self.rigidbody_dynamics == MillerDynamics.ROOT_IMPLICIT
+                ):
                     self.objective_functions.add(
                         ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="qddot", phase=i, weight=1e-4
                     )

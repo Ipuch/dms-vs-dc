@@ -9,4 +9,3 @@ class OCP(Enum):
     LEG = (LegOCP,)
     ARM = (ArmOCP,)
     ACROBAT = (MillerOCP,)
-
