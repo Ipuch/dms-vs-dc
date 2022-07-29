@@ -96,8 +96,30 @@ pd.set_option("display.expand_frame_repr", False)
 # display all the rows of the dataframe
 pd.set_option("display.max_rows", 20)
 
-print(df_results[["dynamics_type", "n_shooting", "ode_solver", "translation_error", "rotation_error", "translation_error_2", "rotation_error_2"]])
-df_results[["dynamics_type", "ode_solver", "status", "translation_error", "rotation_error", "translation_error_2", "rotation_error_2"]].to_csv(f"{out_path_raw}/results.csv")
+print(
+    df_results[
+        [
+            "dynamics_type",
+            "n_shooting",
+            "ode_solver",
+            "translation_error",
+            "rotation_error",
+            "translation_error_2",
+            "rotation_error_2",
+        ]
+    ]
+)
+df_results[
+    [
+        "dynamics_type",
+        "ode_solver",
+        "status",
+        "translation_error",
+        "rotation_error",
+        "translation_error_2",
+        "rotation_error_2",
+    ]
+].to_csv(f"{out_path_raw}/results.csv")
 # print(df_results[["ode_solver", ]])
 
 # fill new columns
