@@ -8,7 +8,7 @@ from time import time
 
 import biorbd
 from bioptim import Solver, Shooting, RigidBodyDynamics, Shooting, SolutionIntegrator, BiorbdInterface
-from robot_leg import LegOCP, Integration
+from robot_leg import MillerOCP, Integration
 
 
 def torque_driven_dynamics(
@@ -28,7 +28,7 @@ def torque_driven_dynamics(
 
 def main(args: list = None):
     """
-    Main function for the miller_run.py script.
+    Main function for the run_miller.py script.
     It runs the optimization and saves the results of a Miller Optimal Control Problem.
 
     Parameters

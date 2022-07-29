@@ -2,13 +2,13 @@
 This script runs the miller optimal control problem with a given set of parameters and save the results.
 The main function is used in main_comparison.py and main_convergence.py. to run the different Miller optimal control problem.
 """
+
 import numpy as np
+import biorbd
+from bioptim import OdeSolver, CostType, Solver, Shooting, SolutionIntegrator
 import pickle
 from time import time
-
-import biorbd
-from bioptim import Solver, Shooting, RigidBodyDynamics, Shooting, SolutionIntegrator, BiorbdInterface, CostType
-from robot_leg import ArmOCP, Integration
+from robot_leg import MillerOCP, Integration
 
 
 def torque_driven_dynamics(
@@ -70,7 +70,7 @@ def main(args: list = None):
         i_rand = args[6]
 
     # --- Solve the program --- #
-    my_ocp = ArmOCP(
+    my_ocp = MillerOCP(
         biorbd_model_path=biorbd_model_path,
         rigidbody_dynamics=dynamics_type,
         n_shooting=n_shooting,
@@ -100,6 +100,7 @@ def main(args: list = None):
         f"i_rand={i_rand},\n"
         f"dynamics_type={dynamics_type},\n"
         f"ode_solver={str_ode_solver},\n"
+        f"ode_solver.defects_type={ode_solver.defects_type.value},\n"
         f"n_shooting={n_shooting},\n"
         f"n_threads={n_threads}\n"
     )
@@ -119,9 +120,11 @@ def main(args: list = None):
     print(f"#################################################### done ")
     print(
         f"Solved in {toc} sec \n"
+        f"filename: {filename} \n"
         f"i_rand={i_rand},\n"
         f"dynamics_type={dynamics_type},\n"
         f"ode_solver={str_ode_solver},\n"
+        f"ode_solver.defects_type={ode_solver.defects_type.value},\n"
         f"n_shooting={n_shooting},\n"
         f"n_threads={n_threads}\n"
     )
@@ -181,8 +184,6 @@ def main(args: list = None):
     print("hello")
     pickle.dump(data, f)
     f.close()
-
-    # leg_ocp.ocp.save(sol, f"{outpath}.bo")
 
 
 if __name__ == "__main__":
