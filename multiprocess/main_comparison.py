@@ -22,10 +22,13 @@ def main():
 
     if model == Models.LEG:
         running_function = main_leg_ocp
+        n_shooting = [20]
     elif model == Models.ARM:
         running_function = main_arm_ocp
+        n_shooting = [50]
     elif model == Models.ACROBAT:
         running_function = main_miller_ocp
+        n_shooting = [(125, 25)]
     else:
         raise ValueError("Unknown model")
 
@@ -54,9 +57,7 @@ def main():
             OdeSolver.COLLOCATION(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
             OdeSolver.COLLOCATION(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
         ],
-        # n_shooting=[20], # leg
-        # n_shooting=[50], # arm
-        n_shooting=[(125, 25)], # acrobat
+        n_shooting=n_shooting,
         n_thread=[n_thread],
         dynamic_type=[
             RigidBodyDynamics.ODE,
