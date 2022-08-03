@@ -145,7 +145,7 @@ def main(args: list = None):
         continuous=True,
         integrator=SolutionIntegrator.SCIPY_DOP853,
     )
-    print("HEY")
+
     integration_2 = Integration(
         ocp=leg_ocp.ocp,
         solution=sol,
@@ -155,7 +155,7 @@ def main(args: list = None):
         function=torque_driven_dynamics,
         mode="linear_control",
     )
-    print("HO")
+
     out_2 = integration_2.integrate(
         shooting_type=Shooting.SINGLE_CONTINUOUS,
         keep_intermediate_points=False,
@@ -163,7 +163,7 @@ def main(args: list = None):
         continuous=True,
         integrator=SolutionIntegrator.SCIPY_DOP853,
     )
-    print("ZZ")
+
     f = open(f"{outpath}.pckl", "wb")
     data = {
         "model_path": biorbd_model_path,
@@ -193,7 +193,7 @@ def main(args: list = None):
         "qdot_integrated_linear": out_2.states["qdot"],
         "time_linear": out_2.time_vector,
     }
-    print("hello")
+
     pickle.dump(data, f)
     f.close()
 
