@@ -6,7 +6,7 @@ import numpy as np
 
 def main():
     n_shooting = 20
-    ode_solver = OdeSolver.RK4(n_integration_steps=1)
+    ode_solver = OdeSolver.RK4(n_integration_steps=5)
     # ode_solver = OdeSolver.RK4()
     # ode_solver = OdeSolver.COLLOCATION()
     time = 0.25
@@ -22,16 +22,16 @@ def main():
         ode_solver=ode_solver,
         rigidbody_dynamics=RigidBodyDynamics.ODE,
         n_threads=n_threads,
-        seed=0,
-        start_point=np.array([0.2, -0.02, 0.1]),
-        end_point=np.array([0.2, 0.02, -0.1]),
+        seed=20,
+        start_point=np.array([0.22, 0.02, 0.03]),
+        end_point=np.array([0.22, 0.021, -0.05]),
     )
 
     leg.ocp.add_plot_penalty(CostType.ALL)
     # humanoid.ocp.print()
 
     solv = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
-    solv.set_maximum_iterations(1000)
+    solv.set_maximum_iterations(10000)
     solv.set_linear_solver("ma57")
     solv.set_print_level(5)
     sol = leg.ocp.solve(solv)
