@@ -90,6 +90,7 @@ def main(args: list = None):
 
     solver.set_maximum_iterations(10000)
     solver.set_print_level(5)
+    solver.set_convergence_tolerance(1e-10)
     solver.set_linear_solver("ma57")
 
     my_ocp.ocp.add_plot_penalty(CostType.ALL)
@@ -110,9 +111,9 @@ def main(args: list = None):
     sol = my_ocp.ocp.solve(solver)
     toc = time() - tic
 
-    states = sol.states["all"]
-    controls = sol.controls["all"]
-    parameters = sol.parameters["all"]
+    # states = sol.states["all"]
+    # controls = sol.controls["all"]
+    # parameters = sol.parameters["all"]
 
     sol.print_cost()
 
