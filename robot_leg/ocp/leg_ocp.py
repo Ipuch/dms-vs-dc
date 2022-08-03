@@ -37,8 +37,8 @@ class LegOCP:
         rigidbody_dynamics: RigidBodyDynamics = RigidBodyDynamics.ODE,
         seed: int = 0,
         use_sx: bool = False,
-        start_point: np.array = np.array([0.2, -0.02, 0.1]),
-        end_point: np.array = np.array([0.2, 0.02, -0.1]),
+        start_point: np.array = np.array([0.22, 0.02, 0.03]),
+        end_point: np.array = np.array([0.22, 0.021, -0.05]),
     ):
         self.biorbd_model_path = biorbd_model_path
         self.n_shooting = n_shooting
@@ -105,7 +105,7 @@ class LegOCP:
                 NoisedInitialGuess(
                     initial_guess=self.u_init[0],
                     bounds=self.u_bounds[0],
-                    noise_magnitude=1,
+                    noise_magnitude=0.2,
                     n_shooting=self.n_shooting - 1,
                     bound_push=0.1,
                     seed=seed,
@@ -135,6 +135,7 @@ class LegOCP:
     def _set_objective_functions(self):
         # --- Objective function --- #
         self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", phase=0)
+        self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", weight=1e-6, phase=0, derivative=True)
 
         if (
             self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK
