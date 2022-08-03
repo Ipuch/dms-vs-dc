@@ -8,7 +8,7 @@ from time import time
 
 import biorbd
 from bioptim import Solver, Shooting, RigidBodyDynamics, Shooting, SolutionIntegrator, BiorbdInterface
-from robot_leg import MillerOCP, Integration
+from robot_leg import LegOCP, Integration
 
 
 def torque_driven_dynamics(
@@ -80,23 +80,27 @@ def main(args: list = None):
     )
     str_ode_solver = ode_solver.__str__().replace("\n", "_").replace(" ", "_")
     str_dynamics_type = dynamics_type.__str__().replace("RigidBodyDynamics.", "").replace("\n", "_").replace(" ", "_")
-    filename = f"sol_irand{i_rand}_{n_shooting}_{str_ode_solver}_{str_dynamics_type}"
+    filename = f"sol_irand{i_rand}_{n_shooting}_{str_ode_solver}_{ode_solver.defects_type.value}_{str_dynamics_type}"
     outpath = f"{out_path_raw}/" + filename
 
     # --- Solve the program --- #
     show_online_optim = False
     print("Show online optimization", show_online_optim)
     solver = Solver.IPOPT(show_online_optim=show_online_optim, show_options=dict(show_bounds=True))
+
     solver.set_maximum_iterations(10000)
     solver.set_print_level(5)
+    solver.set_convergence_tolerance(1e-10)
     solver.set_linear_solver("ma57")
 
     print(f"##########################################################")
     print(
         f"Solving ... \n"
+        f"filename: {filename} \n"
         f"i_rand={i_rand},\n"
         f"dynamics_type={dynamics_type},\n"
         f"ode_solver={str_ode_solver},\n"
+        f"ode_solver.defects_type={ode_solver.defects_type.value},\n"
         f"n_shooting={n_shooting},\n"
         f"n_threads={n_threads}\n"
     )
@@ -116,14 +120,17 @@ def main(args: list = None):
     print(f"#################################################### done ")
     print(
         f"Solved in {toc} sec \n"
+        f"filename: {filename} \n"
         f"i_rand={i_rand},\n"
         f"dynamics_type={dynamics_type},\n"
         f"ode_solver={str_ode_solver},\n"
+        f"ode_solver.defects_type={ode_solver.defects_type.value},\n"
         f"n_shooting={n_shooting},\n"
         f"n_threads={n_threads}\n"
     )
     print(f"##################################################### done ")
     # sol.graphs(show_bounds=True)
+    # sol.animate()
     # --- Save the results --- #
 
     # integrer la dynamique direct
