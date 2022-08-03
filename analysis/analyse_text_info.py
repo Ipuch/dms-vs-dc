@@ -8,7 +8,8 @@ df_results = pd.read_pickle("Dataframe_results_metrics.pkl")
 
 # Did everything converged ?
 a = len(df_results[df_results["status"] == 1])
-print(f"{a} of the trials did not converge to an optimal solutions")
+b = len(df_results)
+print(f"{a} / {b} of the trials did not converge to an optimal solutions")
 formulation = df_results["grps"].unique()
 
 for f in formulation:
