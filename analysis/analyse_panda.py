@@ -19,9 +19,10 @@ from utils import (
 )
 
 from enums import Results
+from robot_leg import Models
 
-out_path_raw = Results.ARM_2022_07_29.value
-model_path = "../robot_leg/models/robot_arm.bioMod"
+out_path_raw = Results.MILLER.value
+model_path = Models.ACROBAT.value
 
 # open files
 files = os.listdir(out_path_raw)
