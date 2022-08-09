@@ -2,6 +2,7 @@
 This script runs the miller optimal control problem with a given set of parameters and save the results.
 The main function is used in main_comparison.py and main_convergence.py. to run the different Miller optimal control problem.
 """
+import os
 import numpy as np
 import pickle
 from time import time
@@ -83,6 +84,12 @@ def main(args: list = None):
     filename = f"sol_irand{i_rand}_{n_shooting}_{str_ode_solver}_{ode_solver.defects_type.value}_{str_dynamics_type}"
     outpath = f"{out_path_raw}/" + filename
 
+    # check if this file already exists if yes return
+    print(outpath)
+    if os.path.isfile(outpath + ".pckl"):
+        print("dejà vu")
+        return
+
     # --- Solve the program --- #
     show_online_optim = False
     print("Show online optimization", show_online_optim)
@@ -90,7 +97,7 @@ def main(args: list = None):
 
     solver.set_maximum_iterations(10000)
     solver.set_print_level(5)
-    solver.set_convergence_tolerance(1e-10)
+    # solver.set_convergence_tolerance(1e-10)
     solver.set_linear_solver("ma57")
 
     my_ocp.ocp.add_plot_penalty(CostType.ALL)
