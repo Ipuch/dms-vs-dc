@@ -9,7 +9,7 @@ from utils import my_traces, add_annotation_letter
 # out_path_file = "../../OnDynamicsForSommersaults_results/figures/V5"
 df_results = pd.read_pickle("Dataframe_results_metrics.pkl")
 
-dyn = [i for i in df_results["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
+# dyn = [i for i in df_results["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
 dyn = df_results["grps"].unique().tolist()
 grps = dyn
 
