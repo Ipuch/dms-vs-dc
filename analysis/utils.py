@@ -47,15 +47,7 @@ def compute_error_single_shooting(
         raise ValueError(f"Single shooting integration duration must be smaller than ocp duration :{time[-1]} s")
 
     # get the index of translation and rotation dof
-    trans_idx = []
-    rot_idx = []
-    for i in range(model.nbQ()):
-        if model.nameDof()[i].to_string()[-4:-1] == "Rot":
-            rot_idx += [i]
-        else:
-            trans_idx += [i]
-    rot_idx = np.array(rot_idx)
-    trans_idx = np.array(trans_idx)
+    trans_idx, rot_idx = get_trans_and_rot_idx(model=model)
 
     sn_1s = int(n_shooting / time[-1] * duration)  # shooting node at {duration} second
     single_shoot_error_r = (
@@ -72,6 +64,32 @@ def compute_error_single_shooting(
     )
 
 
+def get_trans_and_rot_idx(model: biorbd.Model) -> tuple:
+    """
+    This function
+
+    Parameters
+    ----------
+    model: biorbd.Model
+        The model from biorbd
+
+    Returns
+    ----------
+    The index of the translation and rotation dof
+    """
+    # get the index of translation and rotation dof
+    trans_idx = []
+    rot_idx = []
+    for i in range(model.nbQ()):
+        if model.nameDof()[i].to_string()[-4:-1] == "Rot":
+            rot_idx += [i]
+        else:
+            trans_idx += [i]
+    rot_idx = np.array(rot_idx)
+    trans_idx = np.array(trans_idx)
+    return trans_idx, rot_idx
+
+
 def stack_states(states: list[dict], key: str = "q"):
     """
     Stack the controls in one vector
@@ -83,7 +101,7 @@ def stack_states(states: list[dict], key: str = "q"):
     key : str
         Key of the states to stack such as "q" or "qdot"
     """
-    the_tuple = (s[key][:, :-1] if i < len(states) else s[key][:, :] for i, s in enumerate(states))
+    the_tuple = [s[key][:, :] if i == len(states) - 1 else s[key][:, :-1] for i, s in enumerate(states)]
     return np.hstack(the_tuple)
 
 
@@ -286,4 +304,104 @@ def add_annotation_letter(
         ),
     )
 
+    return fig
+
+
+def generate_windows_size(nb: int) -> tuple:
+    """
+    Defines the number of column and rows of subplots from the number of variables to plot.
+
+    Parameters
+    ----------
+    nb: int
+        Number of variables to plot
+
+    Returns
+    -------
+    The optimized number of rows and columns
+    """
+
+    n_rows = int(round(np.sqrt(nb)))
+    return n_rows + 1 if n_rows * n_rows < nb else n_rows, n_rows
+
+
+def plot_all_dof(fig: go.Figure, key: str, df: DataFrame, list_dof: list, idx_rows: list, idx_cols: list):
+    """
+    This function plots all generalized coordinates and all torques for all MillerDynamics
+    contained in the main cluster of optimal costs
+
+    Parameters
+    ----------
+    fig : go.Figure
+        Figure to plot on
+    key : str
+        Key of the dataframe to plot (q, qdot, tau, muscle)
+    df : DataFrame
+        Dataframe of all results
+    list_dof : list
+        List of all dofs
+    idx_rows : list
+        List of the rows to plot
+    idx_cols : list
+        List of the columns to plot
+
+    Returns
+    -------
+    fig : go.Figure
+        Figure with all plots
+    """
+
+    showleg = False
+
+    for i_dof, dof_name in enumerate(list_dof):
+        idx_row = idx_rows[i_dof]
+        idx_col = idx_cols[i_dof]
+        for index, row in df.iterrows():
+
+            # rotations in degrees
+            coef = 180 / np.pi if i_dof > 2 and "q" in key else 1
+
+            fig.add_scatter(
+                x=row.time,
+                y=row[key][i_dof] * coef,
+                mode="lines",
+                marker=dict(
+                    size=2,
+                    color=px.colors.qualitative.D3[row.grp_number],
+                ),
+                line=dict(
+                    width=1.5,
+                    color=px.colors.qualitative.D3[row.grp_number]
+                ),
+                name=row.grps if row.irand == 0 and i_dof == 0 else None,
+                legendgroup=row.grps,
+                showlegend=True if row.irand == 0 and i_dof == 0 else False,
+                row=idx_row,
+                col=idx_col,
+            )
+            fig.update_yaxes(tickfont=dict(size=11))
+
+    fig.update_layout(
+        height=1200,
+        width=1200,
+        paper_bgcolor="rgba(255,255,255,1)",
+        plot_bgcolor="rgba(255,255,255,1)",
+        legend=dict(
+            title_font_family="Times New Roman",
+            font=dict(family="Times New Roman", color="black", size=18),
+            orientation="h",
+            yanchor="bottom",
+            y=1.05,
+            x=0.5,
+            xanchor="center",
+            valign="top",
+        ),
+        font=dict(
+            size=19,
+            family="Times New Roman",
+        ),
+        yaxis=dict(color="black"),
+        template="simple_white",
+        boxgap=0.2,
+    )
     return fig
