@@ -73,11 +73,11 @@ class MillerOcp:
         self,
         biorbd_model_path: str = None,
         n_shooting: tuple = (125, 25),
-        phase_durations: tuple = (1.351875, 0.193125),  # t_tot = 1.545 (7/8, 1/8)
+        phase_durations: tuple = (1.50187, 0.173097),  # actualized with results from https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4096894
         n_threads: int = 8,
         ode_solver: OdeSolver = OdeSolver.RK4(),
         rigidbody_dynamics: RigidBodyDynamics = RigidBodyDynamics.ODE,
-        vertical_velocity_0: float = 9.2,  # Real data 9.2 before
+        vertical_velocity_0: float = 8.30022867e+00, # actualized with results from https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4096894
         somersaults: float = 4 * np.pi,
         twists: float = 6 * np.pi,
         use_sx: bool = False,
@@ -129,12 +129,14 @@ class MillerOcp:
         self.x = None
         self.u = None
 
-        self.phase_durations = (1.351875, 0.193125) if phase_durations is None else phase_durations
+        self.phase_durations = (1.50187, 0.173097) if phase_durations is None else phase_durations
+        # actualized with results from https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4096894
+
         self.duration = np.sum(self.phase_durations)
         self.phase_proportions = (self.phase_durations[0] / self.duration, self.phase_durations[1] / self.duration)
 
-        self.velocity_x = 0
-        self.velocity_y = 0
+        self.velocity_x = -7.58264491e-03  # actualized with results from https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4096894
+        self.velocity_y = 4.48581035e-01  # actualized with results from https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4096894
         self.vertical_velocity_0 = vertical_velocity_0
         self.somersault_rate_0 = self.somersaults / self.duration
 
@@ -416,21 +418,21 @@ class MillerOcp:
             node=Node.END,
         )
 
-        slack_duration = 0.15
-        self.objective_functions.add(
-            ObjectiveFcn.Mayer.MINIMIZE_TIME,
-            min_bound=self.phase_durations[0] - slack_duration,
-            max_bound=self.phase_durations[0] + slack_duration,
-            phase=0,
-            weight=1e-6,
-        )
-        self.objective_functions.add(
-            ObjectiveFcn.Mayer.MINIMIZE_TIME,
-            min_bound=self.phase_durations[1] - slack_duration,
-            max_bound=self.phase_durations[1] + slack_duration,
-            phase=1,
-            weight=1e-6,
-        )
+        # slack_duration = 0.15
+        # self.objective_functions.add(
+        #     ObjectiveFcn.Mayer.MINIMIZE_TIME,
+        #     min_bound=self.phase_durations[0] - slack_duration,
+        #     max_bound=self.phase_durations[0] + slack_duration,
+        #     phase=0,
+        #     weight=1e-6,
+        # )
+        # self.objective_functions.add(
+        #     ObjectiveFcn.Mayer.MINIMIZE_TIME,
+        #     min_bound=self.phase_durations[1] - slack_duration,
+        #     max_bound=self.phase_durations[1] + slack_duration,
+        #     phase=1,
+        #     weight=1e-6,
+        # )
 
     def _set_initial_momentum(self):
         """
@@ -615,9 +617,9 @@ class MillerOcp:
         self.thorax_hips_xyz = thorax_hips_xyz
         arm_rotation_y_final = 2.4
 
-        slack_initial_vertical_velocity = 2
-        slack_initial_somersault_rate = 3
-        slack_initial_translation_velocities = 1
+        slack_initial_vertical_velocity = .2
+        slack_initial_somersault_rate = .2
+        slack_initial_translation_velocities = .2
 
         # end phase 0
         slack_somersault = 30 * 3.14 / 180
