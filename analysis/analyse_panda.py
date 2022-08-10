@@ -18,10 +18,10 @@ from utils import (
     compute_error_single_shooting,
 )
 
-from enums import ResultFolders
+from enums import Results
 from robot_leg import Models
 
-out_path_raw = ResultFolders.MILLER.value
+out_path_raw = Results.MILLER.value
 model_path = Models.ACROBAT.value
 
 # open files
