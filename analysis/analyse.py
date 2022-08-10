@@ -24,7 +24,7 @@ from utils import (
     get_trans_and_rot_idx,
 )
 
-from enums import Results
+from enums import ResultFolders
 from robot_leg import Models
 
 
@@ -480,7 +480,7 @@ class ResultsAnalyse:
 
 
 def main():
-    path_to_files = Results.MILLER_2.value
+    path_to_files = ResultFolders.MILLER_2.value
     model_path = Models.ACROBAT.value
 
     # path_to_files = Results.MILLER.value
