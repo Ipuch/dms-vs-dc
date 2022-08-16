@@ -1,5 +1,6 @@
-from typing import Any, Union
+from typing import Any, Union, Tuple
 import numpy as np
+from numpy import ndarray
 
 from plotly import graph_objects as go
 import plotly.express as px
@@ -64,6 +65,52 @@ def compute_error_single_shooting(
     )
 
 
+def compute_error_single_shooting_each_frame(
+    time: Union[np.ndarray, list],
+    n_shooting: int,
+    model: biorbd.Model,
+    q: np.ndarray,
+    q_integrated: np.ndarray,
+) -> tuple[ndarray, ndarray]:
+    """
+    This function compute the error between the solution of the OCP and the solution of the integrated OCP for each frame
+
+    Parameters
+    ----------
+    time : np.ndarray
+        Time vector
+    n_shooting : int
+        Number of shooting points
+    model : biorbd.Model
+        Model
+    q : np.ndarray
+        ocp generalized coordinates
+    q_integrated : np.ndarray
+        integrated generalized coordinates
+    duration: float
+        The duration to report the error in states btween the two solutions
+
+    Returns
+    -------
+    The error between the two solutions for each frame
+    """
+
+    single_shoot_error_t = np.zeros(time.shape[0])
+    single_shoot_error_r = np.zeros(time.shape[0])
+
+    for i, t in enumerate(time):
+        single_shoot_error_t[i], single_shoot_error_r[i] = compute_error_single_shooting(
+            time=time,
+            n_shooting=n_shooting,
+            model=model,
+            q=q,
+            q_integrated=q_integrated,
+            duration=t,
+        )
+
+    return single_shoot_error_t, single_shoot_error_r
+
+
 def get_trans_and_rot_idx(model: biorbd.Model) -> tuple:
     """
     This function
@@ -83,8 +130,10 @@ def get_trans_and_rot_idx(model: biorbd.Model) -> tuple:
     for i in range(model.nbQ()):
         if model.nameDof()[i].to_string()[-4:-1] == "Rot":
             rot_idx += [i]
-        else:
+        elif "_Trans" in model.nameDof()[i].to_string():
             trans_idx += [i]
+        else:
+            ValueError("This type is not recognized")
     rot_idx = np.array(rot_idx)
     trans_idx = np.array(trans_idx)
     return trans_idx, rot_idx
@@ -325,7 +374,7 @@ def generate_windows_size(nb: int) -> tuple:
     return n_rows + 1 if n_rows * n_rows < nb else n_rows, n_rows
 
 
-def plot_all_dof(fig: go.Figure, key: str, df: DataFrame, list_dof: list, idx_rows: list, idx_cols: list):
+def plot_all_dof(fig: go.Figure, key: str, df: DataFrame, list_dof: list, idx_rows: list, idx_cols: list, trans_idx: list, rot_idx: list):
     """
     This function plots all generalized coordinates and all torques for all MillerDynamics
     contained in the main cluster of optimal costs
@@ -344,6 +393,10 @@ def plot_all_dof(fig: go.Figure, key: str, df: DataFrame, list_dof: list, idx_ro
         List of the rows to plot
     idx_cols : list
         List of the columns to plot
+    trans_idx: list
+        List of translation dof indexes
+    rot_idx: mlist
+        List of rotation dof indexes
 
     Returns
     -------
@@ -356,10 +409,10 @@ def plot_all_dof(fig: go.Figure, key: str, df: DataFrame, list_dof: list, idx_ro
     for i_dof, dof_name in enumerate(list_dof):
         idx_row = idx_rows[i_dof]
         idx_col = idx_cols[i_dof]
-        for index, row in df.iterrows():
+        for _, row in df.iterrows():
 
             # rotations in degrees
-            coef = 180 / np.pi if i_dof > 2 and "q" in key else 1
+            coef = 180 / np.pi if i_dof in rot_idx and "q" in key else 1
 
             fig.add_scatter(
                 x=row.time,

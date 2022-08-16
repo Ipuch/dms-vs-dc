@@ -7,8 +7,8 @@ import pickle
 from time import time
 
 import biorbd
-from bioptim import Solver, Shooting, RigidBodyDynamics, Shooting, SolutionIntegrator, BiorbdInterface
-from robot_leg import LegOCP, Integration
+from bioptim import Solver, Shooting, RigidBodyDynamics, Shooting, SolutionIntegrator, BiorbdInterface, CostType
+from robot_leg import LegOCP, Integration, add_custom_plots
 
 
 def torque_driven_dynamics(
@@ -77,7 +77,14 @@ def main(args: list = None):
         ode_solver=ode_solver,
         n_threads=n_threads,
         seed=i_rand,
+        phase_time=(0.25, 0.25)
     )
+
+    # --- add custom figures --- #
+    leg_ocp.ocp.add_plot_penalty(CostType.ALL)
+    add_custom_plots(leg_ocp.ocp)
+
+
     str_ode_solver = ode_solver.__str__().replace("\n", "_").replace(" ", "_")
     str_dynamics_type = dynamics_type.__str__().replace("RigidBodyDynamics.", "").replace("\n", "_").replace(" ", "_")
     filename = f"sol_irand{i_rand}_{n_shooting}_{str_ode_solver}_{ode_solver.defects_type.value}_{str_dynamics_type}"
@@ -90,7 +97,7 @@ def main(args: list = None):
 
     solver.set_maximum_iterations(10000)
     solver.set_print_level(5)
-    solver.set_convergence_tolerance(1e-10)
+    # solver.set_convergence_tolerance(1e-10)
     solver.set_linear_solver("ma57")
 
     print(f"##########################################################")
@@ -111,10 +118,6 @@ def main(args: list = None):
     sol = leg_ocp.ocp.solve(solver)
     toc = time() - tic
 
-    states = sol.states["all"]
-    controls = sol.controls["all"]
-    parameters = sol.parameters["all"]
-
     sol.print_cost()
 
     print(f"#################################################### done ")
@@ -129,7 +132,7 @@ def main(args: list = None):
         f"n_threads={n_threads}\n"
     )
     print(f"##################################################### done ")
-    # sol.graphs(show_bounds=True)
+    sol.graphs(show_bounds=True)
     # sol.animate()
     # --- Save the results --- #
 
@@ -140,7 +143,7 @@ def main(args: list = None):
         solution=sol,
         state_keys=["q", "qdot"],
         control_keys=["tau"],
-        # fext_keys=["fext"] if dynamics_type == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK else None,
+        fext_keys=None,
         function=torque_driven_dynamics,
         mode="constant_control",
     )
@@ -148,28 +151,49 @@ def main(args: list = None):
     out = integration.integrate(
         shooting_type=Shooting.SINGLE_CONTINUOUS,
         keep_intermediate_points=False,
-        merge_phases=False,
+        merge_phases=True if len(n_shooting) > 1 else False,
         continuous=True,
         integrator=SolutionIntegrator.SCIPY_DOP853,
     )
 
-    integration_2 = Integration(
-        ocp=leg_ocp.ocp,
-        solution=sol,
-        state_keys=["q", "qdot"],
-        control_keys=["tau"],
-        fext_keys=None,
-        function=torque_driven_dynamics,
-        mode="linear_control",
-    )
+    biorbd_model = biorbd.Model(biorbd_model_path)
+    qddot = list()
+    for p, (states, controls) in enumerate(zip(sol.states, sol.controls)):
+        qddot.append(np.zeros((int(states["all"].shape[0]/2), states["all"].shape[1])))
+        for i, (x, u) in enumerate(zip(states["all"].T, controls["all"].T)):
+            states_dot = torque_driven_dynamics(model=biorbd_model, states=x, controls=u, params=None, fext=None)
+            qddot[p][:, i] = states_dot[biorbd_model.nbQ():]
 
-    out_2 = integration_2.integrate(
-        shooting_type=Shooting.SINGLE_CONTINUOUS,
-        keep_intermediate_points=False,
-        merge_phases=False,
-        continuous=True,
-        integrator=SolutionIntegrator.SCIPY_DOP853,
-    )
+    # merge qddot elements in one numpy array deleting the last node of each phase and keeping the first node of each phase
+    # qddot[p][:, -1] is not kept when merging phases except for the last phase
+    qddot_list = [qddot_p[:, :-1] for qddot_p in qddot]
+    qddot_list.append(np.expand_dims(qddot[-1][:, -1], axis=1))
+    qddot = np.hstack(qddot_list)
+
+    # sol_integrated = sol.integrate(shooting_type=Shooting.SINGLE_CONTINUOUS,
+    #     keep_intermediate_points=False,
+    #     merge_phases=True if len(n_shooting) > 1 else False,
+    #     continuous=True,
+    #     integrator=SolutionIntegrator.SCIPY_RK45)
+
+    # integration_2 = Integration(
+    #     ocp=leg_ocp.ocp,
+    #     solution=sol,
+    #     state_keys=["q", "qdot"],
+    #     control_keys=["tau"],
+    #     fext_keys=None,
+    #     function=torque_driven_dynamics,
+    #     mode="linear_control",
+    # )
+    #
+    # out_2 = integration_2.integrate(
+    #     shooting_type=Shooting.SINGLE_CONTINUOUS,
+    #     keep_intermediate_points=False,
+    #     merge_phases=False,
+    #     continuous=True,
+    #     integrator=SolutionIntegrator.SCIPY_DOP853,
+    # )
+    merged_sol = sol.merge_phases()
 
     f = open(f"{outpath}.pckl", "wb")
     data = {
@@ -189,16 +213,19 @@ def main(args: list = None):
         "ode_solver": ode_solver,
         "ode_solver_str": ode_solver.__str__().replace("\n", "_").replace(" ", "_"),
         "defects_type": ode_solver.defects_type,
-        "q": sol.states_no_intermediate["q"],
-        "qdot": sol.states_no_intermediate["qdot"],
+        "q": merged_sol.states_no_intermediate["q"],
+        "qdot": merged_sol.states_no_intermediate["qdot"],
+        "qddot": qddot,
         "q_integrated": out.states["q"],
         "qdot_integrated": out.states["qdot"],
+        # "q_integrated": out.states["q"],
+        # "qdot_integrated": out.states["qdot"],
         # "qddot_integrated": out.states["qdot"],
         "n_shooting": n_shooting,
         "n_theads": n_threads,
-        "q_integrated_linear": out_2.states["q"],
-        "qdot_integrated_linear": out_2.states["qdot"],
-        "time_linear": out_2.time_vector,
+        # "q_integrated_linear": out_2.states["q"],
+        # "qdot_integrated_linear": out_2.states["qdot"],
+        # "time_linear": out_2.time_vector,
     }
 
     pickle.dump(data, f)

@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import plotly
 from plotly.subplots import make_subplots
+import plotly.express as px
 
 import biorbd
 
@@ -17,6 +18,7 @@ from utils import (
     stack_controls,
     define_time,
     compute_error_single_shooting,
+    compute_error_single_shooting_each_frame,
     my_traces,
     add_annotation_letter,
     generate_windows_size,
@@ -117,6 +119,11 @@ class ResultsAnalyse:
             "tau",
             "n_shooting",
             "n_theads",
+            "grps",
+            "grps_cat",
+            "grp_number",
+            "translation_error_traj"
+            "rotation_error_traj",
         ]
         df_results = pd.DataFrame(columns=column_names)
 
@@ -129,22 +136,31 @@ class ResultsAnalyse:
 
                 # DM to array
                 data["cost"] = np.array(data["cost"])[0][0]
-
+                # print(data["n_threads"])
                 # compute error
                 model = biorbd.Model(self.model_path)
 
-                if isinstance(data["n_shooting"], tuple) and len(data["n_shooting"]) > 1:
-                    n_shooting = sum(data["n_shooting"])
-                    q = stack_states(data["q"], "q")  # todo: "q" shouldn't be there.
-                    q_integrated = data["q_integrated"]["q"]  # todo: "q" shouldn't be there.
-                    data["q"] = q
-                    data["q_integrated"] = q_integrated
-                else:
-                    n_shooting = data["n_shooting"]
-                    q = data["q"]
-                    q_integrated = data["q_integrated"]
+                # if isinstance(data["n_shooting"], tuple) and len(data["n_shooting"]) > 1:
+                #     n_shooting = sum(data["n_shooting"])
+                #     q = stack_states(data["q"], "q")  # todo: "q" shouldn't be there.
+                #     q_integrated = data["q_integrated"]["q"]  # todo: "q" shouldn't be there.
+                #     data["q"] = q
+                #     data["q_integrated"] = q_integrated
+                # else:
+                n_shooting = sum(data["n_shooting"])
+                q = data["q"]
+                q_integrated = data["q_integrated"]
+                # print(data["q_integrated"].shape)
 
                 data["translation_error"], data["rotation_error"] = compute_error_single_shooting(
+                    model=model,
+                    n_shooting=n_shooting,
+                    time=np.array(data["time"]),
+                    q=q,
+                    q_integrated=q_integrated,
+                )
+
+                data["translation_error_traj"], data["rotation_error_traj"] = compute_error_single_shooting_each_frame(
                     model=model,
                     n_shooting=n_shooting,
                     time=np.array(data["time"]),
@@ -273,7 +289,110 @@ class ResultsAnalyse:
             fig.write_image(self.path_to_figures + "/analyse_time_iter.eps")
             fig.write_html(self.path_to_figures + "/analyse_time_iter.html", include_mathjax="cdn")
 
-    def plot_integration_error(self, show: bool = True, export: bool = True):
+    def plot_integration_frame_to_frame_error(self, show: bool = True, export: bool = True):
+        """
+        This function plots the time and number of iterations need to make the OCP converge
+
+        Parameters
+        ----------
+        show : bool
+            If True, the figure is shown.
+        export : bool
+            If True, the figure is exported.
+        """
+
+        # dyn = [i for i in self.df["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
+        dyn = self.df["grps"].unique().tolist()
+        grps = dyn
+
+        fig = make_subplots(
+            rows=1,
+            cols=2,
+            subplot_titles=["translation error", "rotation error"]
+        )
+        # update the font size of the subplot_titles
+        for i in fig["layout"]["annotations"]:
+            i["font"] = dict(size=18)
+
+        # select only the one who converged
+        df_results = self.df[self.df["status"] == 0]
+
+        for _, row in df_results.iterrows():
+            fig.add_scatter(
+                x=row.time,
+                y=row["translation_error_traj"],
+                mode="lines",
+                marker=dict(
+                    size=1,
+                    color=px.colors.qualitative.D3[row.grp_number],
+                    line=dict(width=0.05, color="DarkSlateGrey"),
+                ),
+                name=row.grps if row.irand == 0 else None,
+                legendgroup=row.grps,
+                showlegend=True if row.irand == 0 else False,
+            )
+
+            fig.add_scatter(
+                x=row.time,
+                y=row["rotation_error_traj"],
+                mode="lines",
+                marker=dict(
+                    size=1,
+                    color=px.colors.qualitative.D3[row.grp_number],
+                    line=dict(width=0.05, color="DarkSlateGrey"),
+                ),
+                name=row.grps if row.irand == 0 else None,
+                legendgroup=row.grps,
+                showlegend=False,
+                row=1,
+                col=2,
+            )
+
+        fig.update_layout(
+            height=800,
+            width=1500,
+            paper_bgcolor="rgba(255,255,255,1)",
+            plot_bgcolor="rgba(255,255,255,1)",
+            legend=dict(
+                title_font_family="Times New Roman",
+                font=dict(family="Times New Roman", color="black", size=11),
+                orientation="h",
+                xanchor="center",
+                x=0.5,
+                y=-0.05,
+            ),
+            font=dict(
+                size=12,
+                family="Times New Roman",
+            ),
+            yaxis=dict(color="black"),
+            template="simple_white",
+            boxgap=0.2,
+        )
+        fig = add_annotation_letter(fig, "A", x=0.01, y=0.99, on_paper=True)
+        fig = add_annotation_letter(fig, "B", x=0.56, y=0.99, on_paper=True)
+
+        fig.update_yaxes(
+            row=1,
+            col=1,
+            type="log",
+        )
+        fig.update_yaxes(
+            row=1,
+            col=2,
+            type="log",
+        )
+
+        if show:
+            fig.show()
+        if export:
+            fig.write_image(self.path_to_figures + "/analyse_integration_each_frame.png")
+            fig.write_image(self.path_to_figures + "/analyse_integration_each_frame.pdf")
+            fig.write_image(self.path_to_figures + "/analyse_integration_each_frame.svg")
+            fig.write_image(self.path_to_figures + "/analyse_integration_each_frame.eps")
+            fig.write_html(self.path_to_figures + "/analyse_integration_each_frame.html", include_mathjax="cdn")
+
+    def plot_integration_final_error(self, show: bool = True, export: bool = True):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -396,8 +515,9 @@ class ResultsAnalyse:
             fig.write_image(self.path_to_figures + "/analyse_obj.eps")
             fig.write_html(self.path_to_figures + "/analyse_obj.html", include_mathjax="cdn")
 
-    def plot_q(
+    def plot_state(
         self,
+        key: str = None,
         show: bool = True,
         export: bool = True,
         label_dofs: list[str] = None,
@@ -454,7 +574,10 @@ class ResultsAnalyse:
         # select only the one who converged
         df_results = self.df[self.df["status"] == 0]
 
-        fig = plot_all_dof(fig, "q", df_results, list_dof, idx_rows, idx_cols)
+        # handle translations and rotations
+        trans_idx, rot_idx = get_trans_and_rot_idx(self.model)
+
+        fig = plot_all_dof(fig, key, df_results, list_dof, idx_rows, idx_cols, trans_idx, rot_idx)
 
         for i in range(1, cols + 1):
             fig.update_xaxes(row=rows, col=i, title=xlabel)
@@ -470,28 +593,34 @@ class ResultsAnalyse:
         if show:
             fig.show()
         if export:
-            fig.write_image(self.path_to_figures + "/analyse_q.png")
-            fig.write_image(self.path_to_figures + "/analyse_q.pdf")
-            fig.write_image(self.path_to_figures + "/analyse_q.svg")
-            fig.write_image(self.path_to_figures + "/analyse_q.eps")
-            fig.write_html(self.path_to_figures + "/analyse_q.html", include_mathjax="cdn")
+            format_type = ["png", "pdf", "svg", "eps"]
+            for f in format_type:
+                fig.write_image(self.path_to_figures + f"/analyse_{key}." + f)
+            fig.write_html(self.path_to_figures + f"/analyse_{key}.html", include_mathjax="cdn")
 
         return fig
 
 
 def main():
-    path_to_files = Results.MILLER_2.value
-    model_path = Models.ACROBAT.value
-
-    # path_to_files = Results.MILLER.value
+    # path_to_files = ResultFolders.MILLER_2.value
     # model_path = Models.ACROBAT.value
 
+    # path_to_files = ResultFolders.MILLER_2.value
+    # model_path = Models.ACROBAT.value
+    #
+    path_to_files = ResultFolders.LEG_2022_08_12_TEST.value
+    model_path = Models.LEG.value
+
     results = ResultsAnalyse(path_to_files=path_to_files, model_path=model_path)
-    # results.print()
-    # results.plot_time_iter(show=True, export=True, time_unit="min")
-    # results.plot_obj_values(show=True, export=True)
-    # results.plot_integration_error(show=True, export=True)
-    results.plot_q(show=True, export=True, row_col=(5, 3))
+    results.print()
+    results.plot_time_iter(show=True, export=True, time_unit="min")
+    results.plot_obj_values(show=True, export=True)
+    results.plot_integration_frame_to_frame_error(show=True, export=True)
+    results.plot_integration_final_error(show=True, export=True)
+    results.plot_state(key="q_integrated", show=True, export=True, row_col=(5, 3))
+    results.plot_state(key="q", show=True, export=True, row_col=(5, 3))
+    # results.plot_state(key="tau", show=True, export=True, row_col=(5, 3))
+    # results.plot_state(key="qddot", show=True, export=True, row_col=(5, 3))
 
 
 if __name__ == "__main__":

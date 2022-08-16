@@ -2,14 +2,17 @@ from bioptim import OdeSolver, CostType, RigidBodyDynamics, Solver, DefectType
 from robot_leg import LegOCP
 
 import numpy as np
+from robot_leg import Integration
 
 
 def main():
-    n_shooting = 20
+    n_shooting = (20, 20)
+    # n_shooting = 20
     ode_solver = OdeSolver.RK4(n_integration_steps=5)
     # ode_solver = OdeSolver.RK4()
     # ode_solver = OdeSolver.COLLOCATION()
-    time = 0.25
+    # time = 0.25
+    time = 0.25, 0.25
     n_threads = 8
     # for human in Humanoid2D:
     model_path = "../robot_leg/models/hexapod_leg.bioMod"
@@ -42,14 +45,27 @@ def main():
 
     # from humanoid_2d import Integration
     #
-    # integration = Integration(
-    #     ocp=humanoid.ocp,
-    #     solution=sol,
-    #     state_keys=["q", "qdot"],
-    #     control_keys=["tau"],
-    #     parameters_keys=None,
-    #     function=None,
-    # )
+    integration = Integration(
+        ocp=leg.ocp,
+        solution=sol,
+        state_keys=["q", "qdot"],
+        control_keys=["tau"],
+        parameters_keys=None,
+        function=None,
+        mode="constant_control"
+    )
+
+    from bioptim import Shooting, SolutionIntegrator
+
+    out = integration.integrate(
+        shooting_type=Shooting.SINGLE_CONTINUOUS,
+        keep_intermediate_points=False,
+        merge_phases=True,
+        continuous=True,
+        integrator=SolutionIntegrator.SCIPY_DOP853,
+
+    )
+
     #
     sol.animate(n_frames=0, show_floor=False, show_gravity=False)
     # sol.graphs(show_bounds=True)

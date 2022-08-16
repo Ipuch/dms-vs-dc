@@ -1,4 +1,5 @@
 import warnings
+from typing import Union
 
 import biorbd_casadi as biorbd
 import numpy as np
@@ -28,9 +29,9 @@ from bioptim import (
 class LegOCP:
     def __init__(
         self,
-        biorbd_model_path: str = None,
-        n_shooting: int = 10,
-        phase_time: float = 0.25,
+        biorbd_model_path: Union[str, tuple] = None,
+        n_shooting: Union[int, tuple] = 10,
+        phase_time: Union[float, tuple] = 0.25,
         n_threads: int = 8,
         control_type: ControlType = ControlType.CONSTANT,
         ode_solver: OdeSolver = OdeSolver.RK4(),
@@ -49,15 +50,17 @@ class LegOCP:
         self.rigidbody_dynamics = rigidbody_dynamics
 
         if biorbd_model_path is not None:
-            self.biorbd_model = biorbd.Model(biorbd_model_path)
+
             self.n_shooting = n_shooting
             self.phase_time = phase_time
+            self.n_phase = len(self.n_shooting)
+            self.biorbd_model = [biorbd.Model(biorbd_model_path) for _ in range(self.n_phase)]
 
-            self.n_q = self.biorbd_model.nbQ()
-            self.n_qdot = self.biorbd_model.nbQdot()
-            self.n_qddot = self.biorbd_model.nbQddot()
+            self.n_q = self.biorbd_model[0].nbQ()
+            self.n_qdot = self.biorbd_model[0].nbQdot()
+            self.n_qddot = self.biorbd_model[0].nbQddot()
             self.n_qdddot = self.n_qddot
-            self.n_tau = self.biorbd_model.nbGeneralizedTorque()
+            self.n_tau = self.biorbd_model[0].nbGeneralizedTorque()
 
             self.tau_min, self.tau_init, self.tau_max = -10, 0, 10
             self.qddot_min, self.qddot_init, self.qddot_max = -100, 0, 100
@@ -89,28 +92,28 @@ class LegOCP:
             self.xn_init = InitialGuessList()
             self.un_init = InitialGuessList()
 
-            self.xn_init.add(
-                NoisedInitialGuess(
-                    initial_guess=self.x_init[0],
-                    bounds=self.x_bounds[0],
-                    noise_magnitude=1,
-                    n_shooting=self.n_shooting
-                    if self.ode_solver.is_direct_shooting
-                    else self.n_shooting * (self.ode_solver.polynomial_degree + 1),
-                    bound_push=0.1,
-                    seed=seed,
+            for i in range(self.n_phase):
+
+                self.xn_init.add(
+                    NoisedInitialGuess(
+                        initial_guess=self.x_init[i],
+                        bounds=self.x_bounds[i],
+                        noise_magnitude=1,
+                        n_shooting=self.n_shooting[i] if self.ode_solver.is_direct_shooting else self.n_shooting[i] * (self.ode_solver.polynomial_degree + 1),
+                        bound_push=0.1,
+                        seed=seed,
+                    )
                 )
-            )
-            self.un_init.add(
-                NoisedInitialGuess(
-                    initial_guess=self.u_init[0],
-                    bounds=self.u_bounds[0],
-                    noise_magnitude=0.2,
-                    n_shooting=self.n_shooting - 1,
-                    bound_push=0.1,
-                    seed=seed,
+                self.un_init.add(
+                    NoisedInitialGuess(
+                        initial_guess=self.u_init[i],
+                        bounds=self.u_bounds[i],
+                        noise_magnitude=0.2,
+                        n_shooting=self.n_shooting[i] - 1,
+                        bound_push=0.1,
+                        seed=seed,
+                    )
                 )
-            )
 
             self.ocp = OptimalControlProgram(
                 self.biorbd_model,
@@ -130,85 +133,92 @@ class LegOCP:
             )
 
     def _set_dynamics(self):
-        self.dynamics.add(DynamicsFcn.TORQUE_DRIVEN, rigidbody_dynamics=self.rigidbody_dynamics, phase=0)
+        for i in range(self.n_phase):
+            self.dynamics.add(DynamicsFcn.TORQUE_DRIVEN, rigidbody_dynamics=self.rigidbody_dynamics, phase=i)
 
     def _set_objective_functions(self):
         # --- Objective function --- #
-        self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", phase=0)
-        self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", weight=1e-6, phase=0, derivative=True)
+        for i in range(self.n_phase):
+            self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", phase=i)
+            self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", weight=1e-6, phase=i, derivative=True)
 
-        if (
-            self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK
-            or self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK
-        ):
-            self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, phase=0, key="qdddot", weight=1e-4)
+            if (
+                self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK
+                or self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK
+            ):
+                self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, phase=i, key="qdddot", weight=1e-4)
 
     def _set_constraints(self):
         # --- Constraints --- #
         # Contact force in Z are positive
-        node = Node.START
-        self.constraints.add(
-            ConstraintFcn.TRACK_MARKERS, node=node, target=self.start_point, marker_index="marker_Leg1", phase=0
-        )
-        self.constraints.add(ConstraintFcn.TRACK_MARKERS_VELOCITY, node=node, marker_index="marker_Leg1", phase=0)
+        for i in range(self.n_phase):
+            start_point = self.start_point if i == 0 else self.end_point
+            end_point = self.end_point if i == 0 else self.start_point
 
-        node = Node.END
-        self.constraints.add(
-            ConstraintFcn.TRACK_MARKERS, node=node, target=self.end_point, marker_index="marker_Leg1", phase=0
-        )
-        self.constraints.add(ConstraintFcn.TRACK_MARKERS_VELOCITY, node=node, marker_index="marker_Leg1", phase=0)
+            node = Node.START
+            self.constraints.add(
+                ConstraintFcn.TRACK_MARKERS, node=node, target=start_point, marker_index="marker_Leg1", phase=i
+            )
+            self.constraints.add(ConstraintFcn.TRACK_MARKERS_VELOCITY, node=node, marker_index="marker_Leg1", phase=i)
+
+            node = Node.END
+            self.constraints.add(
+                ConstraintFcn.TRACK_MARKERS, node=node, target=end_point, marker_index="marker_Leg1", phase=i
+            )
+            self.constraints.add(ConstraintFcn.TRACK_MARKERS_VELOCITY, node=node, marker_index="marker_Leg1", phase=i)
 
     def _set_boundary_conditions(self):
-        self.x_bounds = BoundsList()
-        self.x_bounds.add(
-            bounds=QAndQDotAndQDDotBounds(self.biorbd_model)
-            if self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK
-            or self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK
-            else QAndQDotBounds(self.biorbd_model)
-        )
-        self.x_bounds[0].max[self.n_q : self.n_q + self.n_qdot, 0] = 0
-        self.x_bounds[0].min[self.n_q : self.n_q + self.n_qdot, 0] = 0
-        self.x_bounds[0].max[self.n_q : self.n_q + self.n_qdot, -1] = 0
-        self.x_bounds[0].min[self.n_q : self.n_q + self.n_qdot, -1] = 0
-        nq = self.n_q
 
-        if self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS:
-            self.u_bounds.add(
-                [self.tau_min] * self.n_tau + [self.qddot_min] * self.n_qddot,
-                [self.tau_max] * self.n_tau + [self.qddot_max] * self.n_qddot,
+        for i in range(self.n_phase):
+            self.x_bounds.add(
+                bounds=QAndQDotAndQDDotBounds(self.biorbd_model[i])
+                if self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK
+                or self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK
+                else QAndQDotBounds(self.biorbd_model[i])
             )
-        elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS:
-            self.u_bounds.add(
-                [self.tau_min] * self.n_tau + [self.qddot_min] * self.n_qddot,
-                [self.tau_max] * self.n_tau + [self.qddot_max] * self.n_qddot,
-            )
-        elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK:
-            self.u_bounds.add(
-                [self.tau_min] * self.n_tau + [self.qdddot_min] * self.n_qddot,
-                [self.tau_max] * self.n_tau + [self.qdddot_max] * self.n_qddot,
-            )
-        elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK:
-            self.u_bounds.add(
-                [self.tau_min] * self.n_tau + [self.qdddot_min] * self.n_qddot,
-                [self.tau_max] * self.n_tau + [self.qdddot_max] * self.n_qddot,
-            )
-        else:
-            self.u_bounds.add([self.tau_min] * self.n_tau, [self.tau_max] * self.n_tau)
+            self.x_bounds[i].max[self.n_q : self.n_q + self.n_qdot, 0] = 0
+            self.x_bounds[i].min[self.n_q : self.n_q + self.n_qdot, 0] = 0
+            self.x_bounds[i].max[self.n_q : self.n_q + self.n_qdot, -1] = 0
+            self.x_bounds[i].min[self.n_q : self.n_q + self.n_qdot, -1] = 0
+            nq = self.n_q
+
+            if self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS:
+                self.u_bounds.add(
+                    [self.tau_min] * self.n_tau + [self.qddot_min] * self.n_qddot,
+                    [self.tau_max] * self.n_tau + [self.qddot_max] * self.n_qddot,
+                )
+            elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS:
+                self.u_bounds.add(
+                    [self.tau_min] * self.n_tau + [self.qddot_min] * self.n_qddot,
+                    [self.tau_max] * self.n_tau + [self.qddot_max] * self.n_qddot,
+                )
+            elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK:
+                self.u_bounds.add(
+                    [self.tau_min] * self.n_tau + [self.qdddot_min] * self.n_qddot,
+                    [self.tau_max] * self.n_tau + [self.qdddot_max] * self.n_qddot,
+                )
+            elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK:
+                self.u_bounds.add(
+                    [self.tau_min] * self.n_tau + [self.qdddot_min] * self.n_qddot,
+                    [self.tau_max] * self.n_tau + [self.qdddot_max] * self.n_qddot,
+                )
+            else:
+                self.u_bounds.add([self.tau_min] * self.n_tau, [self.tau_max] * self.n_tau)
 
     def _set_initial_guesses(self):
         """
         Set initial guess for the optimization problem.
         """
+        for i in range(self.n_phase):
+            self._set_initial_states(phase=i)
+            self._set_initial_controls(phase=i)
 
-        self._set_initial_states()
-        self._set_initial_controls()
-
-    def _set_initial_states(self, X0: np.array = None):
+    def _set_initial_states(self, X0: np.array = None, phase: int= None):
         if X0 is None:
             if self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK:
-                X0 = np.zeros((self.n_q + self.n_qdot + self.n_qddot, self.n_shooting + 1))
+                X0 = np.zeros((self.n_q + self.n_qdot + self.n_qddot, self.n_shooting[phase] + 1))
             else:
-                X0 = np.zeros((self.n_q + self.n_qdot, self.n_shooting + 1))
+                X0 = np.zeros((self.n_q + self.n_qdot, self.n_shooting[phase] + 1))
             if not self.ode_solver.is_direct_shooting:
                 n = self.ode_solver.polynomial_degree
                 X0 = np.repeat(X0, n + 1, axis=1)
@@ -216,8 +226,8 @@ class LegOCP:
 
             self.x_init.add(X0, interpolation=InterpolationType.EACH_FRAME)
         else:
-            if X0.shape[1] != self.n_shooting + 1:
-                X0 = self._interpolate_initial_states(X0)
+            if X0.shape[1] != self.n_shooting[phase]  + 1:
+                X0 = self._interpolate_initial_states(X0, phase)
 
             if not self.ode_solver.is_direct_shooting:
                 n = self.ode_solver.polynomial_degree
@@ -226,7 +236,7 @@ class LegOCP:
 
             self.x_init.add(X0, interpolation=InterpolationType.EACH_FRAME)
 
-    def _set_initial_controls(self, U0: np.array = None):
+    def _set_initial_controls(self, U0: np.array = None, phase: int = None):
         if U0 is None:
             if self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS:
                 self.u_init.add([self.tau_init] * self.n_tau + [self.qddot_init] * self.n_qddot)
@@ -239,16 +249,16 @@ class LegOCP:
             else:
                 self.u_init.add([self.tau_init] * self.n_tau)
         else:
-            if U0.shape[1] != self.n_shooting:
-                U0 = self._interpolate_initial_controls(U0)
+            if U0.shape[1] != self.n_shooting[phase]:
+                U0 = self._interpolate_initial_controls(U0, phase=phase)
             self.u_init.add(U0, interpolation=InterpolationType.EACH_FRAME)
 
-    def _interpolate_initial_states(self, X0: np.array):
+    def _interpolate_initial_states(self, X0: np.array, phase=None):
         print("interpolating initial states to match the number of shooting nodes")
         x = np.linspace(0, self.phase_time, X0.shape[1])
         y = X0
         f = interpolate.interp1d(x, y)
-        x_new = np.linspace(0, self.phase_time, self.n_shooting + 1)
+        x_new = np.linspace(0, self.phase_time, self.n_shooting[phase] + 1)
         y_new = f(x_new)  # use interpolation function returned by `interp1d`
         return y_new
 
@@ -257,6 +267,6 @@ class LegOCP:
         x = np.linspace(0, self.phase_time, U0.shape[1])
         y = U0
         f = interpolate.interp1d(x, y)
-        x_new = np.linspace(0, self.phase_time, self.n_shooting)
+        x_new = np.linspace(0, self.phase_time, self.n_shooting[phase])
         y_new = f(x_new)  # use interpolation function returned by `interp1d`
         return y_new

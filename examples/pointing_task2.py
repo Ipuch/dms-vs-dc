@@ -2,6 +2,22 @@ from bioptim import OdeSolver, CostType, RigidBodyDynamics, Solver, DefectType
 from robot_leg import ArmOCP
 
 import numpy as np
+from robot_leg import Integration
+
+
+def torque_driven_dynamics(
+    model: biorbd.Model, states: np.array, controls: np.array, params: np.array, fext: np.array
+) -> np.ndarray:
+    q = states[: model.nbQ()]
+    qdot = states[model.nbQ() :]
+    tau = controls
+    if fext is None:
+        qddot = model.ForwardDynamics(q, qdot, tau).to_array()
+    else:
+        fext_vec = biorbd.VecBiorbdVector()
+        fext_vec.append(fext)
+        qddot = model.ForwardDynamics(q, qdot, tau, biorbd.VecBiorbdSpatialVector(), fext_vec).to_array()
+    return np.hstack((qdot, qddot))
 
 
 def main():
@@ -33,7 +49,7 @@ def main():
     # humanoid.ocp.print()
 
     solv = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
-    solv.set_maximum_iterations(1000)
+    solv.set_maximum_iterations(0)
     solv.set_linear_solver("ma57")
     solv.set_print_level(5)
     sol = leg.ocp.solve(solv)
@@ -44,14 +60,14 @@ def main():
 
     # from humanoid_2d import Integration
     #
-    # integration = Integration(
-    #     ocp=humanoid.ocp,
-    #     solution=sol,
-    #     state_keys=["q", "qdot"],
-    #     control_keys=["tau"],
-    #     parameters_keys=None,
-    #     function=None,
-    # )
+    integration = Integration(
+        ocp=leg.ocp,
+        solution=sol,
+        state_keys=["q", "qdot"],
+        control_keys=["tau"],
+        parameters_keys=None,
+        function=None,
+    )
     #
     sol.animate(n_frames=0, show_floor=False, show_gravity=False)
     # sol.graphs(show_bounds=True)

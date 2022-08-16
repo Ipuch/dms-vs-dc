@@ -117,7 +117,11 @@ class Integration:
         self.time_vector = None
 
         self.phase_time = solution.phase_time
-        self.function = function if function is not None else [nlp.dynamics for nlp in self.ocp.nlp]
+        if function is not None:
+            self.function = [function for _ in self.ocp.nlp]
+        else:
+            self.function = [nlp.dynamics_func for nlp in self.ocp.nlp]
+        self.function_custom = True if function is not None else False
 
         self.mode = extra_variables["mode"] if "mode" in extra_variables else None
 
@@ -368,7 +372,7 @@ class Integration:
             if shooting_type == Shooting.SINGLE_CONTINUOUS:
                 if p != 0:
                     u0 = self._controls[p - 1]["all"][:, -1]
-                    val = self.ocp.phase_transitions[p - 1].function(np.vstack((x0, x0)), np.vstack((u0, u0)), params)
+                    val = self.ocp.phase_transitions[p - 1].function(np.hstack((x0, x0)), np.hstack((u0, u0)), params)
                     if val.shape[0] != x0.shape[0]:
                         raise RuntimeError(
                             f"Phase transition must have the same number of states ({val.shape[0]}) "
@@ -385,10 +389,6 @@ class Integration:
                 x0 = self._states[p]["all"][:, col]
 
             for s in range(self.ns[p]):
-                # print(s)
-                # if s == self.ns[p] - 1:
-                # print(self._controls[p]["all"][:, s: s + 2])
-                # print("stop")
 
                 if self.mode is not None:
                     if self.mode == "constant_control":
@@ -424,10 +424,13 @@ class Integration:
                     t_eval = np.linspace(t_init, t_end, n_points) if keep_intermediate_points else [t_init, t_end]
 
                     if self.mode == "constant_control":
-                        f_lambda = lambda t, x: np.array(self.function(self.model[p], x, u, params, fext))
+                        if self.function_custom:
+                            f_lambda = lambda t, x: np.array(self.function[p](self.model[p], x, u, params, fext))
+                        else:
+                            f_lambda = lambda t, x: np.array(self.function[p](x, u, params))[:, 0]
                     else:
                         f_lambda = lambda t, x: np.array(
-                            self.function(self.model[p], x, get_u(u, t, [t_init, t_end]), params, fext)
+                            self.function[p](self.model[p], x, get_u(u, t, [t_init, t_end]), params, fext)
                         )
 
                     integrated = solve_ivp(

@@ -88,7 +88,7 @@ def main(args: list = None):
     print("Show online optimization", show_online_optim)
     solver = Solver.IPOPT(show_online_optim=show_online_optim, show_options=dict(show_bounds=True))
 
-    solver.set_maximum_iterations(10000)
+    solver.set_maximum_iterations(1)
     solver.set_print_level(5)
     solver.set_linear_solver("ma57")
 
@@ -111,10 +111,6 @@ def main(args: list = None):
     sol = my_ocp.ocp.solve(solver)
     toc = time() - tic
 
-    states = sol.states["all"]
-    controls = sol.controls["all"]
-    parameters = sol.parameters["all"]
-
     sol.print_cost()
 
     print(f"#################################################### done ")
@@ -134,6 +130,14 @@ def main(args: list = None):
 
     # integrer la dynamique direct
 
+    sol_integrated = sol.integrate(
+        shooting_type=Shooting.SINGLE_CONTINUOUS,
+        keep_intermediate_points=False,
+        merge_phases=True,
+        continuous=True,
+        integrator=SolutionIntegrator.SCIPY_DOP853,
+    )
+
     integration = Integration(
         ocp=my_ocp.ocp,
         solution=sol,
@@ -151,6 +155,7 @@ def main(args: list = None):
         continuous=True,
         integrator=SolutionIntegrator.SCIPY_DOP853,
     )
+
 
     f = open(f"{outpath}.pckl", "wb")
     data = {
