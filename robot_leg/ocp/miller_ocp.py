@@ -217,37 +217,6 @@ class MillerOcp:
             if initial_u is None:
                 self._set_initial_controls()  # noise is into the initial guess
 
-            # todo: turn it into a NoisedInitialGuessList
-            # self.xn_init = InitialGuessList()
-            # self.un_init = InitialGuessList()
-            #
-            # if seed is not None:
-            #     for i in range(self.n_phases):
-            #         self.xn_init.add(
-            #             NoisedInitialGuess(
-            #                 initial_guess=self.x_init[i],
-            #                 bounds=self.x_bounds[i],
-            #                 noise_magnitude=1,
-            #                 n_shooting=self.n_shooting[i] if self.ode_solver.is_direct_shooting else self.n_shooting[i] * (
-            #                             self.ode_solver.polynomial_degree + 1),
-            #                 bound_push=0.1,
-            #                 seed=seed,
-            #             )
-            #         )
-            #         self.un_init.add(
-            #             NoisedInitialGuess(
-            #                 initial_guess=self.u_init[i],
-            #                 bounds=self.u_bounds[i],
-            #                 noise_magnitude=1,
-            #                 n_shooting=self.n_shooting[i] - 1,
-            #                 bound_push=0.1,
-            #                 seed=seed,
-            #             )
-            #         )
-            # else:
-            #     self.xn_init = self.x_init
-            #     self.un_init = self.u_init
-
             self._set_initial_momentum()
             self._set_dynamics()
             self._set_objective_functions()
@@ -337,7 +306,7 @@ class MillerOcp:
                 node=Node.ALL_SHOOTING,
             )  # Left hand trajectory
             self.objective_functions.add(
-                ObjectiveFcn.Mayer.MINIMIZE_MARKERS,  ########### Lagrange
+                ObjectiveFcn.Mayer.MINIMIZE_MARKERS,  # Lagrange
                 node=Node.ALL_SHOOTING,
                 derivative=True,
                 reference_jcs=0,

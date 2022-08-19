@@ -26,7 +26,7 @@ from utils import (
     get_trans_and_rot_idx,
 )
 
-from enums import Results
+from enums import ResultFolders
 from robot_leg import Models
 
 
@@ -146,11 +146,11 @@ class ResultsAnalyse:
                 #     q_integrated = data["q_integrated"]["q"]  # todo: "q" shouldn't be there.
                 #     data["q"] = q
                 #     data["q_integrated"] = q_integrated
-                # else:
+                # # # else:
                 n_shooting = sum(data["n_shooting"])
                 q = data["q"]
                 q_integrated = data["q_integrated"]
-                # print(data["q_integrated"].shape)
+                # # print(data["q_integrated"].shape)
 
                 data["translation_error"], data["rotation_error"] = compute_error_single_shooting(
                     model=model,
@@ -613,10 +613,10 @@ def main():
 
     results = ResultsAnalyse(path_to_files=path_to_files, model_path=model_path)
     results.print()
-    results.plot_time_iter(show=True, export=True, time_unit="min")
-    results.plot_obj_values(show=True, export=True)
-    results.plot_integration_frame_to_frame_error(show=True, export=True)
-    results.plot_integration_final_error(show=True, export=True)
+    # results.plot_time_iter(show=True, export=True, time_unit="min")
+    # results.plot_obj_values(show=True, export=True)
+    # results.plot_integration_frame_to_frame_error(show=True, export=True)
+    # results.plot_integration_final_error(show=True, export=True)
     results.plot_state(key="q_integrated", show=True, export=True, row_col=(5, 3))
     results.plot_state(key="q", show=True, export=True, row_col=(5, 3))
     # results.plot_state(key="tau", show=True, export=True, row_col=(5, 3))
