@@ -244,24 +244,9 @@ class ArmOCP:
         self._set_initial_controls()
 
     def _set_initial_states(self, X0: np.array = None):
-        if X0 is None:
-            X0 = np.zeros((self.n_q + self.n_qdot, self.n_shooting + 1))
-            if not self.ode_solver.is_direct_shooting:
-                n = self.ode_solver.polynomial_degree
-                X0 = np.repeat(X0, n + 1, axis=1)
-                X0 = X0[:, :-n]
-
-            self.x_init.add(X0, interpolation=InterpolationType.EACH_FRAME)
-        else:
-            if X0.shape[1] != self.n_shooting + 1:
-                X0 = self._interpolate_initial_states(X0)
-
-            if not self.ode_solver.is_direct_shooting:
-                n = self.ode_solver.polynomial_degree
-                X0 = np.repeat(X0, n + 1, axis=1)
-                X0 = X0[:, :-n]
-
-            self.x_init.add(X0, interpolation=InterpolationType.EACH_FRAME)
+        X0 = np.zeros((self.n_q + self.n_qdot, self.n_shooting + 1)) if X0 is None else X0
+        self.x_init.add(X0, interpolation=InterpolationType.EACH_FRAME)
+        self.x_init.add(X0, interpolation=InterpolationType.EACH_FRAME)
 
     def _set_initial_controls(self, U0: np.array = None):
         if U0 is None:
