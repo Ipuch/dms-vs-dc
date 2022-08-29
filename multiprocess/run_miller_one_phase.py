@@ -8,7 +8,7 @@ import biorbd
 from bioptim import OdeSolver, CostType, Solver, Shooting, SolutionIntegrator
 import pickle
 from time import time
-from robot_leg import MillerOCP, Integration
+from robot_leg import MillerOCP_1, Integration
 
 
 def torque_driven_dynamics(
@@ -70,7 +70,7 @@ def main(args: list = None):
         i_rand = args[6]
 
     # --- Solve the program --- #
-    my_ocp = MillerOCP(
+    my_ocp = MillerOCP_1(
         biorbd_model_path=biorbd_model_path,
         rigidbody_dynamics=dynamics_type,
         n_shooting=n_shooting,
@@ -88,7 +88,7 @@ def main(args: list = None):
     print("Show online optimization", show_online_optim)
     solver = Solver.IPOPT(show_online_optim=show_online_optim, show_options=dict(show_bounds=True))
 
-    solver.set_maximum_iterations(0)
+    solver.set_maximum_iterations(10000)
     solver.set_print_level(5)
     # solver.set_convergence_tolerance(1e-8)
     solver.set_linear_solver("ma57")
@@ -116,7 +116,7 @@ def main(args: list = None):
     # controls = sol.controls["all"]
     # parameters = sol.parameters["all"]
 
-    sol.print_cost()
+    # sol.print_cost()
     if show_online_optim:
         sol.animate()
         sol.graphs()
@@ -145,6 +145,21 @@ def main(args: list = None):
         continuous=True,
         integrator=SolutionIntegrator.SCIPY_DOP853,
     )
+
+    biorbd_model = biorbd.Model(biorbd_model_path)
+    # qddot = list()
+
+    # for p, (states, controls) in enumerate(zip(sol.states, sol.controls)):
+    qddot=np.zeros((int(sol.states["all"].shape[0] / 2), sol.states["all"].shape[1]))
+    for i, (x, u) in enumerate(zip(sol.states["all"].T, sol.controls["all"].T)):
+        states_dot = torque_driven_dynamics(model=biorbd_model, states=x, controls=u, params=None, fext=None)
+        qddot[:, i] = states_dot[biorbd_model.nbQ():]
+
+    # merge qddot elements in one numpy array deleting the last node of each phase and keeping the first node of each phase
+    # qddot[p][:, -1] is not kept when merging phases except for the last phase
+    # qddot_list = [qddot_p[:, :-1] for qddot_p in qddot]
+    # qddot_list.append(np.expand_dims(qddot[-1][:, -1], axis=1))
+    # qddot = np.hstack(qddot_list)
 
     # integration = Integration(
     #     ocp=my_ocp.ocp,
@@ -183,10 +198,11 @@ def main(args: list = None):
         "ode_solver": ode_solver,
         "ode_solver_str": ode_solver.__str__().replace("\n", "_").replace(" ", "_"),
         "defects_type": ode_solver.defects_type,
-        "q": sol.states_no_intermediate,
-        "qdot": sol.states_no_intermediate,
-        "q_integrated": sol_integrated.states,
-        "qdot_integrated": sol_integrated.states,
+        "q": sol.states_no_intermediate["q"],
+        "qdot": sol.states_no_intermediate["qdot"],
+        "q_integrated": sol_integrated.states["q"],
+        "qdot_integrated": sol_integrated.states["qdot"],
+        "qddot": qddot,
         # "qddot_integrated": out.states["qdot"],
         "n_shooting": n_shooting,
         "n_theads": n_threads,
@@ -197,6 +213,8 @@ def main(args: list = None):
     # print("hello")
     pickle.dump(data, f)
     f.close()
+
+    my_ocp.ocp.save(sol, f"{outpath}.bo")
 
 
 if __name__ == "__main__":
