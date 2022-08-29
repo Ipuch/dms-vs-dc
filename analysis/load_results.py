@@ -1,26 +1,26 @@
-import os, shutil
-from Comparison import ComparisonAnalysis, ComparisonParameters
+import os
 import pickle
-from robot_leg import Humanoid2D
-from humanoid_ocp import HumanoidOcp
+from robot_leg import Models
+from enums import ResultFolders
 from bioptim import OptimalControlProgram
 
 
 def main():
-    model_path = Humanoid2D.HUMANOID_3DOF
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    out_path = dir_path + "/" + model_path.name
+    model_path = Models.ACROBAT.value
+    result_path = "/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_22-08-22_2"
+    # dir_path = os.path.dirname(os.path.realpath(__file__))
+    # out_path = dir_path + "/" + model_path.name
 
-    f = open(f"{out_path}/comp_{model_path.name}.pckl", "rb")
-    comp = pickle.load(f)
-    f.close()
+    # open files
+    files = os.listdir(result_path)
+    files.sort()
 
-    # comp.graphs(second_parameter="n_shooting", third_parameter="implicit_dynamics", res_path=out_path, show=True)
-
-    df = comp.df[comp.df["implicit_dynamics"] == True]
-    ocp, sol = OptimalControlProgram.load(out_path + "/" + df.iloc[0].filename + ".bo")
-    # sol.graphs()
-    sol.animate()
+    for i, file in enumerate(files):
+        if file.endswith(".bo") and i > 3:
+            print(file)
+            ocp, sol = OptimalControlProgram.load(result_path + "/" + file)
+            # sol.graphs()
+            sol.animate()
 
 
 if __name__ == "__main__":
