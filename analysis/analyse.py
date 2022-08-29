@@ -147,8 +147,10 @@ class ResultsAnalyse:
                 #     data["q"] = q
                 #     data["q_integrated"] = q_integrated
                 # # # else:
-                n_shooting = sum(data["n_shooting"])
-                q = data["q"]
+                n_shooting = data["n_shooting"]
+                q = data["q"]["q"]
+                data["q"] = data["q"]["q"]
+                data["q_integrated"] = data["q_integrated"]["q"]
                 q_integrated = data["q_integrated"]
                 # # print(data["q_integrated"].shape)
 
@@ -608,19 +610,21 @@ def main():
     # path_to_files = ResultFolders.MILLER_2.value
     # model_path = Models.ACROBAT.value
     #
-    path_to_files = ResultFolders.LEG_2022_08_12_TEST.value
-    model_path = Models.LEG.value
+    path_to_files = "/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_22-08-22_2"
+    model_path = Models.ACROBAT.value
+    export = False
+    show = True
 
     results = ResultsAnalyse(path_to_files=path_to_files, model_path=model_path)
     results.print()
-    # results.plot_time_iter(show=True, export=True, time_unit="min")
-    # results.plot_obj_values(show=True, export=True)
-    # results.plot_integration_frame_to_frame_error(show=True, export=True)
-    # results.plot_integration_final_error(show=True, export=True)
-    results.plot_state(key="q_integrated", show=True, export=True, row_col=(5, 3))
-    results.plot_state(key="q", show=True, export=True, row_col=(5, 3))
-    # results.plot_state(key="tau", show=True, export=True, row_col=(5, 3))
-    # results.plot_state(key="qddot", show=True, export=True, row_col=(5, 3))
+    results.plot_time_iter(show=show, export=export, time_unit="min")
+    results.plot_obj_values(show=show, export=export)
+    results.plot_integration_frame_to_frame_error(show=show, export=export)
+    results.plot_integration_final_error(show=show, export=export)
+    results.plot_state(key="q_integrated", show=show, export=export, row_col=(5, 3))
+    results.plot_state(key="q", show=show, export=export, row_col=(5, 3))
+    results.plot_state(key="tau", show=show, export=export, row_col=(5, 3))
+    results.plot_state(key="qddot", show=show, export=export, row_col=(5, 3))
 
 
 if __name__ == "__main__":
