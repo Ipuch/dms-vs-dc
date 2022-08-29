@@ -10,10 +10,8 @@ from bioptim import OdeSolver, RigidBodyDynamics
 from pathlib import Path
 from bioptim import DefectType
 
-from run_leg_ocp import main as main_leg_ocp
-from run_arm_ocp import main as main_arm_ocp
-from run_miller import main as main_miller_ocp
-# from ..analysis.enums import Results
+from robot_leg import ArmOCP, LegOCP, MillerOCP
+from run_ocp import RunOCP
 
 
 def main():
@@ -22,15 +20,18 @@ def main():
     model = Models.ACROBAT
 
     if model == Models.LEG:
-        running_function = main_leg_ocp
-        # n_shooting = [20]
-        n_shooting = [(20, 20)]
+        #n_shooting = [(20, 20)]
+        n_shooting = [20]
+        run_ocp = RunOCP(ocp_class=LegOCP, show_optim=False, iteration=0, print_level=5, ignore_already_run=False)
+        running_function = run_ocp.main
     elif model == Models.ARM:
-        running_function = main_arm_ocp
         n_shooting = [50]
+        run_ocp = RunOCP(ocp_class=ArmOCP, show_optim=False, iteration=0, print_level=5, ignore_already_run=False)
+        running_function = run_ocp.main
     elif model == Models.ACROBAT:
-        running_function = main_miller_ocp
         n_shooting = [(125, 25)]
+        run_ocp = RunOCP(ocp_class=MillerOCP, show_optim=False, iteration=0, print_level=5, ignore_already_run=False)
+        running_function = run_ocp.main
     else:
         raise ValueError("Unknown model")
 
@@ -86,10 +87,6 @@ def main():
     #     running_function=running_function,
     #     calls=my_calls,
     #     pool_nb=4,
-    # )
-
-    # run_the_missing_ones(
-    #     out_path_raw, Date, n_shooting, ode_solver, nsteps, n_thread, model_str, my_pool_number
     # )
 
 

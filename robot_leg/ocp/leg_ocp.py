@@ -42,7 +42,7 @@ class LegOCP:
         end_point: np.array = np.array([0.22, 0.021, -0.05]),
     ):
         self.biorbd_model_path = biorbd_model_path
-        self.n_shooting = n_shooting
+        # self.n_shooting = [n_shooting] if isinstance(n_shooting, int) else n_shooting
         self.phase_time = phase_time
         self.n_threads = n_threads
         self.control_type = control_type
@@ -51,9 +51,9 @@ class LegOCP:
 
         if biorbd_model_path is not None:
 
-            self.n_shooting = n_shooting
+            self.n_shooting = [n_shooting] if isinstance(n_shooting, int) else n_shooting
             self.phase_time = phase_time
-            self.n_phase = len(self.n_shooting)
+            self.n_phase = 1 if isinstance(self.n_shooting, int) else len(self.n_shooting)
             self.biorbd_model = [biorbd.Model(biorbd_model_path) for _ in range(self.n_phase)]
 
             self.n_q = self.biorbd_model[0].nbQ()
@@ -93,13 +93,13 @@ class LegOCP:
             self.un_init = InitialGuessList()
 
             for i in range(self.n_phase):
-
                 self.xn_init.add(
                     NoisedInitialGuess(
                         initial_guess=self.x_init[i],
                         bounds=self.x_bounds[i],
                         noise_magnitude=1,
-                        n_shooting=self.n_shooting[i] if self.ode_solver.is_direct_shooting else self.n_shooting[i] * (self.ode_solver.polynomial_degree + 1),
+                        # noise_magnitude_bounds=0,
+                        n_shooting=self.n_shooting[i],
                         bound_push=0.1,
                         seed=seed,
                     )
@@ -109,6 +109,7 @@ class LegOCP:
                         initial_guess=self.u_init[i],
                         bounds=self.u_bounds[i],
                         noise_magnitude=0.2,
+                        # noise_magnitude=0,
                         n_shooting=self.n_shooting[i] - 1,
                         bound_push=0.1,
                         seed=seed,
@@ -147,6 +148,8 @@ class LegOCP:
                 or self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK
             ):
                 self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, phase=i, key="qdddot", weight=1e-4)
+            if i == 1:
+                self.objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_QDDOT, phase=i, weight=2000, node=Node.START)
 
     def _set_constraints(self):
         # --- Constraints --- #
@@ -213,28 +216,9 @@ class LegOCP:
             self._set_initial_states(phase=i)
             self._set_initial_controls(phase=i)
 
-    def _set_initial_states(self, X0: np.array = None, phase: int= None):
-        if X0 is None:
-            if self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK:
-                X0 = np.zeros((self.n_q + self.n_qdot + self.n_qddot, self.n_shooting[phase] + 1))
-            else:
-                X0 = np.zeros((self.n_q + self.n_qdot, self.n_shooting[phase] + 1))
-            if not self.ode_solver.is_direct_shooting:
-                n = self.ode_solver.polynomial_degree
-                X0 = np.repeat(X0, n + 1, axis=1)
-                X0 = X0[:, :-n]
-
-            self.x_init.add(X0, interpolation=InterpolationType.EACH_FRAME)
-        else:
-            if X0.shape[1] != self.n_shooting[phase]  + 1:
-                X0 = self._interpolate_initial_states(X0, phase)
-
-            if not self.ode_solver.is_direct_shooting:
-                n = self.ode_solver.polynomial_degree
-                X0 = np.repeat(X0, n + 1, axis=1)
-                X0 = X0[:, :-n]
-
-            self.x_init.add(X0, interpolation=InterpolationType.EACH_FRAME)
+    def _set_initial_states(self, X0: np.array = None, phase: int = 0):
+        X0 = np.zeros((self.n_q + self.n_qdot, self.n_shooting[phase] + 1)) if X0 is None else X0
+        self.x_init.add(X0, interpolation=InterpolationType.EACH_FRAME)
 
     def _set_initial_controls(self, U0: np.array = None, phase: int = None):
         if U0 is None:

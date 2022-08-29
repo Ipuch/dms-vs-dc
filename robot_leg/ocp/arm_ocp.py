@@ -96,10 +96,9 @@ class ArmOCP:
                 NoisedInitialGuess(
                     initial_guess=self.x_init[0],
                     bounds=self.x_bounds[0],
-                    noise_magnitude=1,
-                    n_shooting=self.n_shooting
-                    if self.ode_solver.is_direct_shooting
-                    else self.n_shooting * (self.ode_solver.polynomial_degree + 1),
+                    noise_magnitude=0.5,
+                    n_shooting=self.n_shooting,
+                    interpolation=InterpolationType.EACH_FRAME,
                     bound_push=0.1,
                     seed=seed,
                 )
@@ -108,7 +107,7 @@ class ArmOCP:
                 NoisedInitialGuess(
                     initial_guess=self.u_init[0],
                     bounds=self.u_bounds[0],
-                    noise_magnitude=1,
+                    noise_magnitude=0.5,
                     n_shooting=self.n_shooting - 1,
                     bound_push=0.1,
                     seed=seed,
@@ -245,7 +244,6 @@ class ArmOCP:
 
     def _set_initial_states(self, X0: np.array = None):
         X0 = np.zeros((self.n_q + self.n_qdot, self.n_shooting + 1)) if X0 is None else X0
-        self.x_init.add(X0, interpolation=InterpolationType.EACH_FRAME)
         self.x_init.add(X0, interpolation=InterpolationType.EACH_FRAME)
 
     def _set_initial_controls(self, U0: np.array = None):

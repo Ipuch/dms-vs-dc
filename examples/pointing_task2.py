@@ -29,7 +29,6 @@ def main():
     # ode_solver = OdeSolver.COLLOCATION()
     time = 0.25
     n_threads = 8
-    # for human in Humanoid2D:
     model_path = "../robot_leg/models/robot_arm.bioMod"
 
     # --- Solve the program --- #

@@ -156,7 +156,6 @@ def main(args: list = None):
         integrator=SolutionIntegrator.SCIPY_DOP853,
     )
 
-
     f = open(f"{outpath}.pckl", "wb")
     data = {
         "model_path": biorbd_model_path,

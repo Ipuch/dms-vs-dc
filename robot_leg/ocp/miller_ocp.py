@@ -130,6 +130,7 @@ class MillerOcp:
         self.u = None
 
         self.phase_durations = (1.351875, 0.193125) if phase_durations is None else phase_durations
+        self.phase_time = self.phase_durations
 
         self.duration = np.sum(self.phase_durations)
         self.phase_proportions = (self.phase_durations[0] / self.duration, self.phase_durations[1] / self.duration)
@@ -492,28 +493,13 @@ class MillerOcp:
         """
         Set the initial states of the optimal control problem.
         """
-        if self.ode_solver.is_direct_shooting:
-            if X0 is None:
-                self.x_init.add([0] * (self.n_q + self.n_q))
-            else:
-                mesh_point_init = 0
-                for i in range(self.n_phases):
-                    self.x_init.add(
-                        X0[:, mesh_point_init : mesh_point_init + self.n_shooting[i] + 1],
-                        interpolation=InterpolationType.EACH_FRAME,
-                    )
-                    mesh_point_init += self.n_shooting[i]
-
-        elif self.ode_solver.is_direct_collocation:
+        if X0 is None:
+            self.x_init.add([0] * (self.n_q + self.n_q))
+        else:
             mesh_point_init = 0
             for i in range(self.n_phases):
-                xtemp = X0[:, mesh_point_init : mesh_point_init + self.n_shooting[i] + 1]
-                n = self.ode_solver.polynomial_degree
-                xtemp = np.repeat(xtemp, n + 1, axis=1)
-                xtemp = xtemp[:, :-n]
-
                 self.x_init.add(
-                    xtemp,
+                    X0[:, mesh_point_init : mesh_point_init + self.n_shooting[i] + 1],
                     interpolation=InterpolationType.EACH_FRAME,
                 )
                 mesh_point_init += self.n_shooting[i]
