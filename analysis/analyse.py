@@ -148,9 +148,7 @@ class ResultsAnalyse:
                 #     data["q_integrated"] = q_integrated
                 # # # else:
                 n_shooting = data["n_shooting"]
-                q = data["q"]["q"]
-                data["q"] = data["q"]["q"]
-                data["q_integrated"] = data["q_integrated"]["q"]
+                q = data["q"]
                 q_integrated = data["q_integrated"]
                 # # print(data["q_integrated"].shape)
 
@@ -610,7 +608,7 @@ def main():
     # path_to_files = ResultFolders.MILLER_2.value
     # model_path = Models.ACROBAT.value
     #
-    path_to_files = "/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_22-08-22_2"
+    path_to_files = "/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_26-08-22_2"
     model_path = Models.ACROBAT.value
     export = False
     show = True
