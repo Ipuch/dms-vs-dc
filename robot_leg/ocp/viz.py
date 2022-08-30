@@ -4,14 +4,22 @@ from bioptim import PlotType, BiorbdInterface
 
 
 def plot_com(x, nlp):
-    com_func = biorbd.to_casadi_func("CoMPlot", nlp.model.CoM, nlp.states["q"].mx, expand=False)
+    com_func = biorbd.to_casadi_func(
+        "CoMPlot", nlp.model.CoM, nlp.states["q"].mx, expand=False
+    )
     com_dot_func = biorbd.to_casadi_func(
-        "Compute_CoM", nlp.model.CoMdot, nlp.states["q"].mx, nlp.states["qdot"].mx, expand=False
+        "Compute_CoM",
+        nlp.model.CoMdot,
+        nlp.states["q"].mx,
+        nlp.states["qdot"].mx,
+        expand=False,
     )
     q = nlp.states["q"].mapping.to_second.map(x[nlp.states["q"].index, :])
     qdot = nlp.states["qdot"].mapping.to_second.map(x[nlp.states["qdot"].index, :])
 
-    return np.concatenate((np.array(com_func(q)[1:, :]), np.array(com_dot_func(q, qdot)[1:, :])))
+    return np.concatenate(
+        (np.array(com_func(q)[1:, :]), np.array(com_dot_func(q, qdot)[1:, :]))
+    )
 
 
 def plot_qddot(x, u, nlp):
@@ -22,7 +30,9 @@ def plot_contact_acceleration(x, u, nlp):
     qddot = nlp.states["qddot"] if "qddot" in nlp.states else nlp.controls["qddot"]
     acc_x = biorbd.to_casadi_func(
         "acc_0",
-        nlp.model.rigidContactAcceleration(nlp.states["q"].mx, nlp.states["qdot"].mx, qddot.mx, 0).to_mx(),
+        nlp.model.rigidContactAcceleration(
+            nlp.states["q"].mx, nlp.states["qdot"].mx, qddot.mx, 0
+        ).to_mx(),
         nlp.states["q"].mx,
         nlp.states["qdot"].mx,
         qddot.mx,
@@ -42,11 +52,18 @@ def plot_contact_acceleration(x, u, nlp):
 def add_custom_plots(ocp):
     for i, nlp in enumerate(ocp.nlp):
         ocp.add_plot(
-            "CoM", lambda t, x, u, p: plot_com(x, nlp), phase=i, legend=["CoMy", "Comz", "CoM_doty", "CoM_dotz"]
+            "CoM",
+            lambda t, x, u, p: plot_com(x, nlp),
+            phase=i,
+            legend=["CoMy", "Comz", "CoM_doty", "CoM_dotz"],
         )
     for i, nlp in enumerate(ocp.nlp):
         ocp.add_plot(
-            "qddot", lambda t, x, u, p: plot_qddot(x, u, nlp), phase=i, legend=["qddot"], plot_type=PlotType.INTEGRATED,
+            "qddot",
+            lambda t, x, u, p: plot_qddot(x, u, nlp),
+            phase=i,
+            legend=["qddot"],
+            plot_type=PlotType.INTEGRATED,
         )
 
         # if "qddot" in ocp.nlp[0].states:

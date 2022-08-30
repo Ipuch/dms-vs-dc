@@ -18,8 +18,28 @@ char = biorbd.SegmentCharacteristics(mass, com, inertia)
 
 # Create an empty model and add the two segments
 lukas = biorbd.Model()
-lukas.AddSegment(name_first, parent_first, translations, rotations, ranges, ranges, ranges, char, roto_trans)
-lukas.AddSegment(name_second, parent_second, translations, rotations, ranges, ranges, ranges, char, roto_trans)
+lukas.AddSegment(
+    name_first,
+    parent_first,
+    translations,
+    rotations,
+    ranges,
+    ranges,
+    ranges,
+    char,
+    roto_trans,
+)
+lukas.AddSegment(
+    name_second,
+    parent_second,
+    translations,
+    rotations,
+    ranges,
+    ranges,
+    ranges,
+    char,
+    roto_trans,
+)
 
 # Write the model and read back
 biorbd.Writer().writeModel(lukas, "coucou.bioMod")

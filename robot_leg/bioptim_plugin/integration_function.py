@@ -5,7 +5,13 @@ import numpy as np
 from scipy.integrate import solve_ivp
 from scipy import interpolate as sci_interp
 
-from bioptim import SolutionIntegrator, Shooting, OptimalControlProgram, Solution, ControlType
+from bioptim import (
+    SolutionIntegrator,
+    Shooting,
+    OptimalControlProgram,
+    Solution,
+    ControlType,
+)
 import biorbd
 
 
@@ -100,17 +106,26 @@ class Integration:
 
         self.ocp = ocp
         self.ns = [nlp.ns for nlp in self.ocp.nlp]
-        self.model = [biorbd.Model(nlp.model.path().absolutePath().to_string()) for nlp in self.ocp.nlp]
+        self.model = [
+            biorbd.Model(nlp.model.path().absolutePath().to_string())
+            for nlp in self.ocp.nlp
+        ]
 
         self.control_keys = control_keys
         self.state_keys = state_keys
         self.fext_keys = fext_keys
 
         # Extract the data now for further use
-        self._states = self._update_variable_with_keys(solution._states, self.state_keys)
-        self._controls = self._update_variable_with_keys(solution._controls, self.control_keys)
+        self._states = self._update_variable_with_keys(
+            solution._states, self.state_keys
+        )
+        self._controls = self._update_variable_with_keys(
+            solution._controls, self.control_keys
+        )
         self._fext = (
-            self._update_variable_with_keys(solution._controls, self.fext_keys) if self.fext_keys is not None else None
+            self._update_variable_with_keys(solution._controls, self.fext_keys)
+            if self.fext_keys is not None
+            else None
         )
         self.parameters = solution.parameters
         self.vector = solution.vector
@@ -137,7 +152,11 @@ class Integration:
             all_variables = np.empty((0, 0))
             # concatenate all the data of all items of the dictionary
             for key, value in phase_list.items():
-                all_variables = value if all_variables.size == 0 else np.concatenate((all_variables, value), axis=0)
+                all_variables = (
+                    value
+                    if all_variables.size == 0
+                    else np.concatenate((all_variables, value), axis=0)
+                )
 
             # add the data to the dictionary
             cleaned_list[i]["all"] = all_variables
@@ -223,13 +242,21 @@ class Integration:
                 "Shooting.SINGLE_CONTINUOUS and continuous=False cannot be used simultaneously it is a contradiction"
             )
 
-        out = self.__perform_integration(shooting_type, keep_intermediate_points, continuous, merge_phases, integrator)
+        out = self.__perform_integration(
+            shooting_type,
+            keep_intermediate_points,
+            continuous,
+            merge_phases,
+            integrator,
+        )
 
         if merge_phases:
             if continuous:
                 out = out.interpolate(sum(out.ns) + 1)
             else:
-                out._states, _, out.phase_time, out.ns = out._merge_phases(skip_controls=True, continuous=continuous)
+                out._states, _, out.phase_time, out.ns = out._merge_phases(
+                    skip_controls=True, continuous=continuous
+                )
                 out.is_merged = True
         out.is_integrated = True
 
@@ -252,16 +279,25 @@ class Integration:
         last_t = 0
         for phase_idx, nlp in enumerate(self.ocp.nlp):
             n_int_steps = (
-                nlp.ode_solver.steps_scipy if integrator != SolutionIntegrator.DEFAULT else nlp.ode_solver.steps
+                nlp.ode_solver.steps_scipy
+                if integrator != SolutionIntegrator.DEFAULT
+                else nlp.ode_solver.steps
             )
             dt_ns = time_phase[phase_idx + 1] / nlp.ns
             time_phase_integrated = []
             last_t_int = copy(last_t)
             for _ in range(nlp.ns):
-                if nlp.ode_solver.is_direct_collocation and integrator == SolutionIntegrator.DEFAULT:
-                    time_phase_integrated += (np.array(nlp.dynamics[0].step_time) * dt_ns + last_t_int).tolist()
+                if (
+                    nlp.ode_solver.is_direct_collocation
+                    and integrator == SolutionIntegrator.DEFAULT
+                ):
+                    time_phase_integrated += (
+                        np.array(nlp.dynamics[0].step_time) * dt_ns + last_t_int
+                    ).tolist()
                 else:
-                    time_interval = np.linspace(last_t_int, last_t_int + dt_ns, n_int_steps + 1)
+                    time_interval = np.linspace(
+                        last_t_int, last_t_int + dt_ns, n_int_steps + 1
+                    )
                     if continuous and _ != nlp.ns - 1:
                         time_interval = time_interval[:-1]
                     if not keep_intermediate_points:
@@ -326,7 +362,9 @@ class Integration:
         merge_phases: bool,
         integrator: SolutionIntegrator,
     ):
-        n_direct_collocation = sum([nlp.ode_solver.is_direct_collocation for nlp in self.ocp.nlp])
+        n_direct_collocation = sum(
+            [nlp.ode_solver.is_direct_collocation for nlp in self.ocp.nlp]
+        )
 
         if n_direct_collocation > 0 and integrator == SolutionIntegrator.DEFAULT:
             if continuous:
@@ -345,7 +383,11 @@ class Integration:
         out.recomputed_time_steps = integrator != SolutionIntegrator.DEFAULT
         out._states = []
         out.time_vector = self._generate_time_vector(
-            out.phase_time, keep_intermediate_points, continuous, merge_phases, integrator
+            out.phase_time,
+            keep_intermediate_points,
+            continuous,
+            merge_phases,
+            integrator,
         )
         for _ in range(len(self._states)):
             out._states.append({})
@@ -360,7 +402,11 @@ class Integration:
         for p, nlp in enumerate(self.ocp.nlp):
             param_scaling = nlp.parameters.scaling
             n_states = self._states[p]["all"].shape[0]
-            n_steps = nlp.ode_solver.steps_scipy if integrator != SolutionIntegrator.DEFAULT else nlp.ode_solver.steps
+            n_steps = (
+                nlp.ode_solver.steps_scipy
+                if integrator != SolutionIntegrator.DEFAULT
+                else nlp.ode_solver.steps
+            )
             if not continuous:
                 n_steps += 1
             if keep_intermediate_points:
@@ -372,7 +418,9 @@ class Integration:
             if shooting_type == Shooting.SINGLE_CONTINUOUS:
                 if p != 0:
                     u0 = self._controls[p - 1]["all"][:, -1]
-                    val = self.ocp.phase_transitions[p - 1].function(np.hstack((x0, x0)), np.hstack((u0, u0)), params)
+                    val = self.ocp.phase_transitions[p - 1].function(
+                        np.hstack((x0, x0)), np.hstack((u0, u0)), params
+                    )
                     if val.shape[0] != x0.shape[0]:
                         raise RuntimeError(
                             f"Phase transition must have the same number of states ({val.shape[0]}) "
@@ -383,7 +431,8 @@ class Integration:
             else:
                 col = (
                     slice(0, n_steps)
-                    if nlp.ode_solver.is_direct_collocation and integrator == SolutionIntegrator.DEFAULT
+                    if nlp.ode_solver.is_direct_collocation
+                    and integrator == SolutionIntegrator.DEFAULT
                     else 0
                 )
                 x0 = self._states[p]["all"][:, col]
@@ -398,7 +447,9 @@ class Integration:
                         if np.isnan(u[:, 1]).all():
                             u[:, 1] = 0
                     else:
-                        raise NotImplementedError(f"mode {self.mode} " f"not yet implemented in integrating")
+                        raise NotImplementedError(
+                            f"mode {self.mode} " f"not yet implemented in integrating"
+                        )
 
                 else:
                     if nlp.control_type == ControlType.CONSTANT:
@@ -408,7 +459,8 @@ class Integration:
                         # check if the last colmuns is full of nans
                     else:
                         raise NotImplementedError(
-                            f"ControlType {nlp.control_type} " f"not yet implemented in integrating"
+                            f"ControlType {nlp.control_type} "
+                            f"not yet implemented in integrating"
                         )
 
                 fext = (
@@ -421,16 +473,30 @@ class Integration:
                     t_init = sum(out.phase_time[:p]) / nlp.ns
                     t_end = sum(out.phase_time[: (p + 2)]) / nlp.ns
                     n_points = n_steps + 1 if continuous else n_steps
-                    t_eval = np.linspace(t_init, t_end, n_points) if keep_intermediate_points else [t_init, t_end]
+                    t_eval = (
+                        np.linspace(t_init, t_end, n_points)
+                        if keep_intermediate_points
+                        else [t_init, t_end]
+                    )
 
                     if self.mode == "constant_control":
                         if self.function_custom:
-                            f_lambda = lambda t, x: np.array(self.function[p](self.model[p], x, u, params, fext))
+                            f_lambda = lambda t, x: np.array(
+                                self.function[p](self.model[p], x, u, params, fext)
+                            )
                         else:
-                            f_lambda = lambda t, x: np.array(self.function[p](x, u, params))[:, 0]
+                            f_lambda = lambda t, x: np.array(
+                                self.function[p](x, u, params)
+                            )[:, 0]
                     else:
                         f_lambda = lambda t, x: np.array(
-                            self.function[p](self.model[p], x, get_u(u, t, [t_init, t_end]), params, fext)
+                            self.function[p](
+                                self.model[p],
+                                x,
+                                get_u(u, t, [t_init, t_end]),
+                                params,
+                                fext,
+                            )
                         )
 
                     integrated = solve_ivp(
@@ -443,9 +509,15 @@ class Integration:
                     ).y
 
                     next_state_col = (
-                        (s + 1) * (nlp.ode_solver.steps + 1) if nlp.ode_solver.is_direct_collocation else s + 1
+                        (s + 1) * (nlp.ode_solver.steps + 1)
+                        if nlp.ode_solver.is_direct_collocation
+                        else s + 1
                     )
-                    cols_in_out = [s * n_steps, (s + 1) * n_steps] if keep_intermediate_points else [s, s + 2]
+                    cols_in_out = (
+                        [s * n_steps, (s + 1) * n_steps]
+                        if keep_intermediate_points
+                        else [s, s + 2]
+                    )
                     # else:
                     # if nlp.ode_solver.is_direct_collocation:
                     #     if keep_intermediate_points:
@@ -470,7 +542,9 @@ class Integration:
 
                     cols_in_out = slice(
                         cols_in_out[0],
-                        cols_in_out[1] + 1 if continuous and keep_intermediate_points else cols_in_out[1],
+                        cols_in_out[1] + 1
+                        if continuous and keep_intermediate_points
+                        else cols_in_out[1],
                     )
                     out._states[p]["all"][:, cols_in_out] = integrated
                     x0 = (
@@ -514,14 +588,28 @@ class Integration:
                 time_offset = sum(out.phase_time[: p + 1])
                 step_time = np.array(nlp.dynamics[0].step_time)
                 dt = out.phase_time[p + 1] / nlp.ns
-                t_tp = np.array([step_time * dt + s * dt + time_offset for s in range(nlp.ns)]).reshape(-1, 1)
+                t_tp = np.array(
+                    [step_time * dt + s * dt + time_offset for s in range(nlp.ns)]
+                ).reshape(-1, 1)
                 t_all.append(np.concatenate((t_tp, [[t_tp[-1, 0]]]))[:, 0])
             else:
-                t_all.append(np.linspace(sum(out.phase_time[: p + 1]), sum(out.phase_time[: p + 2]), out.ns[p] + 1))
+                t_all.append(
+                    np.linspace(
+                        sum(out.phase_time[: p + 1]),
+                        sum(out.phase_time[: p + 2]),
+                        out.ns[p] + 1,
+                    )
+                )
 
         if isinstance(n_frames, int):
-            data_states, _, out.phase_time, out.ns = self._merge_phases(skip_controls=True)
-            t_all = [np.concatenate((np.concatenate([_t[:-1] for _t in t_all]), [t_all[-1][-1]]))]
+            data_states, _, out.phase_time, out.ns = self._merge_phases(
+                skip_controls=True
+            )
+            t_all = [
+                np.concatenate(
+                    (np.concatenate([_t[:-1] for _t in t_all]), [t_all[-1][-1]])
+                )
+            ]
 
             n_frames = [n_frames]
             out.is_merged = True
@@ -555,7 +643,9 @@ class Integration:
                 if key == "all":
                     continue
                 n_elements = data_states[p][key].shape[0]
-                out._states[p][key] = out._states[p]["all"][offset : offset + n_elements]
+                out._states[p][key] = out._states[p]["all"][
+                    offset : offset + n_elements
+                ]
                 offset += n_elements
 
         out.is_interpolated = True
@@ -576,7 +666,12 @@ class Integration:
         new.is_merged = True
         return new
 
-    def _merge_phases(self, skip_states: bool = False, skip_controls: bool = False, continuous: bool = True) -> tuple:
+    def _merge_phases(
+        self,
+        skip_states: bool = False,
+        skip_controls: bool = False,
+        continuous: bool = True,
+    ) -> tuple:
         """
         Actually performing the phase merging
 
@@ -596,7 +691,12 @@ class Integration:
         """
 
         if self.is_merged:
-            return deepcopy(self._states), deepcopy(self._controls), deepcopy(self.phase_time), deepcopy(self.ns)
+            return (
+                deepcopy(self._states),
+                deepcopy(self._controls),
+                deepcopy(self.phase_time),
+                deepcopy(self.ns),
+            )
 
         def _merge(data: list, is_control: bool) -> Union[list, dict]:
             """
@@ -622,7 +722,9 @@ class Integration:
             sizes = [data[0][d].shape[0] for d in data[0]]
             for d in data:
                 if d.keys() != keys or [d[key].shape[0] for key in d] != sizes:
-                    raise RuntimeError("Program dimension must be coherent across phases to merge_phases them")
+                    raise RuntimeError(
+                        "Program dimension must be coherent across phases to merge_phases them"
+                    )
 
             data_out = [{}]
             for i, key in enumerate(keys):
@@ -632,29 +734,47 @@ class Integration:
             for p in range(len(data)):
                 d = data[p]
                 for key in d:
-                    if self.ocp.nlp[p].ode_solver.is_direct_collocation and not is_control:
+                    if (
+                        self.ocp.nlp[p].ode_solver.is_direct_collocation
+                        and not is_control
+                    ):
                         steps = self.ocp.nlp[p].ode_solver.steps + 1
                         data_out[0][key] = np.concatenate(
-                            (data_out[0][key], d[key][:, : self.ns[p] * steps + add]), axis=1
+                            (data_out[0][key], d[key][:, : self.ns[p] * steps + add]),
+                            axis=1,
                         )
                     else:
-                        data_out[0][key] = np.concatenate((data_out[0][key], d[key][:, : self.ns[p] + add]), axis=1)
+                        data_out[0][key] = np.concatenate(
+                            (data_out[0][key], d[key][:, : self.ns[p] + add]), axis=1
+                        )
             if add == 0:
                 for key in data[-1]:
-                    data_out[0][key] = np.concatenate((data_out[0][key], data[-1][key][:, -1][:, np.newaxis]), axis=1)
+                    data_out[0][key] = np.concatenate(
+                        (data_out[0][key], data[-1][key][:, -1][:, np.newaxis]), axis=1
+                    )
 
             return data_out
 
         if len(self._states) == 1:
             out_states = deepcopy(self._states)
         else:
-            out_states = _merge(self.states, is_control=False) if not skip_states and self._states else None
+            out_states = (
+                _merge(self.states, is_control=False)
+                if not skip_states and self._states
+                else None
+            )
 
         if len(self._controls) == 1:
             out_controls = deepcopy(self._controls)
         else:
-            out_controls = _merge(self.controls, is_control=True) if not skip_controls and self._controls else None
-        phase_time = [0] + [sum([self.phase_time[i + 1] for i in range(len(self.phase_time) - 1)])]
+            out_controls = (
+                _merge(self.controls, is_control=True)
+                if not skip_controls and self._controls
+                else None
+            )
+        phase_time = [0] + [
+            sum([self.phase_time[i + 1] for i in range(len(self.phase_time) - 1)])
+        ]
         ns = [sum(self.ns)]
 
         return out_states, out_controls, phase_time, ns
@@ -668,9 +788,15 @@ class Integration:
             if nlp.control_type == ControlType.CONSTANT:
                 for key in self._controls[p]:
                     self._controls[p][key] = np.concatenate(
-                        (self._controls[p][key], np.nan * np.zeros((self._controls[p][key].shape[0], 1))), axis=1
+                        (
+                            self._controls[p][key],
+                            np.nan * np.zeros((self._controls[p][key].shape[0], 1)),
+                        ),
+                        axis=1,
                     )
             elif nlp.control_type == ControlType.LINEAR_CONTINUOUS:
                 pass
             else:
-                raise NotImplementedError(f"ControlType {nlp.control_type} is not implemented  in _complete_control")
+                raise NotImplementedError(
+                    f"ControlType {nlp.control_type} is not implemented  in _complete_control"
+                )

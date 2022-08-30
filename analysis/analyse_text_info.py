@@ -32,12 +32,26 @@ df_results = df_results[df_results["status"] == 0]
 # Costs
 print("The average cost were")
 for ii, d in enumerate(dyn):
-    c_mean = round(df_results["cost_J"][df_results["dynamics_type_label"] == d].mean(), 1)
+    c_mean = round(
+        df_results["cost_J"][df_results["dynamics_type_label"] == d].mean(), 1
+    )
     c_std = round(df_results["cost_J"][df_results["dynamics_type_label"] == d].std(), 1)
     print(f"{c_mean} $\pm$ {c_std} min, ")
-    c_median = round(df_results["cost_J"][df_results["dynamics_type_label"] == d].median(), 2)
-    c_first_quartile = round(df_results["cost_J"][df_results["dynamics_type_label"] == d].quantile([0.25]).iloc[0], 2)
-    c_second_quartile = round(df_results["cost_J"][df_results["dynamics_type_label"] == d].quantile([0.75]).iloc[0], 2)
+    c_median = round(
+        df_results["cost_J"][df_results["dynamics_type_label"] == d].median(), 2
+    )
+    c_first_quartile = round(
+        df_results["cost_J"][df_results["dynamics_type_label"] == d]
+        .quantile([0.25])
+        .iloc[0],
+        2,
+    )
+    c_second_quartile = round(
+        df_results["cost_J"][df_results["dynamics_type_label"] == d]
+        .quantile([0.75])
+        .iloc[0],
+        2,
+    )
     c_min = round(df_results["cost_J"][df_results["dynamics_type_label"] == d].min(), 2)
     c_max = round(df_results["cost_J"][df_results["dynamics_type_label"] == d].max(), 2)
     print(f"{c_median} ({c_first_quartile} - {c_second_quartile}, {c_min} - {c_max})")
@@ -54,20 +68,52 @@ print(
     " were in average "
 )
 for ii, d in enumerate(dyn):
-    t_mean = round(df_results["computation_time"][df_results["dynamics_type_label"] == d].mean() / 60, 1)
-    t_std = round(df_results["computation_time"][df_results["dynamics_type_label"] == d].std() / 60, 1)
-    iter = int(df_results["iterations"][df_results["dynamics_type_label"] == d].mean() / 60)
+    t_mean = round(
+        df_results["computation_time"][df_results["dynamics_type_label"] == d].mean()
+        / 60,
+        1,
+    )
+    t_std = round(
+        df_results["computation_time"][df_results["dynamics_type_label"] == d].std()
+        / 60,
+        1,
+    )
+    iter = int(
+        df_results["iterations"][df_results["dynamics_type_label"] == d].mean() / 60
+    )
     print(f"{t_mean} $\pm$ {t_std} min, ")
-    c_median = round(df_results["computation_time"][df_results["dynamics_type_label"] == d].median() / 60, 2)
+    c_median = round(
+        df_results["computation_time"][df_results["dynamics_type_label"] == d].median()
+        / 60,
+        2,
+    )
     c_first_quartile = round(
-        df_results["computation_time"][df_results["dynamics_type_label"] == d].quantile([0.25]).iloc[0] / 60, 2
+        df_results["computation_time"][df_results["dynamics_type_label"] == d]
+        .quantile([0.25])
+        .iloc[0]
+        / 60,
+        2,
     )
     c_second_quartile = round(
-        df_results["computation_time"][df_results["dynamics_type_label"] == d].quantile([0.75]).iloc[0] / 60, 2
+        df_results["computation_time"][df_results["dynamics_type_label"] == d]
+        .quantile([0.75])
+        .iloc[0]
+        / 60,
+        2,
     )
-    c_min = round(df_results["computation_time"][df_results["dynamics_type_label"] == d].min() / 60, 2)
-    c_max = round(df_results["computation_time"][df_results["dynamics_type_label"] == d].max() / 60, 2)
-    print(f"{c_median} ({c_first_quartile} - {c_second_quartile}, {c_min} - {c_max}) min")
+    c_min = round(
+        df_results["computation_time"][df_results["dynamics_type_label"] == d].min()
+        / 60,
+        2,
+    )
+    c_max = round(
+        df_results["computation_time"][df_results["dynamics_type_label"] == d].max()
+        / 60,
+        2,
+    )
+    print(
+        f"{c_median} ({c_first_quartile} - {c_second_quartile}, {c_min} - {c_max}) min"
+    )
     print(f"IC : {c_second_quartile - c_first_quartile}")
 
 # iterations
@@ -77,69 +123,171 @@ print(
     " were in average "
 )
 for ii, d in enumerate(dyn):
-    t_mean = round(df_results["iterations"][df_results["dynamics_type_label"] == d].mean(), 1)
-    t_std = round(df_results["iterations"][df_results["dynamics_type_label"] == d].std(), 1)
+    t_mean = round(
+        df_results["iterations"][df_results["dynamics_type_label"] == d].mean(), 1
+    )
+    t_std = round(
+        df_results["iterations"][df_results["dynamics_type_label"] == d].std(), 1
+    )
     print(f"{int(t_mean)} $\pm$ {int(t_std)}, ")
 
 # Torque residuals
 print("While implicit transcriptions were not consistent,")
 print("Translation torque residuals respectively reached")
 for ii, d in enumerate(dyn[2:]):
-    t_mean = round(df_results["int_T"][df_results["dynamics_type_label"] == d].mean(), 1)
+    t_mean = round(
+        df_results["int_T"][df_results["dynamics_type_label"] == d].mean(), 1
+    )
     t_std = round(df_results["int_T"][df_results["dynamics_type_label"] == d].std(), 1)
     print(f"{t_mean} $\pm$ {t_std} \si{{N.s}}, ")
-    c_median = round(df_results["int_T"][df_results["dynamics_type_label"] == d].median(), 2)
-    c_first_quartile = round(df_results["int_T"][df_results["dynamics_type_label"] == d].quantile([0.25]).iloc[0], 2)
-    c_second_quartile = round(df_results["int_T"][df_results["dynamics_type_label"] == d].quantile([0.75]).iloc[0], 2)
+    c_median = round(
+        df_results["int_T"][df_results["dynamics_type_label"] == d].median(), 2
+    )
+    c_first_quartile = round(
+        df_results["int_T"][df_results["dynamics_type_label"] == d]
+        .quantile([0.25])
+        .iloc[0],
+        2,
+    )
+    c_second_quartile = round(
+        df_results["int_T"][df_results["dynamics_type_label"] == d]
+        .quantile([0.75])
+        .iloc[0],
+        2,
+    )
     c_min = round(df_results["int_T"][df_results["dynamics_type_label"] == d].min(), 2)
     c_max = round(df_results["int_T"][df_results["dynamics_type_label"] == d].max(), 2)
-    print(f"{c_median} ({c_first_quartile} - {c_second_quartile}, {c_min} - {c_max}) \si{{N.s}}")
+    print(
+        f"{c_median} ({c_first_quartile} - {c_second_quartile}, {c_min} - {c_max}) \si{{N.s}}"
+    )
     print(f"IC : {c_second_quartile - c_first_quartile}")
 print(".")
 print("Rotation torque residuals respectively reached")
 for ii, d in enumerate(dyn[2:]):
-    t_mean = round(df_results["int_R"][df_results["dynamics_type_label"] == d].mean(), 1)
+    t_mean = round(
+        df_results["int_R"][df_results["dynamics_type_label"] == d].mean(), 1
+    )
     t_std = round(df_results["int_R"][df_results["dynamics_type_label"] == d].std(), 1)
     print(f"{t_mean} $\pm$ {t_std} \si{{N.m.s}}, ")
-    c_median = round(df_results["int_R"][df_results["dynamics_type_label"] == d].median(), 2)
-    c_first_quartile = round(df_results["int_R"][df_results["dynamics_type_label"] == d].quantile([0.25]).iloc[0], 2)
-    c_second_quartile = round(df_results["int_R"][df_results["dynamics_type_label"] == d].quantile([0.75]).iloc[0], 2)
+    c_median = round(
+        df_results["int_R"][df_results["dynamics_type_label"] == d].median(), 2
+    )
+    c_first_quartile = round(
+        df_results["int_R"][df_results["dynamics_type_label"] == d]
+        .quantile([0.25])
+        .iloc[0],
+        2,
+    )
+    c_second_quartile = round(
+        df_results["int_R"][df_results["dynamics_type_label"] == d]
+        .quantile([0.75])
+        .iloc[0],
+        2,
+    )
     c_min = round(df_results["int_R"][df_results["dynamics_type_label"] == d].min(), 2)
     c_max = round(df_results["int_R"][df_results["dynamics_type_label"] == d].max(), 2)
-    print(f"{c_median} ({c_first_quartile} - {c_second_quartile}, {c_min} - {c_max}) \si{{N.s}}")
+    print(
+        f"{c_median} ({c_first_quartile} - {c_second_quartile}, {c_min} - {c_max}) \si{{N.s}}"
+    )
     print(f"IC : {c_second_quartile - c_first_quartile}")
 print(".")
 print("It lead to RMSe in linear momentum of")
 for ii, d in enumerate(dyn[2:]):
-    t_mean = round(df_results["linear_momentum_rmse"][df_results["dynamics_type_label"] == d].mean(), 2)
-    t_std = round(df_results["linear_momentum_rmse"][df_results["dynamics_type_label"] == d].std(), 2)
+    t_mean = round(
+        df_results["linear_momentum_rmse"][
+            df_results["dynamics_type_label"] == d
+        ].mean(),
+        2,
+    )
+    t_std = round(
+        df_results["linear_momentum_rmse"][
+            df_results["dynamics_type_label"] == d
+        ].std(),
+        2,
+    )
     print(f"{t_mean} $\pm$ {t_std} \si{{kg.m^2.s}}, ")
-    c_median = round(df_results["linear_momentum_rmse"][df_results["dynamics_type_label"] == d].median(), 2)
+    c_median = round(
+        df_results["linear_momentum_rmse"][
+            df_results["dynamics_type_label"] == d
+        ].median(),
+        2,
+    )
     c_first_quartile = round(
-        df_results["linear_momentum_rmse"][df_results["dynamics_type_label"] == d].quantile([0.25]).iloc[0], 2
+        df_results["linear_momentum_rmse"][df_results["dynamics_type_label"] == d]
+        .quantile([0.25])
+        .iloc[0],
+        2,
     )
     c_second_quartile = round(
-        df_results["linear_momentum_rmse"][df_results["dynamics_type_label"] == d].quantile([0.75]).iloc[0], 2
+        df_results["linear_momentum_rmse"][df_results["dynamics_type_label"] == d]
+        .quantile([0.75])
+        .iloc[0],
+        2,
     )
-    c_min = round(df_results["linear_momentum_rmse"][df_results["dynamics_type_label"] == d].min(), 2)
-    c_max = round(df_results["linear_momentum_rmse"][df_results["dynamics_type_label"] == d].max(), 2)
-    print(f"{c_median} ({c_first_quartile} - {c_second_quartile}, {c_min} - {c_max}) \si{{N.s}}")
+    c_min = round(
+        df_results["linear_momentum_rmse"][
+            df_results["dynamics_type_label"] == d
+        ].min(),
+        2,
+    )
+    c_max = round(
+        df_results["linear_momentum_rmse"][
+            df_results["dynamics_type_label"] == d
+        ].max(),
+        2,
+    )
+    print(
+        f"{c_median} ({c_first_quartile} - {c_second_quartile}, {c_min} - {c_max}) \si{{N.s}}"
+    )
     print(f"IC : {c_second_quartile - c_first_quartile}")
 print(".")
 print("And it lead to RMSe in angular momentum of")
 for ii, d in enumerate(dyn[2:]):
-    t_mean = round(df_results["angular_momentum_rmse"][df_results["dynamics_type_label"] == d].mean(), 2)
-    t_std = round(df_results["angular_momentum_rmse"][df_results["dynamics_type_label"] == d].std(), 2)
+    t_mean = round(
+        df_results["angular_momentum_rmse"][
+            df_results["dynamics_type_label"] == d
+        ].mean(),
+        2,
+    )
+    t_std = round(
+        df_results["angular_momentum_rmse"][
+            df_results["dynamics_type_label"] == d
+        ].std(),
+        2,
+    )
     print(f"{t_mean} $\pm$ {t_std} \si{{kg.m.s^{{-1}} }}, ")
-    c_median = round(df_results["angular_momentum_rmse"][df_results["dynamics_type_label"] == d].median(), 2)
+    c_median = round(
+        df_results["angular_momentum_rmse"][
+            df_results["dynamics_type_label"] == d
+        ].median(),
+        2,
+    )
     c_first_quartile = round(
-        df_results["angular_momentum_rmse"][df_results["dynamics_type_label"] == d].quantile([0.25]).iloc[0], 2
+        df_results["angular_momentum_rmse"][df_results["dynamics_type_label"] == d]
+        .quantile([0.25])
+        .iloc[0],
+        2,
     )
     c_second_quartile = round(
-        df_results["angular_momentum_rmse"][df_results["dynamics_type_label"] == d].quantile([0.75]).iloc[0], 2
+        df_results["angular_momentum_rmse"][df_results["dynamics_type_label"] == d]
+        .quantile([0.75])
+        .iloc[0],
+        2,
     )
-    c_min = round(df_results["angular_momentum_rmse"][df_results["dynamics_type_label"] == d].min(), 2)
-    c_max = round(df_results["angular_momentum_rmse"][df_results["dynamics_type_label"] == d].max(), 2)
-    print(f"{c_median} ({c_first_quartile} - {c_second_quartile}, {c_min} - {c_max}) \si{{N.s}}")
+    c_min = round(
+        df_results["angular_momentum_rmse"][
+            df_results["dynamics_type_label"] == d
+        ].min(),
+        2,
+    )
+    c_max = round(
+        df_results["angular_momentum_rmse"][
+            df_results["dynamics_type_label"] == d
+        ].max(),
+        2,
+    )
+    print(
+        f"{c_median} ({c_first_quartile} - {c_second_quartile}, {c_min} - {c_max}) \si{{N.s}}"
+    )
     print(f"IC : {c_second_quartile - c_first_quartile}")
 print(".")

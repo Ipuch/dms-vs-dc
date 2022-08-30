@@ -21,8 +21,20 @@ df_results = df_results[df_results["status"] == 0]
 df_results["computation_time"] = df_results["computation_time"]
 df_results["iter_per_sec"] = df_results["iterations"] / df_results["computation_time"]
 
-fig = my_traces(fig, dyn, grps, df_results, "computation_time", 1, 1, r"$\text{time (s)}$", ylog=False)
-fig = my_traces(fig, dyn, grps, df_results, "iterations", 1, 2, r"$\text{iterations}$", ylog=False)
+fig = my_traces(
+    fig,
+    dyn,
+    grps,
+    df_results,
+    "computation_time",
+    1,
+    1,
+    r"$\text{time (s)}$",
+    ylog=False,
+)
+fig = my_traces(
+    fig, dyn, grps, df_results, "iterations", 1, 2, r"$\text{iterations}$", ylog=False
+)
 
 fig.update_layout(
     height=800,

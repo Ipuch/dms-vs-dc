@@ -105,7 +105,11 @@ def huygens(inertia, mass, com, new_com):
     b = d[1]
     c = d[2]
     return inertia + mass * np.array(
-        [[b**2 + c**2, -a * b, -a * c], [-a * b, a**2 + c**2, -b * c], [-a * c, -b * c, a**2 + b**2]]
+        [
+            [b**2 + c**2, -a * b, -a * c],
+            [-a * b, a**2 + c**2, -b * c],
+            [-a * c, -b * c, a**2 + b**2],
+        ]
     )
 
 
@@ -113,29 +117,49 @@ def merge_segment(Segment_master, Segment_child):
     # Compute the homogenous transform from child to master segment
     angles = Angles(Segment_child.rt[:, np.newaxis, np.newaxis])
     translations = Angles(Segment_child.xyz[:, np.newaxis, np.newaxis])
-    roto_trans = Rototrans.from_euler_angles(angles=angles, angle_sequence="xyz", translations=translations)
+    roto_trans = Rototrans.from_euler_angles(
+        angles=angles, angle_sequence="xyz", translations=translations
+    )
     T = roto_trans.values[:, :, 0]
 
     # Compute the child's com in master's frame
     child_com = Segment_child.com.to_array()[:, np.newaxis]
-    child_com_in_master = np.matmul(T, np.concatenate([child_com, np.ones((1, 1))], axis=0))
+    child_com_in_master = np.matmul(
+        T, np.concatenate([child_com, np.ones((1, 1))], axis=0)
+    )
     child_com_in_master = np.delete(child_com_in_master, 3)
 
     # weighted mean to compute the new com
     new_com = np.average(
-        np.concatenate((Segment_master.com.to_array()[:, np.newaxis], child_com_in_master[:, np.newaxis]), axis=1),
+        np.concatenate(
+            (
+                Segment_master.com.to_array()[:, np.newaxis],
+                child_com_in_master[:, np.newaxis],
+            ),
+            axis=1,
+        ),
         weights=[Segment_master.mass, Segment_child.mass],
         axis=1,
     )
 
     # compute the new inertia matrix at the new com
     new_inertia = huygens(
-        Segment_master.inertia.to_array(), Segment_master.mass, Segment_master.com.to_array(), new_com
-    ) + huygens(Segment_child.inertia.to_array(), Segment_child.mass, child_com_in_master, new_com)
+        Segment_master.inertia.to_array(),
+        Segment_master.mass,
+        Segment_master.com.to_array(),
+        new_com,
+    ) + huygens(
+        Segment_child.inertia.to_array(),
+        Segment_child.mass,
+        child_com_in_master,
+        new_com,
+    )
 
     # mesh in the master frame
     n_mesh = Segment_child.mesh.shape[0]
-    mesh_in_master_frame = np.matmul(T, np.concatenate([Segment_child.mesh.T, np.ones((1, n_mesh))], axis=0))
+    mesh_in_master_frame = np.matmul(
+        T, np.concatenate([Segment_child.mesh.T, np.ones((1, n_mesh))], axis=0)
+    )
     mesh_in_master_frame = np.delete(mesh_in_master_frame, 3, axis=0).T
     all_mesh = np.concatenate((Segment_master.mesh, mesh_in_master_frame))
 
@@ -186,7 +210,9 @@ class Model:
 
     def add_contact(self, contact: Contact):
         parent_int = self.model.GetBodyRbdlId(contact.parent)
-        self.model.AddConstraint(parent_int, contact.position, contact.axis, contact.name, contact.acc)
+        self.model.AddConstraint(
+            parent_int, contact.position, contact.axis, contact.name, contact.acc
+        )
         print("ello")
 
     def add_marker(self, marker: Marker):
