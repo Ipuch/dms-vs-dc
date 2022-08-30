@@ -14,7 +14,7 @@ from robot_leg import ArmOCP, LegOCP, MillerOCP
 from run_ocp import RunOCP
 
 
-def main():
+def main(model: Models = None):
     # model = Models.ARM
     # model = Models.LEG
     model = Models.ACROBAT
@@ -92,3 +92,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    main(model=Models.ARM)
