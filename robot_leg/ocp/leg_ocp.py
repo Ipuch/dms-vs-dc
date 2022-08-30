@@ -51,10 +51,16 @@ class LegOCP:
 
         if biorbd_model_path is not None:
 
-            self.n_shooting = [n_shooting] if isinstance(n_shooting, int) else n_shooting
+            self.n_shooting = (
+                [n_shooting] if isinstance(n_shooting, int) else n_shooting
+            )
             self.phase_time = phase_time
-            self.n_phase = 1 if isinstance(self.n_shooting, int) else len(self.n_shooting)
-            self.biorbd_model = [biorbd.Model(biorbd_model_path) for _ in range(self.n_phase)]
+            self.n_phase = (
+                1 if isinstance(self.n_shooting, int) else len(self.n_shooting)
+            )
+            self.biorbd_model = [
+                biorbd.Model(biorbd_model_path) for _ in range(self.n_phase)
+            ]
 
             self.n_q = self.biorbd_model[0].nbQ()
             self.n_qdot = self.biorbd_model[0].nbQdot()
@@ -80,7 +86,11 @@ class LegOCP:
             self.u_init = InitialGuessList()
 
             self.control_type = control_type
-            self.control_nodes = Node.ALL if self.control_type == ControlType.LINEAR_CONTINUOUS else Node.ALL_SHOOTING
+            self.control_nodes = (
+                Node.ALL
+                if self.control_type == ControlType.LINEAR_CONTINUOUS
+                else Node.ALL_SHOOTING
+            )
 
             self._set_dynamics()
             self._set_constraints()
@@ -135,21 +145,44 @@ class LegOCP:
 
     def _set_dynamics(self):
         for i in range(self.n_phase):
-            self.dynamics.add(DynamicsFcn.TORQUE_DRIVEN, rigidbody_dynamics=self.rigidbody_dynamics, phase=i)
+            self.dynamics.add(
+                DynamicsFcn.TORQUE_DRIVEN,
+                rigidbody_dynamics=self.rigidbody_dynamics,
+                phase=i,
+            )
 
     def _set_objective_functions(self):
         # --- Objective function --- #
         for i in range(self.n_phase):
-            self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", phase=i)
-            self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", weight=1e-6, phase=i, derivative=True)
+            self.objective_functions.add(
+                ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", phase=i
+            )
+            self.objective_functions.add(
+                ObjectiveFcn.Lagrange.MINIMIZE_STATE,
+                key="qdot",
+                weight=1e-6,
+                phase=i,
+                derivative=True,
+            )
 
             if (
                 self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK
-                or self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK
+                or self.rigidbody_dynamics
+                == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK
             ):
-                self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, phase=i, key="qdddot", weight=1e-4)
+                self.objective_functions.add(
+                    ObjectiveFcn.Lagrange.MINIMIZE_CONTROL,
+                    phase=i,
+                    key="qdddot",
+                    weight=1e-4,
+                )
             if i == 1:
-                self.objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_QDDOT, phase=i, weight=2000, node=Node.START)
+                self.objective_functions.add(
+                    ObjectiveFcn.Mayer.MINIMIZE_QDDOT,
+                    phase=i,
+                    weight=2000,
+                    node=Node.START,
+                )
 
     def _set_constraints(self):
         # --- Constraints --- #
@@ -160,23 +193,43 @@ class LegOCP:
 
             node = Node.START
             self.constraints.add(
-                ConstraintFcn.TRACK_MARKERS, node=node, target=start_point, marker_index="marker_Leg1", phase=i
+                ConstraintFcn.TRACK_MARKERS,
+                node=node,
+                target=start_point,
+                marker_index="marker_Leg1",
+                phase=i,
             )
-            self.constraints.add(ConstraintFcn.TRACK_MARKERS_VELOCITY, node=node, marker_index="marker_Leg1", phase=i)
+            self.constraints.add(
+                ConstraintFcn.TRACK_MARKERS_VELOCITY,
+                node=node,
+                marker_index="marker_Leg1",
+                phase=i,
+            )
 
             node = Node.END
             self.constraints.add(
-                ConstraintFcn.TRACK_MARKERS, node=node, target=end_point, marker_index="marker_Leg1", phase=i
+                ConstraintFcn.TRACK_MARKERS,
+                node=node,
+                target=end_point,
+                marker_index="marker_Leg1",
+                phase=i,
             )
-            self.constraints.add(ConstraintFcn.TRACK_MARKERS_VELOCITY, node=node, marker_index="marker_Leg1", phase=i)
+            self.constraints.add(
+                ConstraintFcn.TRACK_MARKERS_VELOCITY,
+                node=node,
+                marker_index="marker_Leg1",
+                phase=i,
+            )
 
     def _set_boundary_conditions(self):
 
         for i in range(self.n_phase):
             self.x_bounds.add(
                 bounds=QAndQDotAndQDDotBounds(self.biorbd_model[i])
-                if self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK
-                or self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK
+                if self.rigidbody_dynamics
+                == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK
+                or self.rigidbody_dynamics
+                == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK
                 else QAndQDotBounds(self.biorbd_model[i])
             )
             self.x_bounds[i].max[self.n_q : self.n_q + self.n_qdot, 0] = 0
@@ -206,7 +259,9 @@ class LegOCP:
                     [self.tau_max] * self.n_tau + [self.qdddot_max] * self.n_qddot,
                 )
             else:
-                self.u_bounds.add([self.tau_min] * self.n_tau, [self.tau_max] * self.n_tau)
+                self.u_bounds.add(
+                    [self.tau_min] * self.n_tau, [self.tau_max] * self.n_tau
+                )
 
     def _set_initial_guesses(self):
         """
@@ -217,19 +272,31 @@ class LegOCP:
             self._set_initial_controls(phase=i)
 
     def _set_initial_states(self, X0: np.array = None, phase: int = 0):
-        X0 = np.zeros((self.n_q + self.n_qdot, self.n_shooting[phase] + 1)) if X0 is None else X0
+        X0 = (
+            np.zeros((self.n_q + self.n_qdot, self.n_shooting[phase] + 1))
+            if X0 is None
+            else X0
+        )
         self.x_init.add(X0, interpolation=InterpolationType.EACH_FRAME)
 
     def _set_initial_controls(self, U0: np.array = None, phase: int = None):
         if U0 is None:
             if self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS:
-                self.u_init.add([self.tau_init] * self.n_tau + [self.qddot_init] * self.n_qddot)
+                self.u_init.add(
+                    [self.tau_init] * self.n_tau + [self.qddot_init] * self.n_qddot
+                )
             elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK:
-                self.u_init.add([self.tau_init] * self.n_tau + [self.qdddot_init] * self.n_qdddot)
+                self.u_init.add(
+                    [self.tau_init] * self.n_tau + [self.qdddot_init] * self.n_qdddot
+                )
             elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK:
-                self.u_init.add([self.tau_init] * self.n_tau + [self.qdddot_init] * self.n_qdddot)
+                self.u_init.add(
+                    [self.tau_init] * self.n_tau + [self.qdddot_init] * self.n_qdddot
+                )
             elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS:
-                self.u_init.add([self.tau_init] * self.n_tau + [self.qddot_init] * self.n_qddot)
+                self.u_init.add(
+                    [self.tau_init] * self.n_tau + [self.qddot_init] * self.n_qddot
+                )
             else:
                 self.u_init.add([self.tau_init] * self.n_tau)
         else:

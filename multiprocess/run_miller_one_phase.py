@@ -12,7 +12,11 @@ from robot_leg import MillerOCP_1, Integration
 
 
 def torque_driven_dynamics(
-    model: biorbd.Model, states: np.array, controls: np.array, params: np.array, fext: np.array
+    model: biorbd.Model,
+    states: np.array,
+    controls: np.array,
+    params: np.array,
+    fext: np.array,
 ) -> np.ndarray:
     q = states[: model.nbQ()]
     qdot = states[model.nbQ() :]
@@ -22,7 +26,9 @@ def torque_driven_dynamics(
     else:
         fext_vec = biorbd.VecBiorbdVector()
         fext_vec.append(fext)
-        qddot = model.ForwardDynamics(q, qdot, tau, biorbd.VecBiorbdSpatialVector(), fext_vec).to_array()
+        qddot = model.ForwardDynamics(
+            q, qdot, tau, biorbd.VecBiorbdSpatialVector(), fext_vec
+        ).to_array()
     return np.hstack((qdot, qddot))
 
 
@@ -79,14 +85,21 @@ def main(args: list = None):
         # seed=i_rand,
     )
     str_ode_solver = ode_solver.__str__().replace("\n", "_").replace(" ", "_")
-    str_dynamics_type = dynamics_type.__str__().replace("RigidBodyDynamics.", "").replace("\n", "_").replace(" ", "_")
+    str_dynamics_type = (
+        dynamics_type.__str__()
+        .replace("RigidBodyDynamics.", "")
+        .replace("\n", "_")
+        .replace(" ", "_")
+    )
     filename = f"sol_irand{i_rand}_{n_shooting}_{str_ode_solver}_{ode_solver.defects_type.value}_{str_dynamics_type}"
     outpath = f"{out_path_raw}/" + filename
 
     # --- Solve the program --- #
     show_online_optim = False
     print("Show online optimization", show_online_optim)
-    solver = Solver.IPOPT(show_online_optim=show_online_optim, show_options=dict(show_bounds=True))
+    solver = Solver.IPOPT(
+        show_online_optim=show_online_optim, show_options=dict(show_bounds=True)
+    )
 
     solver.set_maximum_iterations(10000)
     solver.set_print_level(5)
@@ -150,10 +163,12 @@ def main(args: list = None):
     # qddot = list()
 
     # for p, (states, controls) in enumerate(zip(sol.states, sol.controls)):
-    qddot=np.zeros((int(sol.states["all"].shape[0] / 2), sol.states["all"].shape[1]))
+    qddot = np.zeros((int(sol.states["all"].shape[0] / 2), sol.states["all"].shape[1]))
     for i, (x, u) in enumerate(zip(sol.states["all"].T, sol.controls["all"].T)):
-        states_dot = torque_driven_dynamics(model=biorbd_model, states=x, controls=u, params=None, fext=None)
-        qddot[:, i] = states_dot[biorbd_model.nbQ():]
+        states_dot = torque_driven_dynamics(
+            model=biorbd_model, states=x, controls=u, params=None, fext=None
+        )
+        qddot[:, i] = states_dot[biorbd_model.nbQ() :]
 
     # merge qddot elements in one numpy array deleting the last node of each phase and keeping the first node of each phase
     # qddot[p][:, -1] is not kept when merging phases except for the last phase
@@ -166,7 +181,7 @@ def main(args: list = None):
     #     solution=sol,
     #     state_keys=["q", "qdot"],
     #     control_keys=["tau"],
-        # fext_keys=["fext"] if dynamics_type == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK else None,
+    # fext_keys=["fext"] if dynamics_type == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK else None,
     #     function=torque_driven_dynamics,
     #     mode="constant_control",
     # )
@@ -178,7 +193,6 @@ def main(args: list = None):
     #     continuous=True,
     #     integrator=SolutionIntegrator.SCIPY_DOP853,
     # )
-
 
     f = open(f"{outpath}.pckl", "wb")
     data = {
