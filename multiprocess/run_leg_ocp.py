@@ -7,12 +7,24 @@ import pickle
 from time import time
 
 import biorbd
-from bioptim import Solver, Shooting, RigidBodyDynamics, Shooting, SolutionIntegrator, BiorbdInterface, CostType
+from bioptim import (
+    Solver,
+    Shooting,
+    RigidBodyDynamics,
+    Shooting,
+    SolutionIntegrator,
+    BiorbdInterface,
+    CostType,
+)
 from robot_leg import LegOCP, Integration, add_custom_plots
 
 
 def torque_driven_dynamics(
-    model: biorbd.Model, states: np.array, controls: np.array, params: np.array, fext: np.array
+    model: biorbd.Model,
+    states: np.array,
+    controls: np.array,
+    params: np.array,
+    fext: np.array,
 ) -> np.ndarray:
     q = states[: model.nbQ()]
     qdot = states[model.nbQ() :]
@@ -22,7 +34,9 @@ def torque_driven_dynamics(
     else:
         fext_vec = biorbd.VecBiorbdVector()
         fext_vec.append(fext)
-        qddot = model.ForwardDynamics(q, qdot, tau, biorbd.VecBiorbdSpatialVector(), fext_vec).to_array()
+        qddot = model.ForwardDynamics(
+            q, qdot, tau, biorbd.VecBiorbdSpatialVector(), fext_vec
+        ).to_array()
     return np.hstack((qdot, qddot))
 
 
@@ -77,23 +91,29 @@ def main(args: list = None):
         ode_solver=ode_solver,
         n_threads=n_threads,
         seed=i_rand,
-        phase_time=(0.25, 0.25)
+        phase_time=(0.25, 0.25),
     )
 
     # --- add custom figures --- #
     leg_ocp.ocp.add_plot_penalty(CostType.ALL)
     add_custom_plots(leg_ocp.ocp)
 
-
     str_ode_solver = ode_solver.__str__().replace("\n", "_").replace(" ", "_")
-    str_dynamics_type = dynamics_type.__str__().replace("RigidBodyDynamics.", "").replace("\n", "_").replace(" ", "_")
+    str_dynamics_type = (
+        dynamics_type.__str__()
+        .replace("RigidBodyDynamics.", "")
+        .replace("\n", "_")
+        .replace(" ", "_")
+    )
     filename = f"sol_irand{i_rand}_{n_shooting}_{str_ode_solver}_{ode_solver.defects_type.value}_{str_dynamics_type}"
     outpath = f"{out_path_raw}/" + filename
 
     # --- Solve the program --- #
     show_online_optim = False
     print("Show online optimization", show_online_optim)
-    solver = Solver.IPOPT(show_online_optim=show_online_optim, show_options=dict(show_bounds=True))
+    solver = Solver.IPOPT(
+        show_online_optim=show_online_optim, show_options=dict(show_bounds=True)
+    )
 
     solver.set_maximum_iterations(10000)
     solver.set_print_level(5)
@@ -159,10 +179,14 @@ def main(args: list = None):
     biorbd_model = biorbd.Model(biorbd_model_path)
     qddot = list()
     for p, (states, controls) in enumerate(zip(sol.states, sol.controls)):
-        qddot.append(np.zeros((int(states["all"].shape[0]/2), states["all"].shape[1])))
+        qddot.append(
+            np.zeros((int(states["all"].shape[0] / 2), states["all"].shape[1]))
+        )
         for i, (x, u) in enumerate(zip(states["all"].T, controls["all"].T)):
-            states_dot = torque_driven_dynamics(model=biorbd_model, states=x, controls=u, params=None, fext=None)
-            qddot[p][:, i] = states_dot[biorbd_model.nbQ():]
+            states_dot = torque_driven_dynamics(
+                model=biorbd_model, states=x, controls=u, params=None, fext=None
+            )
+            qddot[p][:, i] = states_dot[biorbd_model.nbQ() :]
 
     # merge qddot elements in one numpy array deleting the last node of each phase and keeping the first node of each phase
     # qddot[p][:, -1] is not kept when merging phases except for the last phase

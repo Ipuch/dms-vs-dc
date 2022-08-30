@@ -21,7 +21,9 @@ fig = make_subplots(rows=1, cols=2)
 # select only the one who converged
 df_results = df_results[df_results["status"] == 0]
 
-fig = my_traces(fig, dyn, grps, df_results, key="cost", row=1, col=1, ylabel="objective value")
+fig = my_traces(
+    fig, dyn, grps, df_results, key="cost", row=1, col=1, ylabel="objective value"
+)
 
 fig.update_layout(
     # xaxis_title=r'$\text{Transcription}$',

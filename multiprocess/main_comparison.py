@@ -20,17 +20,35 @@ def main(model: Models = None):
     model = Models.ACROBAT
 
     if model == Models.LEG:
-        #n_shooting = [(20, 20)]
+        # n_shooting = [(20, 20)]
         n_shooting = [20]
-        run_ocp = RunOCP(ocp_class=LegOCP, show_optim=False, iteration=0, print_level=5, ignore_already_run=False)
+        run_ocp = RunOCP(
+            ocp_class=LegOCP,
+            show_optim=False,
+            iteration=0,
+            print_level=5,
+            ignore_already_run=False,
+        )
         running_function = run_ocp.main
     elif model == Models.ARM:
         n_shooting = [50]
-        run_ocp = RunOCP(ocp_class=ArmOCP, show_optim=False, iteration=0, print_level=5, ignore_already_run=False)
+        run_ocp = RunOCP(
+            ocp_class=ArmOCP,
+            show_optim=False,
+            iteration=0,
+            print_level=5,
+            ignore_already_run=False,
+        )
         running_function = run_ocp.main
     elif model == Models.ACROBAT:
         n_shooting = [300, 150, 170, 250]
-        run_ocp = RunOCP(ocp_class=MillerOcpOnePhase, show_optim=False, iteration=0, print_level=5, ignore_already_run=False)
+        run_ocp = RunOCP(
+            ocp_class=MillerOcpOnePhase,
+            show_optim=False,
+            iteration=10000,
+            print_level=5,
+            ignore_already_run=True,
+        )
         running_function = run_ocp.main
     else:
         raise ValueError("Unknown model")
@@ -39,16 +57,20 @@ def main(model: Models = None):
     # out_path = Path("/home/puchaud/Projets_Python/dms-vs-dc-results/ARM_01-08-22_2")
     #
     Date = date.today().strftime("%d-%m-%y")
-    out_path = Path(Path(__file__).parent.__str__() + f"/../../dms-vs-dc-results/{model.name}_{Date}_2")
+    out_path = Path(
+        Path(__file__).parent.__str__()
+        + f"/../../dms-vs-dc-results/{model.name}_{Date}_2"
+    )
     # out_path = Path("/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_22-08-22_2")
     try:
         os.mkdir(out_path)
     except:
         print(f"{out_path}" + Date + " is already created ")
 
-   # --- Generate the parameters --- #
-    n_thread = 4
-   #  n_thread = 32
+    # --- Generate the parameters --- #
+    n_thread = 16
+    # n_thread = 4
+    #  n_thread = 32
     param = dict(
         model_str=[
             model.value,

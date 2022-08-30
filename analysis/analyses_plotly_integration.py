@@ -10,7 +10,11 @@ from utils import my_traces, add_annotation_letter
 df_results = pd.read_pickle("Dataframe_results_metrics.pkl")
 
 # dyn = df_results["ode_solver_str"].unique().tolist()
-dyn = [i for i in df_results["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
+dyn = [
+    i
+    for i in df_results["grps"].unique().tolist()
+    if "COLLOCATION" in i and "legendre" in i
+]
 dyn = df_results["grps"].unique().tolist()
 grps = dyn
 
@@ -22,7 +26,17 @@ df_results = df_results[df_results["status"] == 0]
 df_results["computation_time"] = df_results["computation_time"]
 df_results["iter_per_sec"] = df_results["iterations"] / df_results["computation_time"]
 
-fig = my_traces(fig, dyn, grps, df_results, "rotation_error", row=1, col=1, ylabel="degrees", ylog=True)
+fig = my_traces(
+    fig,
+    dyn,
+    grps,
+    df_results,
+    "rotation_error",
+    row=1,
+    col=1,
+    ylabel="degrees",
+    ylog=True,
+)
 
 fig.update_layout(
     height=800,
