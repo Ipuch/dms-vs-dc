@@ -47,7 +47,7 @@ class MillerDynamics(Enum):
     ROOT_IMPLICIT_QDDDOT = "root_implicit_qdddot"
 
 
-class MillerOcp:
+class MillerOcpOnePhase:
     """
     Class to generate the OCP for the miller acrobatic task for a 15-dof human model.
 
@@ -130,6 +130,7 @@ class MillerOcp:
         self.u = None
 
         self.phase_durations = phase_durations
+        self.phase_time = phase_durations
 
         self.duration = np.sum(self.phase_durations)
         self.phase_proportions = 0.8966564714409299
@@ -411,25 +412,8 @@ class MillerOcp:
         """
         Set the initial states of the optimal control problem.
         """
-        if self.ode_solver.is_direct_shooting:
-            if X0 is None:
-                self.x_init.add([0] * (self.n_q + self.n_q))
-            else:
-                self.x_init.add(
-                    X0[:, 0 :  self.n_shooting + 1],
-                    interpolation=InterpolationType.EACH_FRAME,
-                )
-
-        elif self.ode_solver.is_direct_collocation:
-            xtemp = X0[:, 0 : self.n_shooting + 1]
-            n = self.ode_solver.polynomial_degree
-            xtemp = np.repeat(xtemp, n + 1, axis=1)
-            xtemp = xtemp[:, :-n]
-
-            self.x_init.add(
-                xtemp,
-                interpolation=InterpolationType.EACH_FRAME,
-            )
+        X0 = np.zeros((self.n_q + self.n_qdot, self.n_shooting + 1)) if X0 is None else X0
+        self.x_init.add(X0, interpolation=InterpolationType.EACH_FRAME)
 
     def _set_initial_controls(self, U0: np.array = None):
         if U0 is None and self.u is None:

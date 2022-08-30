@@ -10,7 +10,7 @@ from bioptim import OdeSolver, RigidBodyDynamics
 from pathlib import Path
 from bioptim import DefectType
 
-from robot_leg import ArmOCP, LegOCP, MillerOCP
+from robot_leg import ArmOCP, LegOCP, MillerOCP, MillerOcpOnePhase
 from run_ocp import RunOCP
 
 
@@ -29,8 +29,8 @@ def main(model: Models = None):
         run_ocp = RunOCP(ocp_class=ArmOCP, show_optim=False, iteration=0, print_level=5, ignore_already_run=False)
         running_function = run_ocp.main
     elif model == Models.ACROBAT:
-        n_shooting = [(125, 25)]
-        run_ocp = RunOCP(ocp_class=MillerOCP, show_optim=False, iteration=0, print_level=5, ignore_already_run=False)
+        n_shooting = [300, 150, 170, 250]
+        run_ocp = RunOCP(ocp_class=MillerOcpOnePhase, show_optim=False, iteration=0, print_level=5, ignore_already_run=False)
         running_function = run_ocp.main
     else:
         raise ValueError("Unknown model")
