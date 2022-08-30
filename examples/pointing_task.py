@@ -52,7 +52,7 @@ def main():
         control_keys=["tau"],
         parameters_keys=None,
         function=None,
-        mode="constant_control"
+        mode="constant_control",
     )
 
     from bioptim import Shooting, SolutionIntegrator
@@ -63,7 +63,6 @@ def main():
         merge_phases=True,
         continuous=True,
         integrator=SolutionIntegrator.SCIPY_DOP853,
-
     )
 
     #

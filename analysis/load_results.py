@@ -7,7 +7,9 @@ from bioptim import OptimalControlProgram
 
 def main():
     model_path = Models.ACROBAT.value
-    result_path = "/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_22-08-22_2"
+    result_path = (
+        "/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_22-08-22_2"
+    )
     # dir_path = os.path.dirname(os.path.realpath(__file__))
     # out_path = dir_path + "/" + model_path.name
 

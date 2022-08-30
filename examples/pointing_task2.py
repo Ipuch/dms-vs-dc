@@ -6,7 +6,11 @@ from robot_leg import Integration
 
 
 def torque_driven_dynamics(
-    model: biorbd.Model, states: np.array, controls: np.array, params: np.array, fext: np.array
+    model: biorbd.Model,
+    states: np.array,
+    controls: np.array,
+    params: np.array,
+    fext: np.array,
 ) -> np.ndarray:
     q = states[: model.nbQ()]
     qdot = states[model.nbQ() :]
@@ -16,7 +20,9 @@ def torque_driven_dynamics(
     else:
         fext_vec = biorbd.VecBiorbdVector()
         fext_vec.append(fext)
-        qddot = model.ForwardDynamics(q, qdot, tau, biorbd.VecBiorbdSpatialVector(), fext_vec).to_array()
+        qddot = model.ForwardDynamics(
+            q, qdot, tau, biorbd.VecBiorbdSpatialVector(), fext_vec
+        ).to_array()
     return np.hstack((qdot, qddot))
 
 

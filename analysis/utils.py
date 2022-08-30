@@ -45,18 +45,24 @@ def compute_error_single_shooting(
     duration = time[-1] if duration is None else duration
 
     if time[-1] < duration:
-        raise ValueError(f"Single shooting integration duration must be smaller than ocp duration :{time[-1]} s")
+        raise ValueError(
+            f"Single shooting integration duration must be smaller than ocp duration :{time[-1]} s"
+        )
 
     # get the index of translation and rotation dof
     trans_idx, rot_idx = get_trans_and_rot_idx(model=model)
 
     sn_1s = int(n_shooting / time[-1] * duration)  # shooting node at {duration} second
     single_shoot_error_r = (
-        rmse(q[rot_idx, sn_1s], q_integrated[rot_idx, sn_1s]) * 180 / np.pi if len(rot_idx) > 0 else np.nan
+        rmse(q[rot_idx, sn_1s], q_integrated[rot_idx, sn_1s]) * 180 / np.pi
+        if len(rot_idx) > 0
+        else np.nan
     )
 
     single_shoot_error_t = (
-        (rmse(q[trans_idx, sn_1s], q_integrated[trans_idx, sn_1s]) / 1000) if len(trans_idx) > 0 else np.nan
+        (rmse(q[trans_idx, sn_1s], q_integrated[trans_idx, sn_1s]) / 1000)
+        if len(trans_idx) > 0
+        else np.nan
     )
 
     return (
@@ -99,7 +105,10 @@ def compute_error_single_shooting_each_frame(
     single_shoot_error_r = np.zeros(time.shape[0])
 
     for i, t in enumerate(time):
-        single_shoot_error_t[i], single_shoot_error_r[i] = compute_error_single_shooting(
+        (
+            single_shoot_error_t[i],
+            single_shoot_error_r[i],
+        ) = compute_error_single_shooting(
             time=time,
             n_shooting=n_shooting,
             model=model,
@@ -150,7 +159,10 @@ def stack_states(states: list[dict], key: str = "q"):
     key : str
         Key of the states to stack such as "q" or "qdot"
     """
-    the_tuple = [s[key][:, :] if i == len(states) - 1 else s[key][:, :-1] for i, s in enumerate(states)]
+    the_tuple = [
+        s[key][:, :] if i == len(states) - 1 else s[key][:, :-1]
+        for i, s in enumerate(states)
+    ]
     return np.hstack(the_tuple)
 
 
@@ -165,7 +177,10 @@ def stack_controls(controls: list[dict], key: str = "tau"):
     key : str
         Key of the controls to stack such as "tau" or "qddot"
     """
-    the_tuple = (c[key][:, :-1] if i < len(controls) else c[key][:, :] for i, c in enumerate(controls))
+    the_tuple = (
+        c[key][:, :-1] if i < len(controls) else c[key][:, :]
+        for i, c in enumerate(controls)
+    )
     return np.hstack(the_tuple)
 
 
@@ -181,9 +196,13 @@ def define_time(time: list, n_shooting: tuple):
         Number of shooting points for each phase
     """
     the_tuple = (
-        np.linspace(0, float(time[i]) - 1 / n_shooting[i] * float(time[i]), n_shooting[i])
+        np.linspace(
+            0, float(time[i]) - 1 / n_shooting[i] * float(time[i]), n_shooting[i]
+        )
         if i < len(time)
-        else np.linspace(float(time[i]), float(time[i]) + float(time[i + 1]), n_shooting[i] + 1)
+        else np.linspace(
+            float(time[i]), float(time[i]) + float(time[i + 1]), n_shooting[i] + 1
+        )
         for i, t in enumerate(time)
     )
     return np.hstack(the_tuple)
@@ -260,9 +279,17 @@ def my_traces(
 
     for ii, d in enumerate(dyn):
         # manage color
-        c = px.colors.hex_to_rgb(px.colors.qualitative.D3[ii % 9]) if color is None else color[ii]
+        c = (
+            px.colors.hex_to_rgb(px.colors.qualitative.D3[ii % 9])
+            if color is None
+            else color[ii]
+        )
         c = str(f"rgba({c[0]},{c[1]},{c[2]},0.5)")
-        c1 = px.colors.qualitative.D3[ii % 9] if color is None else px.colors.label_rgb(color[ii])
+        c1 = (
+            px.colors.qualitative.D3[ii % 9]
+            if color is None
+            else px.colors.label_rgb(color[ii])
+        )
         fig.add_trace(
             go.Box(
                 x=df["grps"][df["grps"] == d],
@@ -307,7 +334,13 @@ def my_traces(
 
 
 def add_annotation_letter(
-    fig: go.Figure, letter: str, x: float, y: float, row: int = None, col: int = None, on_paper: bool = False
+    fig: go.Figure,
+    letter: str,
+    x: float,
+    y: float,
+    row: int = None,
+    col: int = None,
+    on_paper: bool = False,
 ) -> go.Figure:
     """
     Adds a letter to the plot for scientific articles.
@@ -374,7 +407,17 @@ def generate_windows_size(nb: int) -> tuple:
     return n_rows + 1 if n_rows * n_rows < nb else n_rows, n_rows
 
 
-def plot_all_dof(fig: go.Figure, key: str, df: DataFrame, list_dof: list, idx_rows: list, idx_cols: list, trans_idx: list, rot_idx: list):
+def plot_all_dof(
+    fig: go.Figure,
+    key: str,
+    df: DataFrame,
+    list_dof: list,
+    idx_rows: list,
+    idx_cols: list,
+    trans_idx: list,
+    rot_idx: list,
+    until_consistent: bool = None,
+):
     """
     This function plots all generalized coordinates and all torques for all MillerDynamics
     contained in the main cluster of optimal costs
@@ -414,18 +457,24 @@ def plot_all_dof(fig: go.Figure, key: str, df: DataFrame, list_dof: list, idx_ro
             # rotations in degrees
             coef = 180 / np.pi if i_dof in rot_idx and "q" in key else 1
 
+            idx_end = (
+                int(row.consistent_threshold)
+                if until_consistent
+                else int(len(row.time))
+            )
+            print(idx_end)
+            time = row.time[:idx_end]
+            y = row[key][i_dof][:idx_end] * coef
+
             fig.add_scatter(
-                x=row.time,
-                y=row[key][i_dof] * coef,
+                x=time,
+                y=y,
                 mode="lines",
                 marker=dict(
                     size=2,
                     color=px.colors.qualitative.D3[row.grp_number],
                 ),
-                line=dict(
-                    width=1.5,
-                    color=px.colors.qualitative.D3[row.grp_number]
-                ),
+                line=dict(width=1.5, color=px.colors.qualitative.D3[row.grp_number]),
                 name=row.grps if row.irand == 0 and i_dof == 0 else None,
                 legendgroup=row.grps,
                 showlegend=True if row.irand == 0 and i_dof == 0 else False,
