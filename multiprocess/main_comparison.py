@@ -18,36 +18,40 @@ def main(model: Models = None):
     # model = Models.ARM
     # model = Models.LEG
     model = Models.ACROBAT
+    iterations = 10000
+    print_level = 5
+    ignore_already_run = True
+    show_optim = False
 
     if model == Models.LEG:
         # n_shooting = [(20, 20)]
         n_shooting = [20]
         run_ocp = RunOCP(
             ocp_class=LegOCP,
-            show_optim=False,
-            iteration=0,
-            print_level=5,
-            ignore_already_run=False,
+            show_optim=show_optim,
+            iteration=iterations,
+            print_level=print_level,
+            ignore_already_run=ignore_already_run,
         )
         running_function = run_ocp.main
     elif model == Models.ARM:
         n_shooting = [50]
         run_ocp = RunOCP(
             ocp_class=ArmOCP,
-            show_optim=False,
-            iteration=0,
-            print_level=5,
-            ignore_already_run=False,
+            show_optim=show_optim,
+            iteration=iterations,
+            print_level=print_level,
+            ignore_already_run=ignore_already_run,
         )
         running_function = run_ocp.main
     elif model == Models.ACROBAT:
         n_shooting = [300, 150, 170, 250]
         run_ocp = RunOCP(
             ocp_class=MillerOcpOnePhase,
-            show_optim=False,
-            iteration=10000,
-            print_level=5,
-            ignore_already_run=True,
+            show_optim=show_optim,
+            iteration=iterations,
+            print_level=print_level,
+            ignore_already_run=ignore_already_run,
         )
         running_function = run_ocp.main
     else:
