@@ -150,8 +150,7 @@ class ArmOCP:
     def _set_constraints(self):
         def last_segment_vertical(all_pn: PenaltyNodeList) -> MX:
             """
-            The used-defined objective function (This particular one mimics the ObjectiveFcn.SUPERIMPOSE_MARKERS)
-            Except for the last two
+            The used-defined objective function
 
             Parameters
             ----------
@@ -187,7 +186,7 @@ class ArmOCP:
             ConstraintFcn.TRACK_MARKERS, node=node, target=self.end_point, marker_index="marker_Leg1", phase=0
         )
         self.constraints.add(ConstraintFcn.TRACK_MARKERS_VELOCITY, node=node, marker_index="marker_Leg1", phase=0)
-        self.constraints.add(last_segment_vertical, node=node, phase=0)
+        self.constraints.add(last_segment_vertical, node=node, phase=0, quadratic=True)
 
         # self.objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_QDDOT, target=np.zeros(self.n_q), node=Node.PENULTIMATE, phase=0, weight=10)
         self.objective_functions.add(
