@@ -63,7 +63,13 @@ class ResultsAnalyse:
         Plot the objective values.
     """
 
-    def __init__(self, path_to_files: str, model_path: str, export: bool = True):
+    def __init__(
+        self,
+        path_to_files: str,
+        model_path: str,
+        export: bool = True,
+        consistent_threshold: float = 10,
+    ):
 
         self.path_to_files = path_to_files
         self.model_path = model_path
@@ -75,6 +81,7 @@ class ResultsAnalyse:
         self.path_to_data = f"{self.path_to_files}/data"
         Path(self.path_to_data).mkdir(parents=True, exist_ok=True)
 
+        self.consistent_threshold = consistent_threshold
         self.df_path = None
         self.df = self.to_panda_dataframe(
             export=export,
@@ -122,8 +129,9 @@ class ResultsAnalyse:
             "grps",
             "grps_cat",
             "grp_number",
-            "translation_error_traj"
+            "translation_error_traj",
             "rotation_error_traj",
+            "index_10_deg_rmse",
         ]
         df_results = pd.DataFrame(columns=column_names)
 
@@ -152,7 +160,10 @@ class ResultsAnalyse:
                 q_integrated = data["q_integrated"]
                 # # print(data["q_integrated"].shape)
 
-                data["translation_error"], data["rotation_error"] = compute_error_single_shooting(
+                (
+                    data["translation_error"],
+                    data["rotation_error"],
+                ) = compute_error_single_shooting(
                     model=model,
                     n_shooting=n_shooting,
                     time=np.array(data["time"]),
@@ -160,15 +171,23 @@ class ResultsAnalyse:
                     q_integrated=q_integrated,
                 )
 
-                data["translation_error_traj"], data["rotation_error_traj"] = compute_error_single_shooting_each_frame(
+                (
+                    data["translation_error_traj"],
+                    data["rotation_error_traj"],
+                ) = compute_error_single_shooting_each_frame(
                     model=model,
                     n_shooting=n_shooting,
                     time=np.array(data["time"]),
                     q=q,
                     q_integrated=q_integrated,
                 )
+                data["consistent_threshold"] = np.where(
+                    data["rotation_error_traj"] > self.consistent_threshold
+                )[0][0]
 
-                data["grps"] = f"{data['ode_solver'].__str__()}_{data['defects_type'].value}"
+                data[
+                    "grps"
+                ] = f"{data['ode_solver'].__str__()}_{data['defects_type'].value}_{n_shooting}"
 
                 df_dictionary = pd.DataFrame([data])
                 df_results = pd.concat([df_results, df_dictionary], ignore_index=True)
@@ -214,9 +233,13 @@ class ResultsAnalyse:
             str_formulation = f.replace("_", " ").replace("-", " ").replace("\n", " ")
             a = len(self.df[(self.df["status"] == 1) & (self.df["grps"] == f)])
             b = len(self.df[self.df["grps"] == f])
-            print(f"{a} / {b} {str_formulation} did not converge to an optimal solutions")
+            print(
+                f"{a} / {b} {str_formulation} did not converge to an optimal solutions"
+            )
 
-    def plot_time_iter(self, show: bool = True, export: bool = True, time_unit: str = "s"):
+    def plot_time_iter(
+        self, show: bool = True, export: bool = True, time_unit: str = "s"
+    ):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -242,8 +265,28 @@ class ResultsAnalyse:
         if time_unit == "min":
             df_results["computation_time"] = df_results["computation_time"] / 60
 
-        fig = my_traces(fig, dyn, grps, df_results, "computation_time", 1, 1, r"$\text{time ({time_unit}})}$", ylog=False)
-        fig = my_traces(fig, dyn, grps, df_results, "iterations", 1, 2, r"$\text{iterations}$", ylog=False)
+        fig = my_traces(
+            fig,
+            dyn,
+            grps,
+            df_results,
+            "computation_time",
+            1,
+            1,
+            r"$\text{time ({time_unit}})}$",
+            ylog=False,
+        )
+        fig = my_traces(
+            fig,
+            dyn,
+            grps,
+            df_results,
+            "iterations",
+            1,
+            2,
+            r"$\text{iterations}$",
+            ylog=False,
+        )
 
         fig.update_layout(
             height=800,
@@ -287,9 +330,13 @@ class ResultsAnalyse:
             fig.write_image(self.path_to_figures + "/analyse_time_iter.pdf")
             fig.write_image(self.path_to_figures + "/analyse_time_iter.svg")
             fig.write_image(self.path_to_figures + "/analyse_time_iter.eps")
-            fig.write_html(self.path_to_figures + "/analyse_time_iter.html", include_mathjax="cdn")
+            fig.write_html(
+                self.path_to_figures + "/analyse_time_iter.html", include_mathjax="cdn"
+            )
 
-    def plot_integration_frame_to_frame_error(self, show: bool = True, export: bool = True):
+    def plot_integration_frame_to_frame_error(
+        self, show: bool = True, export: bool = True, until_consistent: bool = False
+    ):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -299,6 +346,8 @@ class ResultsAnalyse:
             If True, the figure is shown.
         export : bool
             If True, the figure is exported.
+        until_consistent : bool
+            plot the curves until it respect the consistency we wanted
         """
 
         # dyn = [i for i in self.df["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
@@ -306,9 +355,7 @@ class ResultsAnalyse:
         grps = dyn
 
         fig = make_subplots(
-            rows=1,
-            cols=2,
-            subplot_titles=["translation error", "rotation error"]
+            rows=1, cols=2, subplot_titles=["translation error", "rotation error"]
         )
         # update the font size of the subplot_titles
         for i in fig["layout"]["annotations"]:
@@ -318,9 +365,20 @@ class ResultsAnalyse:
         df_results = self.df[self.df["status"] == 0]
 
         for _, row in df_results.iterrows():
+
+            idx_end = (
+                int(row.consistent_threshold)
+                if until_consistent
+                else int(len(row.time))
+            )
+            print(idx_end)
+            time = row.time[:idx_end]
+            y1 = row["translation_error_traj"][:idx_end]
+            y2 = row["rotation_error_traj"][:idx_end]
+
             fig.add_scatter(
-                x=row.time,
-                y=row["translation_error_traj"],
+                x=time,
+                y=y1,
                 mode="lines",
                 marker=dict(
                     size=1,
@@ -333,8 +391,8 @@ class ResultsAnalyse:
             )
 
             fig.add_scatter(
-                x=row.time,
-                y=row["rotation_error_traj"],
+                x=time,
+                y=y2,
                 mode="lines",
                 marker=dict(
                     size=1,
@@ -386,11 +444,22 @@ class ResultsAnalyse:
         if show:
             fig.show()
         if export:
-            fig.write_image(self.path_to_figures + "/analyse_integration_each_frame.png")
-            fig.write_image(self.path_to_figures + "/analyse_integration_each_frame.pdf")
-            fig.write_image(self.path_to_figures + "/analyse_integration_each_frame.svg")
-            fig.write_image(self.path_to_figures + "/analyse_integration_each_frame.eps")
-            fig.write_html(self.path_to_figures + "/analyse_integration_each_frame.html", include_mathjax="cdn")
+            fig.write_image(
+                self.path_to_figures + "/analyse_integration_each_frame.png"
+            )
+            fig.write_image(
+                self.path_to_figures + "/analyse_integration_each_frame.pdf"
+            )
+            fig.write_image(
+                self.path_to_figures + "/analyse_integration_each_frame.svg"
+            )
+            fig.write_image(
+                self.path_to_figures + "/analyse_integration_each_frame.eps"
+            )
+            fig.write_html(
+                self.path_to_figures + "/analyse_integration_each_frame.html",
+                include_mathjax="cdn",
+            )
 
     def plot_integration_final_error(self, show: bool = True, export: bool = True):
         """
@@ -413,7 +482,17 @@ class ResultsAnalyse:
         # select only the one who converged
         df_results = self.df[self.df["status"] == 0]
 
-        fig = my_traces(fig, dyn, grps, df_results, "rotation_error", row=1, col=1, ylabel="degrees", ylog=True)
+        fig = my_traces(
+            fig,
+            dyn,
+            grps,
+            df_results,
+            "rotation_error",
+            row=1,
+            col=1,
+            ylabel="degrees",
+            ylog=True,
+        )
 
         fig.update_layout(
             height=800,
@@ -454,7 +533,10 @@ class ResultsAnalyse:
             fig.write_image(self.path_to_figures + "/analyse_integration.pdf")
             fig.write_image(self.path_to_figures + "/analyse_integration.svg")
             fig.write_image(self.path_to_figures + "/analyse_integration.eps")
-            fig.write_html(self.path_to_figures + "/analyse_integration.html", include_mathjax="cdn")
+            fig.write_html(
+                self.path_to_figures + "/analyse_integration.html",
+                include_mathjax="cdn",
+            )
 
     def plot_obj_values(self, show: bool = True, export: bool = True):
         """
@@ -477,7 +559,16 @@ class ResultsAnalyse:
         # select only the one who converged
         df_results = self.df[self.df["status"] == 0]
 
-        fig = my_traces(fig, dyn, grps, df_results, key="cost", row=1, col=1, ylabel="objective value")
+        fig = my_traces(
+            fig,
+            dyn,
+            grps,
+            df_results,
+            key="cost",
+            row=1,
+            col=1,
+            ylabel="objective value",
+        )
 
         fig.update_layout(
             height=800,
@@ -513,7 +604,9 @@ class ResultsAnalyse:
             fig.write_image(self.path_to_figures + "/analyse_obj.pdf")
             fig.write_image(self.path_to_figures + "/analyse_obj.svg")
             fig.write_image(self.path_to_figures + "/analyse_obj.eps")
-            fig.write_html(self.path_to_figures + "/analyse_obj.html", include_mathjax="cdn")
+            fig.write_html(
+                self.path_to_figures + "/analyse_obj.html", include_mathjax="cdn"
+            )
 
     def plot_state(
         self,
@@ -525,7 +618,8 @@ class ResultsAnalyse:
         ylabel_rotations: str = "q",
         ylabel_translations: str = "q",
         xlabel: str = "Time (s)",
-    )-> plotly.graph_objects.Figure:
+        until_consistent: bool = False,
+    ) -> plotly.graph_objects.Figure:
         """
         This function plots generalized coordinates of each OCPs
 
@@ -566,7 +660,8 @@ class ResultsAnalyse:
             cols=cols,
             subplot_titles=label_dofs if not label_dofs is None else list_dof,
             vertical_spacing=0.05,
-            shared_xaxes=True)
+            shared_xaxes=True,
+        )
         # update the font size of the subplot_titles
         for i in fig["layout"]["annotations"]:
             i["font"] = dict(size=18)
@@ -577,7 +672,17 @@ class ResultsAnalyse:
         # handle translations and rotations
         trans_idx, rot_idx = get_trans_and_rot_idx(self.model)
 
-        fig = plot_all_dof(fig, key, df_results, list_dof, idx_rows, idx_cols, trans_idx, rot_idx)
+        fig = plot_all_dof(
+            fig,
+            key,
+            df_results,
+            list_dof,
+            idx_rows,
+            idx_cols,
+            trans_idx,
+            rot_idx,
+            until_consistent=until_consistent,
+        )
 
         for i in range(1, cols + 1):
             fig.update_xaxes(row=rows, col=i, title=xlabel)
@@ -586,9 +691,13 @@ class ResultsAnalyse:
         trans_idx, rot_idx = get_trans_and_rot_idx(self.model)
 
         for idx in trans_idx:
-            fig.update_yaxes(row=idx_rows[idx], col=idx_cols[idx], title=ylabel_translations)
+            fig.update_yaxes(
+                row=idx_rows[idx], col=idx_cols[idx], title=ylabel_translations
+            )
         for idx in rot_idx:
-            fig.update_yaxes(row=idx_rows[idx], col=idx_cols[idx], title=ylabel_rotations)
+            fig.update_yaxes(
+                row=idx_rows[idx], col=idx_cols[idx], title=ylabel_rotations
+            )
 
         if show:
             fig.show()
@@ -596,7 +705,9 @@ class ResultsAnalyse:
             format_type = ["png", "pdf", "svg", "eps"]
             for f in format_type:
                 fig.write_image(self.path_to_figures + f"/analyse_{key}." + f)
-            fig.write_html(self.path_to_figures + f"/analyse_{key}.html", include_mathjax="cdn")
+            fig.write_html(
+                self.path_to_figures + f"/analyse_{key}.html", include_mathjax="cdn"
+            )
 
         return fig
 
@@ -608,21 +719,34 @@ def main():
     # path_to_files = ResultFolders.MILLER_2.value
     # model_path = Models.ACROBAT.value
     #
-    path_to_files = "/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_26-08-22_2"
+    path_to_files = (
+        "/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_30-08-22_2"
+    )
     model_path = Models.ACROBAT.value
     export = False
     show = True
 
     results = ResultsAnalyse(path_to_files=path_to_files, model_path=model_path)
     results.print()
-    results.plot_time_iter(show=show, export=export, time_unit="min")
-    results.plot_obj_values(show=show, export=export)
-    results.plot_integration_frame_to_frame_error(show=show, export=export)
+    # results.plot_time_iter(show=show, export=export, time_unit="min")
+    # results.plot_obj_values(show=show, export=export)
+    results.plot_integration_frame_to_frame_error(
+        show=show, export=export, until_consistent=False
+    )
     results.plot_integration_final_error(show=show, export=export)
-    results.plot_state(key="q_integrated", show=show, export=export, row_col=(5, 3))
-    results.plot_state(key="q", show=show, export=export, row_col=(5, 3))
-    results.plot_state(key="tau", show=show, export=export, row_col=(5, 3))
-    results.plot_state(key="qddot", show=show, export=export, row_col=(5, 3))
+    results.plot_state(
+        key="q", show=show, export=export, row_col=(5, 3), until_consistent=False
+    )
+    results.plot_state(
+        key="q_integrated",
+        show=show,
+        export=export,
+        row_col=(5, 3),
+        until_consistent=False,
+    )
+
+    # results.plot_state(key="tau", show=show, export=export, row_col=(5, 3))
+    # results.plot_state(key="qddot", show=show, export=export, row_col=(5, 3))
 
 
 if __name__ == "__main__":
