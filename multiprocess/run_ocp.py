@@ -36,9 +36,8 @@ class RunOCP:
                  print_level: int = 5,
                  ignore_already_run: bool = True,
                  ):
-        print("he")
+
         self.ocp_class = ocp_class
-        print("hello")
         self.show_optim = show_optim
         self.iteration = iteration
         self.print_level = print_level
