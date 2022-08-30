@@ -40,27 +40,28 @@ def main(model: Models = None):
     #
     Date = date.today().strftime("%d-%m-%y")
     out_path = Path(Path(__file__).parent.__str__() + f"/../../dms-vs-dc-results/{model.name}_{Date}_2")
+    # out_path = Path("/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_22-08-22_2")
     try:
         os.mkdir(out_path)
     except:
         print(f"{out_path}" + Date + " is already created ")
 
    # --- Generate the parameters --- #
-    n_thread = 8
+    n_thread = 4
+   #  n_thread = 32
     param = dict(
         model_str=[
             model.value,
         ],
         ode_solver=[
             OdeSolver.RK4(n_integration_steps=5),
-            # OdeSolver.RK4(n_integration_steps=5),
-            # # OdeSolver.RK4(n_integration_steps=10),
-            # OdeSolver.RK8(n_integration_steps=1),
-            # # OdeSolver.RK8(n_integration_steps=10),
-            # # OdeSolver.CVODES(),
-            # OdeSolver.IRK(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
+            # OdeSolver.RK4(n_integration_steps=10),
+            OdeSolver.RK8(n_integration_steps=2),
+            # OdeSolver.RK8(n_integration_steps=10),
+            # OdeSolver.CVODES(),
+            OdeSolver.IRK(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
             # OdeSolver.IRK(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
-            # OdeSolver.COLLOCATION(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
+            OdeSolver.COLLOCATION(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
             OdeSolver.COLLOCATION(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
         ],
         n_shooting=n_shooting,
@@ -71,7 +72,7 @@ def main(model: Models = None):
         ],
         out_path=[out_path.absolute().__str__()],
     )
-    calls = int(1)
+    calls = int(30)
 
     my_calls = generate_calls(
         call_number=calls,
@@ -81,13 +82,13 @@ def main(model: Models = None):
     cpu_number = cpu_count()
     my_pool_number = int(cpu_number / n_thread)
 
-    running_function(my_calls[0])
+    # running_function(my_calls[0])
     # running_function(my_calls[1])
-    # run_pool(
-    #     running_function=running_function,
-    #     calls=my_calls,
-    #     pool_nb=4,
-    # )
+    run_pool(
+        running_function=running_function,
+        calls=my_calls,
+        pool_nb=my_pool_number,
+    )
 
 
 if __name__ == "__main__":

@@ -10,11 +10,11 @@ HumanoidOcpMultiPhase
 
 """
 VERSION = "0.1.0"
-
 from .ocp.viz import add_custom_plots
 from .ocp.leg_ocp import LegOCP
 from .ocp.arm_ocp import ArmOCP
 from .ocp.miller_ocp import MillerOcp as MillerOCP
+from .ocp.miller_ocp_one_phase import MillerOcp as MillerOCP_1
 from .ocp.viz import add_custom_plots
 from .bioptim_plugin.integration_function import Integration
 from .models.enums import Models
