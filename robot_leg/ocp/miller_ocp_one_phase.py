@@ -182,27 +182,47 @@ class MillerOcpOnePhase:
                 self.n_qdddot = self.biorbd_model[0].nbQddot()
 
             self.tau_min, self.tau_init, self.tau_max = -100, 0, 100
-            self.tau_hips_min, self.tau_hips_init, self.tau_hips_max = -300, 0, 300  # hips and torso
+            self.tau_hips_min, self.tau_hips_init, self.tau_hips_max = (
+                -300,
+                0,
+                300,
+            )  # hips and torso
 
-            self.high_torque_idx = [
-                6 - self.nb_root,
-                7 - self.nb_root,
-                8 - self.nb_root,
-                13 - self.nb_root,
-                14 - self.nb_root,
-            ]
+            self.high_torque_idx = (
+                [
+                    6 - self.nb_root,
+                    7 - self.nb_root,
+                    8 - self.nb_root,
+                    13 - self.nb_root,
+                    14 - self.nb_root,
+                ]
+                if self.remove_thorax_rot_x
+                else [
+                    6 - self.nb_root,
+                    7 - self.nb_root,
+                    12 - self.nb_root,
+                    13 - self.nb_root,
+                ]
+            )
+
             self.qddot_min, self.qddot_init, self.qddot_max = -1000, 0, 1000
 
             if (
                 self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK
                 or self.rigidbody_dynamics == MillerDynamics.ROOT_IMPLICIT_QDDDOT
             ):
-                self.qdddot_min, self.qdddot_init, self.qdddot_max = -1000 * 10, 0, 1000 * 10
+                self.qdddot_min, self.qdddot_init, self.qdddot_max = (
+                    -1000 * 10,
+                    0,
+                    1000 * 10,
+                )
 
             self.velocity_max = 100  # qdot
             self.velocity_max_phase_transition = 10  # qdot hips, thorax in phase 2
 
-            self.random_scale = 0.02  # relative to the maximal bounds of the states or controls
+            self.random_scale = (
+                0.02  # relative to the maximal bounds of the states or controls
+            )
             self.random_scale_qdot = 0.02
             self.random_scale_qddot = 0.02
             self.random_scale_tau = 0.02
@@ -430,15 +450,30 @@ class MillerOcpOnePhase:
         # parabolic trajectory on Z
         self.x[2, :] = v0 * data_point + -9.81 / 2 * data_point**2
         # Somersaults
-        self.x[3, :] = np.linspace(0, self.phase_proportions * self.somersaults, self.n_shooting + 1)
+        self.x[3, :] = np.linspace(
+            0, self.phase_proportions * self.somersaults, self.n_shooting + 1
+        )
         # Twists
         self.x[5, :] = np.linspace(0, self.twists, self.n_shooting + 1)
 
         # Handle second DoF of arms with Noise.
-        self.x[6:9, :] = np.random.random((3, total_n_shooting)) * np.pi / 12 - np.pi / 24
-        self.x[10, :] = np.random.random((1, total_n_shooting)) * np.pi / 2 - (np.pi - np.pi / 4)
-        self.x[12, :] = np.random.random((1, total_n_shooting)) * np.pi / 2 + np.pi / 4
-        self.x[13:15, :] = np.random.random((2, total_n_shooting)) * np.pi / 12 - np.pi / 24
+        thorax_slice = range(6, 9) if not self.remove_thorax_rot_x else range(6, 8)
+        arm_slice = 10 if not self.remove_thorax_rot_x else 9
+        arm_slice2 = 12 if not self.remove_thorax_rot_x else 11
+        rest_slice = range(13, 15) if not self.remove_thorax_rot_x else range(13, 14)
+
+        self.x[thorax_slice, :] = (
+            np.random.random((3, total_n_shooting)) * np.pi / 12 - np.pi / 24
+        )
+        self.x[arm_slice, :] = np.random.random((1, total_n_shooting)) * np.pi / 2 - (
+            np.pi - np.pi / 4
+        )
+        self.x[arm_slice2, :] = (
+            np.random.random((1, total_n_shooting)) * np.pi / 2 + np.pi / 4
+        )
+        self.x[rest_slice, :] = (
+            np.random.random((2, total_n_shooting)) * np.pi / 12 - np.pi / 24
+        )
 
         # velocity on Y
         self.x[self.n_q + 0, :] = self.velocity_x
@@ -593,8 +628,24 @@ class MillerOcpOnePhase:
             0,
         ]
 
-        x_max[0, : self.n_q, 0] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -initial_arm_elevation, 0, initial_arm_elevation, 0, 0]
-        x_max[0, self.n_q :, 0] = [
+        x_max[: self.n_q, 0] = [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            -initial_arm_elevation,
+            0,
+            initial_arm_elevation,
+            0,
+            0,
+        ]
+        x_max[self.n_q :, 0] = [
             self.velocity_x + slack_initial_translation_velocities,
             self.velocity_y + slack_initial_translation_velocities,
             self.vertical_velocity_0 + slack_initial_vertical_velocity,
@@ -612,7 +663,7 @@ class MillerOcpOnePhase:
             0,
         ]
 
-        x_min[0, : self.n_q, 1] = [
+        x_min[: self.n_q, 1] = [
             -3,
             -3,
             -0.001,
@@ -629,9 +680,9 @@ class MillerOcpOnePhase:
             -thorax_hips_xyz,
             -thorax_hips_xyz,
         ]
-        x_min[0, self.n_q :, 1] = -self.velocity_max
+        x_min[self.n_q :, 1] = -self.velocity_max
 
-        x_max[0, : self.n_q, 1] = [
+        x_max[: self.n_q, 1] = [
             3,
             3,
             10,
@@ -648,9 +699,9 @@ class MillerOcpOnePhase:
             thorax_hips_xyz,
             thorax_hips_xyz,
         ]
-        x_max[0, self.n_q :, 1] = +self.velocity_max
+        x_max[self.n_q :, 1] = +self.velocity_max
 
-        x_min[0, : self.n_q, 2] = [
+        x_min[: self.n_q, 2] = [
             -3,
             -3,
             -0.001,
@@ -667,9 +718,9 @@ class MillerOcpOnePhase:
             thorax_hips_xyz - slack_final_dofs,
             -slack_final_dofs,
         ]  # x_min[0, :self.n_q, 1]
-        x_min[0, self.n_q :, 2] = -self.velocity_max
+        x_min[self.n_q :, 2] = -self.velocity_max
 
-        x_max[0, : self.n_q, 2] = [
+        x_max[: self.n_q, 2] = [
             3,
             3,
             10,
@@ -686,176 +737,20 @@ class MillerOcpOnePhase:
             thorax_hips_xyz,
             slack_final_dofs,
         ]  # x_max[0, :self.n_q, 1]
-        x_max[0, self.n_q :, 2] = +self.velocity_max
+        x_max[self.n_q :, 2] = +self.velocity_max
 
-        # x_min[1, : self.n_q, 0] = x_min[0, : self.n_q, 2]
-        # x_min[1, self.n_q :, 0] = x_min[0, self.n_q :, 2]
-        #
-        # x_max[1, : self.n_q, 0] = x_max[0, : self.n_q, 2]
-        # x_max[1, self.n_q :, 0] = x_max[0, self.n_q :, 2]
-        #
-        # x_min[1, : self.n_q, 1] = [
-        #     -3,
-        #     -3,
-        #     -0.001,
-        #     self.phase_proportions[0] * self.somersaults - slack_final_somersault,
-        #     -tilt_bound,
-        #     self.twists - slack_twist,
-        #     -slack_final_dofs,
-        #     -slack_final_dofs,
-        #     -slack_final_dofs,
-        #     -arm_rotation_z_low,
-        #     -arm_elevation_y_upp,
-        #     -arm_rotation_z_upp,
-        #     arm_elevation_y_low,
-        #     -slack_final_dofs,
-        #     -slack_final_dofs,
-        # ]  # x_min[0, :self.n_q, 1]
-        # x_min[1, self.n_q :, 1] = [
-        #     -self.velocity_max,
-        #     -self.velocity_max,
-        #     -self.velocity_max,
-        #     -self.velocity_max,
-        #     -self.velocity_max_phase_transition,
-        #     -self.velocity_max_phase_transition,
-        #     -self.velocity_max_phase_transition,
-        #     -self.velocity_max_phase_transition,
-        #     -self.velocity_max_phase_transition,
-        #     -self.velocity_max,
-        #     -self.velocity_max,
-        #     -self.velocity_max,
-        #     -self.velocity_max,
-        #     -self.velocity_max,
-        #     -self.velocity_max_phase_transition,
-        # ]
-        #
-        # x_max[1, : self.n_q, 1] = [
-        #     3,
-        #     3,
-        #     10,
-        #     self.somersaults + slack_somersault,
-        #     tilt_bound,
-        #     self.twists + slack_twist,
-        #     slack_final_dofs,
-        #     slack_final_dofs,
-        #     slack_final_dofs,
-        #     arm_rotation_z_upp,
-        #     -arm_elevation_y_low,
-        #     arm_rotation_z_low,
-        #     arm_elevation_y_upp,
-        #     thorax_hips_xyz,
-        #     slack_final_dofs,
-        # ]  # x_max[0, :self.n_q, 1]
-        # x_max[1, self.n_q :, 1] = [
-        #     self.velocity_max,
-        #     self.velocity_max,
-        #     self.velocity_max,
-        #     self.velocity_max,
-        #     self.velocity_max_phase_transition,
-        #     self.velocity_max_phase_transition,
-        #     self.velocity_max_phase_transition,
-        #     self.velocity_max_phase_transition,
-        #     self.velocity_max_phase_transition,
-        #     self.velocity_max,
-        #     self.velocity_max,
-        #     self.velocity_max,
-        #     self.velocity_max,
-        #     self.velocity_max,
-        #     self.velocity_max_phase_transition,
-        # ]
-        #
-        # x_min[1, : self.n_q, 2] = [
-        #     -0.15,
-        #     -0.25,
-        #     -0.1,
-        #     self.somersaults - thorax_hips_xyz - slack_final_somersault,
-        #     -tilt_final_bound,
-        #     self.twists - slack_final_twist,
-        #     -slack_final_dofs,
-        #     -slack_final_dofs,
-        #     -slack_final_dofs,
-        #     -arm_rotation_z_low,
-        #     -arm_elevation_y_upp,
-        #     -arm_rotation_z_upp,
-        #     arm_rotation_y_final,
-        #     thorax_hips_xyz - slack_final_dofs,
-        #     -slack_final_dofs,
-        # ]
-        # x_min[1, self.n_q :, 2] = [
-        #     -self.velocity_max,
-        #     -self.velocity_max,
-        #     -self.velocity_max,
-        #     -self.velocity_max,
-        #     -self.velocity_max_phase_transition,
-        #     -self.velocity_max_phase_transition,
-        #     -self.velocity_max_phase_transition,
-        #     -self.velocity_max_phase_transition,
-        #     -self.velocity_max_phase_transition,
-        #     -self.velocity_max,
-        #     -self.velocity_max,
-        #     -self.velocity_max,
-        #     -self.velocity_max,
-        #     -self.velocity_max,
-        #     -self.velocity_max_phase_transition,
-        # ]
-        #
-        # x_max[1, : self.n_q, 2] = [
-        #     0.15,
-        #     0.25,
-        #     0.1,
-        #     self.somersaults - thorax_hips_xyz,
-        #     tilt_final_bound,
-        #     self.twists + slack_final_twist,
-        #     slack_final_dofs,
-        #     slack_final_dofs,
-        #     slack_final_dofs,
-        #     arm_rotation_z_upp,
-        #     -arm_rotation_y_final,
-        #     arm_rotation_z_low,
-        #     arm_elevation_y_upp,
-        #     thorax_hips_xyz,
-        #     slack_final_dofs,
-        # ]
-        # x_max[1, self.n_q :, 2] = [
-        #     self.velocity_max,
-        #     self.velocity_max,
-        #     self.velocity_max,
-        #     self.velocity_max,
-        #     self.velocity_max_phase_transition,
-        #     self.velocity_max_phase_transition,
-        #     self.velocity_max_phase_transition,
-        #     self.velocity_max_phase_transition,
-        #     self.velocity_max_phase_transition,
-        #     self.velocity_max,
-        #     self.velocity_max,
-        #     self.velocity_max,
-        #     self.velocity_max,
-        #     self.velocity_max,
-        #     self.velocity_max_phase_transition,
-        # ]
+        if self.remove_thorax_rot_x:
+            x_min = np.delete(x_min, 6, 0)
+            x_max = np.delete(x_max, 6, 0)
 
         self.x_bounds.add(
             bounds=Bounds(
-                x_min[0, :, :],
-                x_max[0, :, :],
+                x_min,
+                x_max,
                 interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
             )
         )
 
-        # if self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK:
-        #     qddot_min = np.ones((self.n_qddot, 3)) * self.qddot_min
-        #     qddot_max = np.ones((self.n_qddot, 3)) * self.qddot_max
-        #     self.x_bounds[phase].concatenate(
-        #         Bounds(qddot_min, qddot_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
-        #     )
-        #
-        # if self.rigidbody_dynamics == MillerDynamics.ROOT_IMPLICIT_QDDDOT:
-        #     qddot_min = np.ones((self.n_qddot, 3)) * self.qddot_min
-        #     qddot_max = np.ones((self.n_qddot, 3)) * self.qddot_max
-        #     self.x_bounds[phase].concatenate(
-        #         Bounds(qddot_min, qddot_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
-        #     )
-        #
         if self.rigidbody_dynamics == RigidBodyDynamics.ODE:
             self.u_bounds.add([self.tau_min] * self.n_tau, [self.tau_max] * self.n_tau)
             self.u_bounds[0].min[self.high_torque_idx, :] = self.tau_hips_min
