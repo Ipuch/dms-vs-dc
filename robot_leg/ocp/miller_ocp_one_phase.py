@@ -148,7 +148,7 @@ class MillerOcpOnePhase:
 
             self.biorbd_model = (biorbd.Model(biorbd_model_path),)
             self.rigidbody_dynamics = rigidbody_dynamics
-            self.remove_thorax_rot_x = self.remove_thorax_rot_x
+            self.remove_thorax_rot_x = remove_thorax_rot_x
 
             self.n_q = self.biorbd_model[0].nbQ()
             self.n_qdot = self.biorbd_model[0].nbQdot()
@@ -707,23 +707,42 @@ class MillerOcpOnePhase:
             thorax_hips_xyz,
         ]
         x_max[self.n_q :, 1] = +self.velocity_max
-        [
-            6.93863800e-03,
-            8.31467100e-02,
-            1.47186783e00,
-            1.08647147e01,
-            2.61750449e-01,
-            1.83325093e01,
-            -1.30662427e-01,
-            -1.54638187e-02,
-            -1.27865720e-01,
-            -5.28159705e-01,
-            -1.99333636e-01,
-            5.63350637e-01,
-            1.99496640e-01,
-            3.92744746e-01,
-            1.30451639e-01,
+        # [
+        #     6.93863800e-03,
+        #     8.31467100e-02,
+        #     1.47186783e00,
+        #     1.08647147e01,
+        #     2.61750449e-01,
+        #     1.83325093e01,
+        #     -1.30662427e-01,
+        #     -1.54638187e-02,
+        #     -1.27865720e-01,
+        #     -5.28159705e-01,
+        #     -1.99333636e-01,
+        #     5.63350637e-01,
+        #     1.99496640e-01,
+        #     3.92744746e-01,
+        #     1.30451639e-01,
+        # ]
+
+        x_min[: self.n_q, 2] = [
+            0.42339227,
+            -0.45696772,
+            -6.28603702,
+            4.68656591,
+            -2.34329545,
+            11.12392693,
+            0.05213902,
+            0.77497476,
+            0.30877216,
+            2.5922945,
+            -4.30055308,
+            1.11943145,
+            3.44242145,
+            1.99795567,
+            -0.16583392,
         ]
+
         x_min[: self.n_q, 2] = [
             -0.01,
             -0.1,
@@ -760,7 +779,7 @@ class MillerOcpOnePhase:
             thorax_hips_xyz,
             slack_final_dofs,
         ]  # x_max[0, :self.n_q, 1]
-        x_max[self.n_q :, 2] = +self.velocity_max
+        # x_max[self.n_q :, 2] = +self.velocity_max
 
         if self.remove_thorax_rot_x:
             x_min = np.delete(x_min, 6, 0)

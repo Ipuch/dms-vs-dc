@@ -193,7 +193,7 @@ class RunOCP:
             "states": sol.states,
             "controls": sol_merged.controls,
             "parameters": sol.parameters,
-            "time": sol_integrated.time_vector,
+            "time": sol_integrated.time,
             "dynamics_type": dynamics_type,
             "ode_solver": ode_solver,
             "ode_solver_str": ode_solver.__str__().replace("\n", "_").replace(" ", "_"),
@@ -210,11 +210,14 @@ class RunOCP:
 
         pickle.dump(data, f)
         f.close()
-        my_ocp.ocp.save(sol, f"{outpath}.bo")
+        try:
+            my_ocp.ocp.save(sol, f"{outpath}.bo")
+        except:
+            print("could not save the .bo file")
 
     @staticmethod
     def recompute_qddot(biorbd_model_path, sol):
-    
+
         biorbd_model = biorbd.Model(biorbd_model_path)
         qddot = list()
         if len(sol.phase_time) > 2:

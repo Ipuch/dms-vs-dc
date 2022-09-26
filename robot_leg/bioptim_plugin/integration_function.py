@@ -195,7 +195,7 @@ class Integration:
 
     def integrate(
         self,
-        shooting_type: Shooting = Shooting.SINGLE_CONTINUOUS,
+        shooting_type: Shooting = Shooting.SINGLE,
         keep_intermediate_points: bool = False,
         merge_phases: bool = False,
         continuous: bool = True,

@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 import pickle
 from itertools import product
-from run_leg_ocp import main as main_leg_ocp
 
 
 def generate_calls(

@@ -221,7 +221,6 @@ class ArmOCP:
         )
         self.constraints.add(last_segment_vertical, node=node, phase=0, quadratic=True)
 
-        # self.objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_QDDOT, target=np.zeros(self.n_q), node=Node.PENULTIMATE, phase=0, weight=10)
         self.objective_functions.add(
             ObjectiveFcn.Mayer.MINIMIZE_QDDOT,
             target=np.zeros(self.n_q),
@@ -229,7 +228,6 @@ class ArmOCP:
             phase=0,
             weight=10,
         )
-        # self.constraints.add(ConstraintFcn.TRACK_QDDOT, node=node, phase=0)
 
     def _set_boundary_conditions(self):
         self.x_bounds = BoundsList()
