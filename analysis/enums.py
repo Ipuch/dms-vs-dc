@@ -3,7 +3,9 @@ from pathlib import Path
 
 
 class ResultFolders(Enum):
-    LEG_2022_08_12_TEST = "/home/puchaud/Projets_Python/dms-vs-dc-results/LEG_19-08-22_2"
+    LEG_2022_08_12_TEST = (
+        "/home/puchaud/Projets_Python/dms-vs-dc-results/LEG_19-08-22_2"
+    )
     LEG_2022_07_19 = "/home/puchaud/Projets_Python/dms-vs-dc-results/raw_17-07-22"
     ARM_2022_07_29 = "/home/puchaud/Projets_Python/dms-vs-dc-results/arm_29-07-22"
     LEG_2022_08_01 = "/home/puchaud/Projets_Python/dms-vs-dc-results/LEG_01-08-22"
@@ -12,4 +14,6 @@ class ResultFolders(Enum):
     MILLER = "/home/puchaud/Projets_Python/dms-vs-dc-results/miller_01-08-22"
     MILLER_2 = "/home/puchaud/Projets_Python/dms-vs-dc-results/ACROBAT_05-08-22"
     MILLER_TEST = "/home/puchaud/Projets_Python/dms-vs-dc-results/ACROBAT_16-08-22_2"
+
+
 #

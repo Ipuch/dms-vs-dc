@@ -12,6 +12,7 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 
 import biorbd
+from bioptim import OptimalControlProgram
 
 from utils import (
     stack_states,
@@ -142,7 +143,10 @@ class ResultsAnalyse:
                 file_path = open(p, "rb")
                 data = pickle.load(file_path)
 
+                # _, sol = OptimalControlProgram.load(f"{self.path_to_files}/{p.stem}.bo")
                 # DM to array
+                data["tau"] = data["controls"]["tau"]
+
                 data["cost"] = np.array(data["cost"])[0][0]
                 # print(data["n_threads"])
                 # compute error
@@ -181,6 +185,8 @@ class ResultsAnalyse:
                     q=q,
                     q_integrated=q_integrated,
                 )
+
+                # to identify the point at which the consistency is sufficient
                 data["consistent_threshold"] = np.where(
                     data["rotation_error_traj"] > self.consistent_threshold
                 )[0][0]
@@ -645,8 +651,12 @@ class ResultsAnalyse:
         fig : plotly.graph_objects.Figure
             Figure object.
         """
-        nq = self.model.nbQ()
-        list_dof = list_dof = [dof.to_string() for dof in self.model.nameDof()]
+        if "tau" in key:
+            nq = 9
+            list_dof = [dof.to_string() for dof in self.model.nameDof()][6:]
+        else:
+            nq = self.model.nbQ()
+            list_dof = [dof.to_string() for dof in self.model.nameDof()]
 
         rows, cols = generate_windows_size(nq) if row_col is None else row_col
 
@@ -689,6 +699,10 @@ class ResultsAnalyse:
 
         # handle translations and rotations
         trans_idx, rot_idx = get_trans_and_rot_idx(self.model)
+
+        if "tau" in key:
+            trans_idx = []
+            rot_idx = rot_idx[:-6]
 
         for idx in trans_idx:
             fig.update_yaxes(

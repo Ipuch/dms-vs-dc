@@ -320,6 +320,13 @@ class MillerOcpOnePhase:
             phase=i,
         )
         self.objective_functions.add(
+            ObjectiveFcn.Lagrange.MINIMIZE_CONTROL,
+            key="tau",
+            weight=w_torque,
+            derivative=True,
+            phase=i,
+        )
+        self.objective_functions.add(
             ObjectiveFcn.Lagrange.MINIMIZE_STATE,
             derivative=True,
             key="qdot",
@@ -700,14 +707,30 @@ class MillerOcpOnePhase:
             thorax_hips_xyz,
         ]
         x_max[self.n_q :, 1] = +self.velocity_max
-
+        [
+            6.93863800e-03,
+            8.31467100e-02,
+            1.47186783e00,
+            1.08647147e01,
+            2.61750449e-01,
+            1.83325093e01,
+            -1.30662427e-01,
+            -1.54638187e-02,
+            -1.27865720e-01,
+            -5.28159705e-01,
+            -1.99333636e-01,
+            5.63350637e-01,
+            1.99496640e-01,
+            3.92744746e-01,
+            1.30451639e-01,
+        ]
         x_min[: self.n_q, 2] = [
-            -3,
-            -3,
-            -0.001,
-            self.phase_proportions * self.somersaults - slack_final_somersault,
-            -tilt_final_bound,
-            self.twists - slack_twist,
+            -0.01,
+            -0.1,
+            1.40,
+            1.05,
+            2.55,
+            1.75,
             -slack_final_dofs,
             -slack_final_dofs,
             -slack_final_dofs,
@@ -721,12 +744,12 @@ class MillerOcpOnePhase:
         x_min[self.n_q :, 2] = -self.velocity_max
 
         x_max[: self.n_q, 2] = [
-            3,
-            3,
-            10,
-            self.phase_proportions * self.somersaults + slack_final_somersault,
-            tilt_final_bound,
-            self.twists + slack_twist,
+            0.01,
+            0.1,
+            1.50,
+            1.1,
+            2.65,
+            1.90,
             slack_final_dofs,
             slack_final_dofs,
             slack_final_dofs,

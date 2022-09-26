@@ -462,7 +462,7 @@ def plot_all_dof(
                 if until_consistent
                 else int(len(row.time))
             )
-            print(idx_end)
+
             time = row.time[:idx_end]
             y = row[key][i_dof][:idx_end] * coef
 

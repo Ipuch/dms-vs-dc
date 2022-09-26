@@ -12,13 +12,9 @@ import biorbd
 from bioptim import (
     Solver,
     Shooting,
-    RigidBodyDynamics,
-    Shooting,
     SolutionIntegrator,
-    BiorbdInterface,
     CostType,
 )
-from robot_leg import ArmOCP, Integration
 
 
 def torque_driven_dynamics(
@@ -140,6 +136,9 @@ class RunOCP:
         solver.set_linear_solver("ma57")
 
         my_ocp.ocp.add_plot_penalty(CostType.ALL)
+        if self.show_optim:
+            my_ocp.ocp.print(to_console=True, to_graph=False)
+
         print(f"##########################################################")
         print(
             f"Solving ... \n"
@@ -169,46 +168,13 @@ class RunOCP:
             f"n_threads={n_threads}\n"
         )
         print(f"##################################################### done ")
-        # sol.graphs(show_bounds=True)
-        # --- Save the results --- #
 
-        biorbd_model = biorbd.Model(biorbd_model_path)
-        qddot = list()
-        if len(sol.phase_time) > 2:
-            for p, (states, controls) in enumerate(zip(sol.states, sol.controls)):
-                qddot.append(
-                    np.zeros((int(states["all"].shape[0] // 2), states["all"].shape[1]))
-                )
-                for i, (x, u) in enumerate(zip(states["all"].T, controls["all"].T)):
-                    states_dot = torque_driven_dynamics(
-                        model=biorbd_model, states=x, controls=u, params=None, fext=None
-                    )
-                    qddot[p][:, i] = states_dot[biorbd_model.nbQ() :]
-        else:
-            p = 0
-            states = sol.states
-            controls = sol.controls
-            qddot.append(
-                np.zeros((int(states["all"].shape[0] // 2), states["all"].shape[1]))
-            )
-            for i, (x, u) in enumerate(zip(states["all"].T, controls["all"].T)):
-                states_dot = torque_driven_dynamics(
-                    model=biorbd_model, states=x, controls=u, params=None, fext=None
-                )
-                qddot[p][:, i] = states_dot[biorbd_model.nbQ() :]
-
-        # merge qddot elements in one numpy array deleting the last node of each phase
-        # and keeping the first node of each phase
-        # qddot[p][:, -1] is not kept when merging phases except for the last phase
-        qddot_list = [qddot_p[:, :-1] for qddot_p in qddot]
-        qddot_list.append(np.expand_dims(qddot[-1][:, -1], axis=1))
-        qddot = np.hstack(qddot_list)
+        qddot = self.recompute_qddot(biorbd_model_path, sol)
 
         sol_integrated = sol.integrate(
-            shooting_type=Shooting.SINGLE_CONTINUOUS,
+            shooting_type=Shooting.SINGLE,
             keep_intermediate_points=False,
             merge_phases=True,
-            continuous=True,
             integrator=SolutionIntegrator.SCIPY_DOP853,
         )
 
@@ -232,6 +198,7 @@ class RunOCP:
             "ode_solver": ode_solver,
             "ode_solver_str": ode_solver.__str__().replace("\n", "_").replace(" ", "_"),
             "defects_type": ode_solver.defects_type,
+            "tau": sol_merged.controls["tau"],
             "q": sol_merged.states_no_intermediate["q"],
             "qdot": sol_merged.states_no_intermediate["qdot"],
             "qddot": qddot,
@@ -239,11 +206,45 @@ class RunOCP:
             "qdot_integrated": sol_integrated.states["qdot"],
             "n_shooting": n_shooting,
             "n_theads": n_threads,
-            # "q_integrated_linear": out_2.states["q"],
-            # "qdot_integrated_linear": out_2.states["qdot"],
-            # "time_linear": out_2.time_vector,
         }
 
         pickle.dump(data, f)
         f.close()
         my_ocp.ocp.save(sol, f"{outpath}.bo")
+
+    @staticmethod
+    def recompute_qddot(biorbd_model_path, sol):
+    
+        biorbd_model = biorbd.Model(biorbd_model_path)
+        qddot = list()
+        if len(sol.phase_time) > 2:
+            for p, (states, controls) in enumerate(zip(sol.states, sol.controls)):
+                qddot.append(
+                    np.zeros((int(states["all"].shape[0] // 2), states["all"].shape[1]))
+                )
+                for i, (x, u) in enumerate(zip(states["all"].T, controls["all"].T)):
+                    states_dot = torque_driven_dynamics(
+                        model=biorbd_model, states=x, controls=u, params=None, fext=None
+                    )
+                    qddot[p][:, i] = states_dot[biorbd_model.nbQ():]
+        else:
+            p = 0
+            states = sol.states
+            controls = sol.controls
+            qddot.append(
+                np.zeros((int(states["all"].shape[0] // 2), states["all"].shape[1]))
+            )
+            for i, (x, u) in enumerate(zip(states["all"].T, controls["all"].T)):
+                states_dot = torque_driven_dynamics(
+                    model=biorbd_model, states=x, controls=u, params=None, fext=None
+                )
+                qddot[p][:, i] = states_dot[biorbd_model.nbQ():]
+
+        # merge qddot elements in one numpy array deleting the last node of each phase
+        # and keeping the first node of each phase
+        # qddot[p][:, -1] is not kept when merging phases except for the last phase
+        qddot_list = [qddot_p[:, :-1] for qddot_p in qddot]
+        qddot_list.append(np.expand_dims(qddot[-1][:, -1], axis=1))
+        qddot = np.hstack(qddot_list)
+
+        return qddot
