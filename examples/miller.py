@@ -23,7 +23,7 @@ def main():
     )
 
     miller.ocp.add_plot_penalty(CostType.ALL)
-    # humanoid.ocp.print()
+    miller.ocp.print(to_console=True, to_graph=False)
 
     solv = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
     solv.set_maximum_iterations(10000)
@@ -42,15 +42,14 @@ def main():
         integrator=SolutionIntegrator.SCIPY_DOP853,
     )
 
-    # sol.animate(n_frames=0, show_floor=False, show_gravity=False)
-    # sol.graphs(show_bounds=True)
-
     plt.figure()
     plt.plot(sol.time, sol.states["q"].T, label="ocp", marker=".")
     plt.plot(out.time, out.states["q"].T, label="integrated", marker="+")
     plt.legend()
     plt.show()
 
+    sol.animate(n_frames=0, show_floor=False, show_gravity=False)
+    sol.graphs(show_bounds=True)
 
 if __name__ == "__main__":
     main()
