@@ -316,12 +316,12 @@ class MillerOcpOnePhase:
             integration_rule=integral_approximation
         )
         self.objective_functions.add(
-            ObjectiveFcn.Lagrange.MINIMIZE_ANGULAR_MOMENTUM,
+            ObjectiveFcn.Mayer.MINIMIZE_ANGULAR_MOMENTUM,
             weight=50,
             quadratic=False,
             index=[0],
             phase=i,
-            integration_rule=integral_approximation
+            node=Node.START
         )
         self.objective_functions.add(
             ObjectiveFcn.Lagrange.MINIMIZE_ANGULAR_MOMENTUM,
@@ -329,7 +329,7 @@ class MillerOcpOnePhase:
             quadratic=True,
             index=[1, 2],
             phase=i,
-            integration_rule=integral_approximation
+            node=Node.START
         )
         self.objective_functions.add(
             ObjectiveFcn.Lagrange.MINIMIZE_STATE,

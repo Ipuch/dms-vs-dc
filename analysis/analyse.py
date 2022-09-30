@@ -332,7 +332,7 @@ class ResultsAnalyse:
             "computation_time",
             1,
             1,
-            r"$\text{time ({time_unit}})}$",
+            "time (s)",
             ylog=False,
         )
         fig = my_traces(
@@ -374,7 +374,7 @@ class ResultsAnalyse:
         fig.update_yaxes(
             row=1,
             col=1,
-            tickformat="0.1r",
+            tickformat=".1f",
         )
         fig.update_yaxes(
             row=1,
@@ -601,6 +601,76 @@ class ResultsAnalyse:
         """
         This function plots the time and number of iterations need to make the OCP converge
 
+        Parameters
+        ----------
+        show : bool
+            If True, the figure is shown.
+        export : bool
+            If True, the figure is exported.
+        """
+
+        # dyn = [i for i in self.df["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
+        dyn = self.df["grps"].unique().tolist()
+        grps = dyn
+
+        fig = make_subplots(rows=1, cols=1)
+
+        # select only the one who converged
+        df_results = self.df[self.df["status"] == 0]
+
+        fig = my_traces(
+            fig,
+            dyn,
+            grps,
+            df_results,
+            key="cost",
+            row=1,
+            col=1,
+            ylabel="objective value",
+        )
+
+        fig.update_layout(
+            height=800,
+            width=1500,
+            paper_bgcolor="rgba(255,255,255,1)",
+            plot_bgcolor="rgba(255,255,255,1)",
+            legend=dict(
+                title_font_family="Times New Roman",
+                font=dict(family="Times New Roman", color="black", size=11),
+                orientation="h",
+                xanchor="center",
+                x=0.5,
+                y=-0.05,
+            ),
+            font=dict(
+                size=12,
+                family="Times New Roman",
+            ),
+            yaxis=dict(color="black"),
+            template="simple_white",
+            boxgap=0.2,
+        )
+
+        fig.update_yaxes(
+            row=1,
+            col=1,
+        )
+
+        if show:
+            fig.show()
+        if export:
+            fig.write_image(self.path_to_figures + "/analyse_obj.png")
+            fig.write_image(self.path_to_figures + "/analyse_obj.pdf")
+            fig.write_image(self.path_to_figures + "/analyse_obj.svg")
+            fig.write_image(self.path_to_figures + "/analyse_obj.eps")
+            fig.write_html(
+                self.path_to_figures + "/analyse_obj.html", include_mathjax="cdn"
+            )
+
+    def plot_detailed_obj_values(self, show: bool = True, export: bool = True):
+        """
+        This function plots the time and number of iterations need to make the OCP converge
+        # todo
         Parameters
         ----------
         show : bool
