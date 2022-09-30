@@ -197,6 +197,11 @@ class ResultsAnalyse:
                     "grps"
                 ] = f"{data['ode_solver'].__str__()}_{data['defects_type'].value}_{n_shooting}"
 
+                for i, cost in enumerate(data["detailed_cost"]):
+                    data[f"cost{i}"] = cost["cost_value_weighted"]
+                    data[f"cost{i}_name"] = cost["name"]
+                    data[f"cost{i}_key"] = cost["params"]["key"] if "key" in cost["params"] else None
+
                 df_dictionary = pd.DataFrame([data])
                 df_results = pd.concat([df_results, df_dictionary], ignore_index=True)
 
@@ -258,8 +263,12 @@ class ResultsAnalyse:
         print(self.df["filename"][num])
         print(self.df["grps"][num])
 
+        p = Path(self.df["model_path"][num])
+        # verify if the path/file exists with pathlib
+        model_path = self.model_path if not p.exists() else p.__str__()
+
         import bioviz
-        biorbd_viz = bioviz.Viz(self.df["model_path"][num],
+        biorbd_viz = bioviz.Viz(model_path,
                                 show_now=False,
                                 show_meshes=True,
                                 show_global_center_of_mass=False,
@@ -683,21 +692,41 @@ class ResultsAnalyse:
         dyn = self.df["grps"].unique().tolist()
         grps = dyn
 
-        fig = make_subplots(rows=1, cols=1)
-
         # select only the one who converged
         df_results = self.df[self.df["status"] == 0]
 
-        fig = my_traces(
-            fig,
-            dyn,
-            grps,
-            df_results,
-            key="cost",
-            row=1,
-            col=1,
-            ylabel="objective value",
-        )
+        nb_costs = df_results["detailed_cost"][0].__len__()
+
+        rows, cols = generate_windows_size(nb_costs)
+
+        # indices of rows and cols for each axe of the subplot
+        idx_rows, idx_cols = np.unravel_index([i for i in range(nb_costs)], (rows, cols))
+        idx_rows += 1
+        idx_cols += 1
+
+        titles = []
+        for i in range(nb_costs):
+            key = df_results[f"cost{i}_key"][0]
+            key = key if key is not None else ""
+            titles.append(df_results[f"cost{i}_name"][0] + " " + key)
+
+        fig = make_subplots(rows=rows, cols=cols, subplot_titles=titles)
+
+        for i in range(nb_costs):
+            key = df_results[f"cost{i}_key"][0]
+            key = key if key is not None else ""
+
+            fig = my_traces(
+                fig,
+                dyn,
+                grps,
+                df_results,
+                key=f"cost{i}",
+                row=idx_rows[i],
+                col=idx_cols[i],
+                # title_str=df_results[f"cost{i}_name"][0] + " " + key,
+                # ylabel="objective value",
+            )
 
         fig.update_layout(
             height=800,
@@ -857,30 +886,31 @@ def main():
     # model_path = Models.ACROBAT.value
     #
     path_to_files = (
-        "/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_30-08-22_2"
+        "/home/puchaud/Projets_Python/dms-vs-dc-results/ACROBAT_28-09-22_2"
     )
     model_path = Models.ACROBAT.value
     export = True
     show = True
 
     results = ResultsAnalyse(path_to_files=path_to_files, model_path=model_path)
-    results.animate(num=5)
+    # results.animate(num=5)
     # results.plot_time_iter(show=show, export=export, time_unit="min")
     # results.plot_obj_values(show=show, export=export)
-    results.plot_integration_frame_to_frame_error(
-        show=show, export=export, until_consistent=False
-    )
-    results.plot_integration_final_error(show=show, export=export)
-    results.plot_state(
-        key="q", show=show, export=export, row_col=(5, 3), until_consistent=False
-    )
-    results.plot_state(
-        key="q_integrated",
-        show=show,
-        export=export,
-        row_col=(5, 3),
-        until_consistent=False,
-    )
+    results.plot_detailed_obj_values(show=show, export=export)
+    # results.plot_integration_frame_to_frame_error(
+    #     show=show, export=export, until_consistent=False
+    # )
+    # results.plot_integration_final_error(show=show, export=export)
+    # results.plot_state(
+    #     key="q", show=show, export=export, row_col=(5, 3), until_consistent=False
+    # )
+    # results.plot_state(
+    #     key="q_integrated",
+    #     show=show,
+    #     export=export,
+    #     row_col=(5, 3),
+    #     until_consistent=False,
+    # )
 
     # results.plot_state(key="tau", show=show, export=export, row_col=(5, 3))
     # results.plot_state(key="qddot", show=show, export=export, row_col=(5, 3))
