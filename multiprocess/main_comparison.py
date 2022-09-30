@@ -74,7 +74,7 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
             OdeSolver.RK8(n_integration_steps=2),
             # OdeSolver.CVODES(),
             OdeSolver.IRK(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
-            OdeSolver.IRK(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
+            # OdeSolver.IRK(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
             OdeSolver.COLLOCATION(
                 defects_type=DefectType.IMPLICIT, polynomial_degree=4
             ),

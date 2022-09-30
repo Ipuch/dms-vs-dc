@@ -884,9 +884,12 @@ def main():
 
     # path_to_files = ResultFolders.MILLER_2.value
     # model_path = Models.ACROBAT.value
-    #
+
     path_to_files = (
-        "/home/puchaud/Projets_Python/dms-vs-dc-results/ACROBAT_28-09-22_2"
+         "/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_28-09-22_2"
+        #"/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_31-08-22_2"
+        # "/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_30-08-22_2"
+        # "/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_26-08-22_2"
     )
     model_path = Models.ACROBAT.value
     export = True
@@ -912,9 +915,10 @@ def main():
     #     until_consistent=False,
     # )
 
+
     # results.plot_state(key="tau", show=show, export=export, row_col=(5, 3))
     # results.plot_state(key="qddot", show=show, export=export, row_col=(5, 3))
-
+    # results.plot_state(key="tau", show=show, export=export, row_col=(5, 3))
 
 if __name__ == "__main__":
     main()
