@@ -38,7 +38,7 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
         )
         running_function = run_ocp.main
     elif model == Models.ACROBAT:
-        n_shooting = [125, 300]
+        n_shooting = [125]
         run_ocp = RunOCP(
             ocp_class=MillerOcpOnePhase,
             show_optim=show_optim,
@@ -62,7 +62,7 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
         print(f"{out_path}" + Date + " is already created ")
 
     # --- Generate the parameters --- #
-    n_thread = 32
+    n_thread = 8
     # n_thread = 4
     #  n_thread = 32
     param = dict(
@@ -97,16 +97,17 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
     cpu_number = cpu_count()
     my_pool_number = int(cpu_number / n_thread)
 
-    running_function(my_calls[0])
+    # running_function(my_calls[0])
     # running_function(my_calls[1])
-    # run_pool(
-    #     running_function=running_function,
-    #     calls=my_calls,
-    #     pool_nb=my_pool_number,
-    # )
+    run_pool(
+         running_function=running_function,
+         calls=my_calls,
+         pool_nb=my_pool_number,
+    )
 
 
 if __name__ == "__main__":
-    main(model=Models.LEG, iterations=0, print_level=5, ignore_already_run=False, show_optim=True)
-    main(model=Models.ARM, iterations=0, print_level=5, ignore_already_run=False, show_optim=False)
-    main(model=Models.ACROBAT, iterations=0, print_level=5, ignore_already_run=False, show_optim=False)
+    # main(model=Models.LEG, iterations=0, print_level=5, ignore_already_run=False, show_optim=True)
+    # main(model=Models.ARM, iterations=0, print_level=5, ignore_already_run=False, show_optim=False)
+    main(model=Models.ACROBAT, iterations=2500, print_level=5, ignore_already_run=False, show_optim=False)
+

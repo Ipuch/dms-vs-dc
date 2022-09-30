@@ -23,6 +23,7 @@ from bioptim import (
     MultinodeConstraintList,
     RigidBodyDynamics,
     NoisedInitialGuess,
+    IntegralApproximation
 )
 
 # from custom_dynamics.root_explicit_qddot_joint import root_explicit_dynamic, custom_configure_root_explicit
@@ -79,7 +80,7 @@ class MillerOcpOnePhase:
         rigidbody_dynamics: RigidBodyDynamics = RigidBodyDynamics.ODE,
         vertical_velocity_0: float = 8.30022867e00,  # actualized with results from https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4096894
         somersaults: float = 4 * np.pi,
-        twists: float = 6 * np.pi,
+        twists: float = 2 * np.pi,
         use_sx: bool = False,
         extra_obj: bool = False,
         initial_x: InitialGuessList = None,
@@ -253,10 +254,6 @@ class MillerOcpOnePhase:
 
             self._set_mapping()
 
-            # import matplotlib.pyplot as plt
-            # plt.plot(self.x_init[0].init[8,:])
-            # plt.show()
-
             self.ocp = OptimalControlProgram(
                 self.biorbd_model,
                 self.dynamics,
@@ -287,16 +284,6 @@ class MillerOcpOnePhase:
                 with_contact=False,
                 rigidbody_dynamics=RigidBodyDynamics.ODE,
             )
-            # elif self.rigidbody_dynamics == MillerDynamics.ROOT_EXPLICIT:
-            #     self.dynamics.add(custom_configure_root_explicit, dynamic_function=root_explicit_dynamic)
-            # elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS:
-            #     self.dynamics.add(DynamicsFcn.TORQUE_DRIVEN, implicit_dynamics=True, with_contact=False)
-            # elif self.rigidbody_dynamics == MillerDynamics.ROOT_IMPLICIT:
-            #     self.dynamics.add(custom_configure_root_implicit, dynamic_function=root_implicit_dynamic)
-            # elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK:
-            #     self.dynamics.add(custom_configure_tau_driven_implicit, dynamic_function=tau_implicit_qdddot_dynamic)
-            # elif self.rigidbody_dynamics == MillerDynamics.ROOT_IMPLICIT_QDDDOT:
-            #     self.dynamics.add(custom_configure_root_implicit_qdddot, dynamic_function=root_implicit_qdddot_dynamic)
         else:
             raise ValueError("This dynamics has not been implemented")
 
@@ -306,12 +293,12 @@ class MillerOcpOnePhase:
         """
 
         # --- Objective function --- #
-        w_qdot = 1
+        w_qdot = 10
         w_penalty = 1
         w_penalty_foot = 10
         w_penalty_core = 10
         w_torque = 100
-
+        integral_approximation = IntegralApproximation.TRAPEZOIDAL
         i = 0
         self.objective_functions.add(
             ObjectiveFcn.Lagrange.MINIMIZE_CONTROL,
@@ -319,12 +306,30 @@ class MillerOcpOnePhase:
             weight=w_torque,
             phase=i,
         )
+
         self.objective_functions.add(
             ObjectiveFcn.Lagrange.MINIMIZE_CONTROL,
             key="tau",
             weight=w_torque,
             derivative=True,
             phase=i,
+            integration_rule=integral_approximation
+        )
+        self.objective_functions.add(
+            ObjectiveFcn.Lagrange.MINIMIZE_ANGULAR_MOMENTUM,
+            weight=50,
+            quadratic=False,
+            index=[0],
+            phase=i,
+            integration_rule=integral_approximation
+        )
+        self.objective_functions.add(
+            ObjectiveFcn.Lagrange.MINIMIZE_ANGULAR_MOMENTUM,
+            weight=50,
+            quadratic=True,
+            index=[1, 2],
+            phase=i,
+            integration_rule=integral_approximation
         )
         self.objective_functions.add(
             ObjectiveFcn.Lagrange.MINIMIZE_STATE,
@@ -333,6 +338,7 @@ class MillerOcpOnePhase:
             index=(6, 7, 8, 9, 10, 11, 12, 13, 14),
             weight=w_qdot,
             phase=i,
+            integration_rule=integral_approximation
         )  # Regularization
         self.objective_functions.add(
             ObjectiveFcn.Mayer.MINIMIZE_MARKERS,
@@ -360,7 +366,6 @@ class MillerOcpOnePhase:
             marker_index=16,
             weight=w_penalty_foot,
             phase=i,
-            quadratic=False,
         )  # feet trajectory
         self.objective_functions.add(
             ObjectiveFcn.Lagrange.MINIMIZE_STATE,
@@ -368,6 +373,7 @@ class MillerOcpOnePhase:
             key="q",
             weight=w_penalty_core,
             phase=i,
+            integration_rule=integral_approximation
         )  # core DoFs
 
         slack_duration = 0.05
@@ -377,56 +383,6 @@ class MillerOcpOnePhase:
             max_bound=self.phase_durations + slack_duration,
             phase=0,
             weight=1e-6,
-        )
-
-        self.objective_functions.add(
-            ObjectiveFcn.Mayer.TRACK_STATE,
-            key="q",
-            target=[
-                6.93863800e-03,
-                8.31467100e-02,
-                1.47186783e00,
-                1.08647147e01,
-                2.61750449e-01,
-                1.83325093e01,
-                -1.30662427e-01,
-                -1.54638187e-02,
-                -1.27865720e-01,
-                -5.28159705e-01,
-                -1.99333636e-01,
-                5.63350637e-01,
-                1.99496640e-01,
-                3.92744746e-01,
-                1.30451639e-01,
-            ],
-            phase=0,
-            node=Node.END,
-            weight=50,
-        )
-
-        self.objective_functions.add(
-            ObjectiveFcn.Mayer.TRACK_STATE,
-            key="qdot",
-            target=[
-                0.42339227,
-                -0.45696772,
-                -6.28603702,
-                4.68656591,
-                -2.34329545,
-                11.12392693,
-                0.05213902,
-                0.77497476,
-                0.30877216,
-                2.5922945,
-                -4.30055308,
-                1.11943145,
-                3.44242145,
-                1.99795567,
-                -0.16583392,
-            ],
-            phase=0,
-            node=Node.END,
-            weight=25,
         )
 
     def _set_initial_momentum(self):
@@ -725,31 +681,31 @@ class MillerOcpOnePhase:
         #     1.30451639e-01,
         # ]
 
-        x_min[: self.n_q, 2] = [
-            0.42339227,
-            -0.45696772,
-            -6.28603702,
-            4.68656591,
-            -2.34329545,
-            11.12392693,
-            0.05213902,
-            0.77497476,
-            0.30877216,
-            2.5922945,
-            -4.30055308,
-            1.11943145,
-            3.44242145,
-            1.99795567,
-            -0.16583392,
-        ]
+        # x_min[: self.n_q, 2] = [
+        #     0.42339227,
+        #     -0.45696772,
+        #     -6.28603702,
+        #     4.68656591,
+        #     -2.34329545,
+        #     11.12392693,
+        #     0.05213902,
+        #     0.77497476,
+        #     0.30877216,
+        #     2.5922945,
+        #     -4.30055308,
+        #     1.11943145,
+        #     3.44242145,
+        #     1.99795567,
+        #     -0.16583392,
+        # ]
 
         x_min[: self.n_q, 2] = [
             -0.01,
             -0.1,
-            1.40,
-            1.05,
-            2.55,
-            1.75,
+            1.45,
+            self.somersaults - 2 * np.pi / 4 - slack_somersault,
+            -tilt_final_bound,
+            self.twists - slack_twist,
             -slack_final_dofs,
             -slack_final_dofs,
             -slack_final_dofs,
@@ -760,15 +716,32 @@ class MillerOcpOnePhase:
             thorax_hips_xyz - slack_final_dofs,
             -slack_final_dofs,
         ]  # x_min[0, :self.n_q, 1]
-        x_min[self.n_q :, 2] = -self.velocity_max
+        x_min[self.n_q :, 2] = -20
+        # x_min[self.n_q :, 2] = [
+        #         0.2,
+        #         -0.6,
+        #         -6.5,
+        #         4,
+        #         -2.5,
+        #         10,
+        #         -0.1,
+        #         0.5,
+        #         0,
+        #         2,
+        #         -4.5,
+        #         1,
+        #         3,
+        #         1.5,
+        #         -0.3,
+        #     ]
 
         x_max[: self.n_q, 2] = [
             0.01,
             0.1,
             1.50,
-            1.1,
-            2.65,
-            1.90,
+            self.somersaults - 2 * np.pi / 4 + slack_somersault,
+            tilt_final_bound,
+            self.twists + slack_twist,
             slack_final_dofs,
             slack_final_dofs,
             slack_final_dofs,
@@ -779,7 +752,24 @@ class MillerOcpOnePhase:
             thorax_hips_xyz,
             slack_final_dofs,
         ]  # x_max[0, :self.n_q, 1]
-        # x_max[self.n_q :, 2] = +self.velocity_max
+        # x_max[self.n_q:, 2] = [
+        #         1,
+        #         0,
+        #         0,
+        #         10,
+        #         2.5,
+        #         15,
+        #         0.1,
+        #         1,
+        #         0.5,
+        #         3,
+        #         0,
+        #         2.5,
+        #         5,
+        #         3,
+        #         0,
+        #     ]
+        x_max[self.n_q:, 2] = 20
 
         if self.remove_thorax_rot_x:
             x_min = np.delete(x_min, 6, 0)

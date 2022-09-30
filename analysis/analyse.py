@@ -145,6 +145,7 @@ class ResultsAnalyse:
 
                 # _, sol = OptimalControlProgram.load(f"{self.path_to_files}/{p.stem}.bo")
                 # DM to array
+                data["filename"] = file
                 data["tau"] = data["controls"]["tau"]
 
                 data["cost"] = np.array(data["cost"])[0][0]
@@ -187,9 +188,10 @@ class ResultsAnalyse:
                 )
 
                 # to identify the point at which the consistency is sufficient
-                data["consistent_threshold"] = np.where(
+                idx = np.where(
                     data["rotation_error_traj"] > self.consistent_threshold
-                )[0][0]
+                )[0]
+                data["consistent_threshold"] = idx[0] if idx.shape[0] != 0 else None
 
                 data[
                     "grps"
@@ -242,6 +244,57 @@ class ResultsAnalyse:
             print(
                 f"{a} / {b} {str_formulation} did not converge to an optimal solutions"
             )
+
+    def animate(self, num: int = 0):
+        """
+        This method animates the motion with bioviz
+
+        Parameters
+        ----------
+        num: int
+        Number of the trial to be visualized
+        """
+
+        print(self.df["filename"][num])
+        print(self.df["grps"][num])
+
+        import bioviz
+        biorbd_viz = bioviz.Viz(self.df["model_path"][num],
+                                show_now=False,
+                                show_meshes=True,
+                                show_global_center_of_mass=False,
+                                show_gravity_vector=False,
+                                show_floor=False,
+                                show_segments_center_of_mass=False,
+                                show_global_ref_frame=False,
+                                show_local_ref_frame=False,
+                                show_markers=False,
+                                show_muscles=False,
+                                show_wrappings=False,
+                                background_color=(1, 1, 1),
+                                mesh_opacity=0.97,
+                                )
+
+        biorbd_viz.resize(600, 900)
+
+        # Position camera
+        biorbd_viz.set_camera_position(-8.782458942185185, 0.486269131372712, 4.362010279585766)
+        biorbd_viz.set_camera_roll(90)
+        biorbd_viz.set_camera_zoom(0.308185240948253)
+        biorbd_viz.set_camera_focus_point(1.624007185850899, 0.009961251074366406, 1.940316420941989)
+
+        # print("roll")
+        # print(biorbd_viz.get_camera_roll())
+        # print("zoom")
+        # print(biorbd_viz.get_camera_zoom())
+        # print("position")
+        # print(biorbd_viz.get_camera_position())
+        # print("get_camera_focus_point")
+        # print(biorbd_viz.get_camera_focus_point())
+
+        q = self.df["q"][num]
+        biorbd_viz.load_movement(q)
+        biorbd_viz.exec()
 
     def plot_time_iter(
         self, show: bool = True, export: bool = True, time_unit: str = "s"
@@ -737,11 +790,11 @@ def main():
         "/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_30-08-22_2"
     )
     model_path = Models.ACROBAT.value
-    export = False
+    export = True
     show = True
 
     results = ResultsAnalyse(path_to_files=path_to_files, model_path=model_path)
-    results.print()
+    results.animate(num=5)
     # results.plot_time_iter(show=show, export=export, time_unit="min")
     # results.plot_obj_values(show=show, export=export)
     results.plot_integration_frame_to_frame_error(

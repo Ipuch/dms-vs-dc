@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 
 def main():
 
-    ode_solver = OdeSolver.RK4(n_integration_steps=5)
-    # ode_solver = OdeSolver.COLLOCATION()
+    # ode_solver = OdeSolver.RK4(n_integration_steps=5)
+    ode_solver = OdeSolver.COLLOCATION()
 
     n_threads = 32
     model_path = Models.ACROBAT.value
@@ -42,13 +42,14 @@ def main():
         integrator=SolutionIntegrator.SCIPY_DOP853,
     )
 
+    sol.animate(show_floor=False, show_gravity=False)
+
     plt.figure()
     plt.plot(sol.time, sol.states["q"].T, label="ocp", marker=".")
     plt.plot(out.time, out.states["q"].T, label="integrated", marker="+")
     plt.legend()
     plt.show()
 
-    sol.animate(n_frames=0, show_floor=False, show_gravity=False)
     sol.graphs(show_bounds=True)
 
 if __name__ == "__main__":
