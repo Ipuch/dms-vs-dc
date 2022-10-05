@@ -2,15 +2,17 @@
 
 """
 import os
-from utils import generate_calls, run_pool, run_the_missing_ones
-from robot_leg import Models
+
+
 from multiprocessing import Pool, cpu_count
 from datetime import date
-from bioptim import OdeSolver, RigidBodyDynamics
 from pathlib import Path
-from bioptim import DefectType
+import pandas as pd
 
-from robot_leg import ArmOCP, LegOCP, MillerOcpOnePhase
+from bioptim import OdeSolver, RigidBodyDynamics, DefectType
+
+from utils import generate_calls, run_pool, run_the_missing_ones
+from robot_leg import ArmOCP, LegOCP, MillerOcpOnePhase, Models
 from run_ocp import RunOCP
 
 
@@ -50,6 +52,21 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
     else:
         raise ValueError("Unknown model")
 
+    ode_list = [
+            OdeSolver.COLLOCATION(
+                defects_type=DefectType.IMPLICIT, polynomial_degree=4
+            ),
+            OdeSolver.COLLOCATION(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
+            OdeSolver.RK4(n_integration_steps=5),
+            OdeSolver.RK8(n_integration_steps=2),
+            # # OdeSolver.CVODES(),
+            OdeSolver.IRK(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
+            # OdeSolver.IRK(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
+        ]
+    if model != Models.ACROBAT:
+        ode_list.append(OdeSolver.IRK(defects_type=DefectType.IMPLICIT, polynomial_degree=4))
+
+
     # --- Generate the output path --- #
     Date = date.today().strftime("%d-%m-%y")
     out_path = Path(
@@ -69,17 +86,7 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
         model_str=[
             model.value,
         ],
-        ode_solver=[
-            OdeSolver.RK4(n_integration_steps=5),
-            OdeSolver.RK8(n_integration_steps=2),
-            # OdeSolver.CVODES(),
-            OdeSolver.IRK(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
-            # OdeSolver.IRK(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
-            OdeSolver.COLLOCATION(
-                defects_type=DefectType.IMPLICIT, polynomial_degree=4
-            ),
-            OdeSolver.COLLOCATION(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
-        ],
+        ode_solver=ode_list,
         n_shooting=n_shooting,
         n_thread=[n_thread],
         dynamic_type=[
@@ -87,7 +94,7 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
         ],
         out_path=[out_path.absolute().__str__()],
     )
-    calls = int(5)
+    calls = int(30)
 
     my_calls = generate_calls(
         call_number=calls,
@@ -99,15 +106,22 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
 
     # running_function(my_calls[0])
     # running_function(my_calls[1])
-    run_pool(
-         running_function=running_function,
-         calls=my_calls,
-         pool_nb=my_pool_number,
-    )
+    columns = list(param.keys())
+    columns.append("random")
+    df = pd.DataFrame(my_calls, columns=columns)
+
+    for ode_solver in ode_list:
+        sub_df = df[df["ode_solver"] == ode_solver]
+        my_calls = sub_df.to_numpy().tolist()
+        run_pool(
+             running_function=running_function,
+             calls=my_calls,
+             pool_nb=my_pool_number,
+        )
 
 
 if __name__ == "__main__":
-    # main(model=Models.LEG, iterations=0, print_level=5, ignore_already_run=False, show_optim=True)
-    # main(model=Models.ARM, iterations=0, print_level=5, ignore_already_run=False, show_optim=False)
+    main(model=Models.LEG, iterations=3000, print_level=5, ignore_already_run=False, show_optim=False)
+    main(model=Models.ARM, iterations=3000, print_level=5, ignore_already_run=False, show_optim=False)
     main(model=Models.ACROBAT, iterations=2500, print_level=5, ignore_already_run=False, show_optim=False)
 

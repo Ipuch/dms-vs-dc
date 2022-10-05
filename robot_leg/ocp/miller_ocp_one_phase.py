@@ -238,7 +238,6 @@ class MillerOcpOnePhase:
             if initial_u is None:
                 self._set_initial_controls()  # noise is into the initial guess
 
-            self._set_initial_momentum()
             self._set_dynamics()
             self._set_objective_functions()
 
@@ -283,7 +282,7 @@ class MillerOcpOnePhase:
         """
 
         # --- Objective function --- #
-        w_qdot = 10
+        w_qdot = 1
         w_penalty = 1
         w_penalty_foot = 10
         w_penalty_core = 10
@@ -296,6 +295,7 @@ class MillerOcpOnePhase:
             key="tau",
             weight=w_torque,
             phase=i,
+            quadratic=True,
         )
         self.objective_functions.add(
             ObjectiveFcn.Lagrange.MINIMIZE_CONTROL,
@@ -303,6 +303,7 @@ class MillerOcpOnePhase:
             weight=w_torque,
             derivative=True,
             phase=i,
+            quadratic=True,
             # integration_rule=integral_approximation
         )
         ## ANGULAR MOMENTUM ##
@@ -330,6 +331,7 @@ class MillerOcpOnePhase:
             key="q",
             weight=w_penalty_core,
             phase=i,
+            quadratic=True,
             # integration_rule=integral_approximation
         )  # core DoFs
 
@@ -341,6 +343,7 @@ class MillerOcpOnePhase:
             index=(6, 7, 8, 9, 10, 11, 12, 13, 14),
             weight=w_qdot,
             phase=i,
+            quadratic=True,
             # integration_rule=integral_approximation
         )  # Regularization
 
@@ -353,6 +356,7 @@ class MillerOcpOnePhase:
             weight=w_penalty,
             phase=i,
             node=Node.ALL_SHOOTING,
+            quadratic=True,
         )  # Right hand trajectory
         self.objective_functions.add(
             ObjectiveFcn.Mayer.MINIMIZE_MARKERS,
@@ -362,6 +366,7 @@ class MillerOcpOnePhase:
             weight=w_penalty,
             phase=i,
             node=Node.ALL_SHOOTING,
+            quadratic=True,
         )  # Left hand trajectory
         self.objective_functions.add(
             ObjectiveFcn.Mayer.MINIMIZE_MARKERS,  # Lagrange
@@ -371,6 +376,7 @@ class MillerOcpOnePhase:
             marker_index=16,
             weight=w_penalty_foot,
             phase=i,
+            quadratic=True,
         )  # feet trajectory
 
         ## SLACKED TIME ##
