@@ -7,6 +7,8 @@ from pathlib import Path
 import pickle
 import numpy as np
 import pandas as pd
+from sklearn.cluster import KMeans
+
 import plotly
 from plotly.subplots import make_subplots
 import plotly.express as px
@@ -21,6 +23,7 @@ from utils import (
     compute_error_single_shooting,
     compute_error_single_shooting_each_frame,
     my_traces,
+    my_twokey_traces,
     add_annotation_letter,
     generate_windows_size,
     plot_all_dof,
@@ -65,11 +68,12 @@ class ResultsAnalyse:
     """
 
     def __init__(
-        self,
-        path_to_files: str,
-        model_path: str,
-        export: bool = True,
-        consistent_threshold: float = 10,
+            self,
+            path_to_files: str,
+            model_path: str,
+            df_path: str = None,
+            df: pd.DataFrame = None,
+            consistent_threshold: float = 10,
     ):
 
         self.path_to_files = path_to_files
@@ -83,17 +87,28 @@ class ResultsAnalyse:
         Path(self.path_to_data).mkdir(parents=True, exist_ok=True)
 
         self.consistent_threshold = consistent_threshold
-        self.df_path = None
-        self.df = self.to_panda_dataframe(
-            export=export,
-        )
+        self.df_path = df_path
+        self.df = df
 
-    def to_panda_dataframe(self, export: bool = True) -> pd.DataFrame:
+    @classmethod
+    def from_folder(
+            cls,
+            path_to_files: str,
+            model_path: str,
+            consistent_threshold: float = 10,
+            export: bool = True,
+    ):
         """
         Convert the data to a pandas dataframe.
 
         Parameters
         ----------
+        path_to_files: str
+            The path to the folder containing the results.
+        model_path: str
+            The path to the model.
+        consistent_threshold: float
+            The threshold to consider the OCP results.
         export : bool
             Export the dataframe as a pickle file.
 
@@ -104,7 +119,7 @@ class ResultsAnalyse:
         """
 
         # open files
-        files = os.listdir(self.path_to_files)
+        files = os.listdir(path_to_files)
         files.sort()
 
         column_names = [
@@ -139,7 +154,7 @@ class ResultsAnalyse:
         for i, file in enumerate(files):
             if file.endswith(".pckl"):
                 print(file)
-                p = Path(f"{self.path_to_files}/{file}")
+                p = Path(f"{path_to_files}/{file}")
                 file_path = open(p, "rb")
                 data = pickle.load(file_path)
 
@@ -151,15 +166,8 @@ class ResultsAnalyse:
                 data["cost"] = np.array(data["cost"])[0][0]
                 # print(data["n_threads"])
                 # compute error
-                model = biorbd.Model(self.model_path)
+                model = biorbd.Model(model_path)
 
-                # if isinstance(data["n_shooting"], tuple) and len(data["n_shooting"]) > 1:
-                #     n_shooting = sum(data["n_shooting"])
-                #     q = stack_states(data["q"], "q")  # todo: "q" shouldn't be there.
-                #     q_integrated = data["q_integrated"]["q"]  # todo: "q" shouldn't be there.
-                #     data["q"] = q
-                #     data["q_integrated"] = q_integrated
-                # # # else:
                 n_shooting = data["n_shooting"]
                 q = data["q"]
                 q_integrated = data["q_integrated"]
@@ -189,7 +197,7 @@ class ResultsAnalyse:
 
                 # to identify the point at which the consistency is sufficient
                 idx = np.where(
-                    data["rotation_error_traj"] > self.consistent_threshold
+                    data["rotation_error_traj"] > consistent_threshold
                 )[0]
                 data["consistent_threshold"] = idx[0] if idx.shape[0] != 0 else None
 
@@ -197,10 +205,16 @@ class ResultsAnalyse:
                     "grps"
                 ] = f"{data['ode_solver'].__str__()}_{data['defects_type'].value}_{n_shooting}"
 
+                # remove element of the list[dict] data["detailed_cost"] if key name contains "ConstraintFcn"
+                data["detailed_cost"] = [
+                    {k: v for k, v in d.items() if "ConstraintFcn" not in d["name"]}
+                    for d in data["detailed_cost"]
+                ]
+                data["detailed_cost"] = [d for d in data["detailed_cost"] if d]
+
                 for i, cost in enumerate(data["detailed_cost"]):
                     data[f"cost{i}"] = cost["cost_value_weighted"]
-                    data[f"cost{i}_name"] = cost["name"]
-                    data[f"cost{i}_key"] = cost["params"]["key"] if "key" in cost["params"] else None
+                    data[f"cost{i}_details"] = cost
 
                 df_dictionary = pd.DataFrame([data])
                 df_results = pd.concat([df_results, df_dictionary], ignore_index=True)
@@ -226,10 +240,39 @@ class ResultsAnalyse:
 
         # saves the dataframe
         if export:
-            self.df_path = f"{self.path_to_data}/Dataframe_results_metrics.pkl"
-            df_results.to_pickle(self.df_path)
+            path_to_data = f"{path_to_files}/data"
+            Path(path_to_data).mkdir(parents=True, exist_ok=True)
+            df_path = f"{path_to_data}/Dataframe_results_metrics.pkl"
+            df_results.to_pickle(df_path)
 
-        return df_results
+        return cls(
+            path_to_files=path_to_files,
+            model_path=model_path,
+            consistent_threshold=consistent_threshold,
+            df_path=df_path,
+            df=df_results
+        )
+
+    def cluster(self, n_clusters: int = 2):
+        """
+        Clusters the OCPs according to their objective values
+
+        Parameters
+        ----------
+        n_clusters: int
+            The number of clusters to use
+        """
+
+        # Cluster the OCPs according to the objective values
+        self.n_clusters = n_clusters
+        self.df["cluster"] = None
+        idx = np.where(self.df["status"] == 0)[0]
+        df = self.df[self.df["status"] == 0]
+        kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(
+            df[["cost"]].values
+        )
+        for i, id in enumerate(idx):
+            self.df.loc[id, "cluster"] = kmeans.labels_[i]
 
     def print(self):
         """
@@ -243,12 +286,21 @@ class ResultsAnalyse:
         formulation = self.df["grps"].unique()
 
         for f in formulation:
+            sub_df = self.df[self.df["grps"] == f]
             str_formulation = f.replace("_", " ").replace("-", " ").replace("\n", " ")
-            a = len(self.df[(self.df["status"] == 1) & (self.df["grps"] == f)])
-            b = len(self.df[self.df["grps"] == f])
+            a = len(sub_df[sub_df["status"] == 1])
+            b = len(sub_df)
             print(
                 f"{a} / {b} {str_formulation} did not converge to an optimal solutions"
             )
+            if "cluster" in self.df.keys():
+                # print the number of element in each cluster
+                for i in sub_df["cluster"].unique().tolist():
+                    if i is not None:
+                        sub_df_cluster = sub_df[sub_df["cluster"] == i]
+                        a = len(sub_df_cluster)
+                        b = len(sub_df)
+                        print(f"{a} / {b} converge to cluster {i}")
 
     def animate(self, num: int = 0):
         """
@@ -260,10 +312,10 @@ class ResultsAnalyse:
         Number of the trial to be visualized
         """
 
-        print(self.df["filename"][num])
-        print(self.df["grps"][num])
+        print(self.df["filename"].iloc[num])
+        print(self.df["grps"].iloc[num])
 
-        p = Path(self.df["model_path"][num])
+        p = Path(self.df["model_path"].iloc[num])
         # verify if the path/file exists with pathlib
         model_path = self.model_path if not p.exists() else p.__str__()
 
@@ -301,13 +353,12 @@ class ResultsAnalyse:
         # print("get_camera_focus_point")
         # print(biorbd_viz.get_camera_focus_point())
 
-        q = self.df["q"][num]
+        q = self.df["q"].iloc[num]
         biorbd_viz.load_movement(q)
         biorbd_viz.exec()
 
     def plot_time_iter(
-        self, show: bool = True, export: bool = True, time_unit: str = "s"
-    ):
+            self, show: bool = True, export: bool = True, time_unit: str = "s", export_suffix : str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -394,16 +445,18 @@ class ResultsAnalyse:
         if show:
             fig.show()
         if export:
-            fig.write_image(self.path_to_figures + "/analyse_time_iter.png")
-            fig.write_image(self.path_to_figures + "/analyse_time_iter.pdf")
-            fig.write_image(self.path_to_figures + "/analyse_time_iter.svg")
-            fig.write_image(self.path_to_figures + "/analyse_time_iter.eps")
+            format_type = ["png", "pdf", "svg", "eps"]
+            for f in format_type:
+                fig.write_image(self.path_to_figures + f"/analyse_time_iter{export_suffix}." + f)
             fig.write_html(
-                self.path_to_figures + "/analyse_time_iter.html", include_mathjax="cdn"
+                self.path_to_figures + f"/analyse_time_iter{export_suffix}.html", include_mathjax="cdn"
             )
 
     def plot_integration_frame_to_frame_error(
-        self, show: bool = True, export: bool = True, until_consistent: bool = False
+            self, show: bool = True,
+            export: bool = True,
+            until_consistent: bool = False,
+            export_suffix : str = None
     ):
         """
         This function plots the time and number of iterations need to make the OCP converge
@@ -433,7 +486,6 @@ class ResultsAnalyse:
         df_results = self.df[self.df["status"] == 0]
 
         for _, row in df_results.iterrows():
-
             idx_end = (
                 int(row.consistent_threshold)
                 if until_consistent
@@ -512,24 +564,15 @@ class ResultsAnalyse:
         if show:
             fig.show()
         if export:
-            fig.write_image(
-                self.path_to_figures + "/analyse_integration_each_frame.png"
-            )
-            fig.write_image(
-                self.path_to_figures + "/analyse_integration_each_frame.pdf"
-            )
-            fig.write_image(
-                self.path_to_figures + "/analyse_integration_each_frame.svg"
-            )
-            fig.write_image(
-                self.path_to_figures + "/analyse_integration_each_frame.eps"
-            )
+            format_type = ["png", "pdf", "svg", "eps"]
+            for f in format_type:
+                fig.write_image(self.path_to_figures + f"/analyse_integration_each_frame{export_suffix}." + f)
             fig.write_html(
-                self.path_to_figures + "/analyse_integration_each_frame.html",
+                self.path_to_figures + f"/analyse_integration_each_frame{export_suffix}.html",
                 include_mathjax="cdn",
             )
 
-    def plot_integration_final_error(self, show: bool = True, export: bool = True):
+    def plot_integration_final_error(self, show: bool = True, export: bool = True, export_suffix : str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -597,16 +640,15 @@ class ResultsAnalyse:
         if show:
             fig.show()
         if export:
-            fig.write_image(self.path_to_figures + "/analyse_integration.png")
-            fig.write_image(self.path_to_figures + "/analyse_integration.pdf")
-            fig.write_image(self.path_to_figures + "/analyse_integration.svg")
-            fig.write_image(self.path_to_figures + "/analyse_integration.eps")
+            format_type = ["png", "pdf", "svg", "eps"]
+            for f in format_type:
+                fig.write_image(self.path_to_figures + f"/analyse_integration{export_suffix}." + f)
             fig.write_html(
-                self.path_to_figures + "/analyse_integration.html",
+                self.path_to_figures + f"/analyse_integration{export_suffix}.html",
                 include_mathjax="cdn",
             )
 
-    def plot_obj_values(self, show: bool = True, export: bool = True):
+    def plot_obj_values(self, show: bool = True, export: bool = True, export_suffix : str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -668,15 +710,182 @@ class ResultsAnalyse:
         if show:
             fig.show()
         if export:
-            fig.write_image(self.path_to_figures + "/analyse_obj.png")
-            fig.write_image(self.path_to_figures + "/analyse_obj.pdf")
-            fig.write_image(self.path_to_figures + "/analyse_obj.svg")
-            fig.write_image(self.path_to_figures + "/analyse_obj.eps")
+            format_type = ["png", "pdf", "svg", "eps"]
+            for f in format_type:
+                fig.write_image(self.path_to_figures + f"/analyse_obj{export_suffix}." + f)
             fig.write_html(
-                self.path_to_figures + "/analyse_obj.html", include_mathjax="cdn"
+                self.path_to_figures + f"/analyse_obj{export_suffix}.html", include_mathjax="cdn"
             )
 
-    def plot_detailed_obj_values(self, show: bool = True, export: bool = True):
+    def _plot_2_keys(
+            self,
+            key_x: str,
+            key_y: str,
+            x_label: str,
+            y_label: str,
+            x_log: bool = False,
+            y_log: bool = False,
+            show: bool = True,
+            export: bool = True,
+            export_suffix : str = None,
+    ):
+        """
+        This function plots the time and number of iterations need to make the OCP converge
+
+        Parameters
+        ----------
+        show : bool
+            If True, the figure is shown.
+        export : bool
+            If True, the figure is exported.
+        """
+
+        # dyn = [i for i in self.df["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
+        dyn = self.df["grps"].unique().tolist()
+        grps = dyn
+
+        fig = make_subplots(rows=1, cols=1)
+
+        # select only the one who converged
+        df_results = self.df[self.df["status"] == 0]
+
+        fig = my_twokey_traces(
+            fig,
+            dyn,
+            grps,
+            df_results,
+            key_x=key_x,
+            key_y=key_y,
+            row=1,
+            col=1,
+            ylabel=y_label,
+            xlabel=x_label,
+            ylog=y_log,
+            xlog=x_log,
+        )
+
+        fig.update_layout(
+            height=800,
+            width=1500,
+            paper_bgcolor="rgba(255,255,255,1)",
+            plot_bgcolor="rgba(255,255,255,1)",
+            legend=dict(
+                title_font_family="Times New Roman",
+                font=dict(family="Times New Roman", color="black", size=11),
+                orientation="h",
+                xanchor="center",
+                x=0.5,
+                y=-0.1,
+            ),
+            font=dict(
+                size=12,
+                family="Times New Roman",
+            ),
+            yaxis=dict(color="black"),
+            xaxis=dict(color="black"),
+            template="simple_white",
+            # show grid with black lines on ticks
+            xaxis_showgrid=True,
+            yaxis_showgrid=True,
+        )
+
+        fig.update_yaxes(
+            row=1,
+            col=1,
+        )
+
+        return fig
+
+    def plot_cost_vs_consistency(self, show: bool = True, export: bool = True, export_suffix : str = None):
+        """
+        This function plots the time and number of iterations need to make the OCP converge
+
+        Parameters
+        ----------
+        show : bool
+            If True, the figure is shown.
+        export : bool
+            If True, the figure is exported.
+        """
+
+        fig = self._plot_2_keys(
+            key_x="cost",
+            key_y="rotation_error",
+            x_label="objective function value",
+            y_label="final rotation RMSE (degree)",
+            y_log=True,
+        )
+
+        if show:
+            fig.show()
+        if export:
+            format_type = ["png", "pdf", "svg", "eps"]
+            for f in format_type:
+                fig.write_image(self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}." + f)
+            fig.write_html(
+                self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}.html", include_mathjax="cdn"
+            )
+
+    def plot_time_vs_consistency(self, show: bool = True, export: bool = True, export_suffix : str = None):
+        """
+        This function plots the time and number of iterations need to make the OCP converge
+
+        Parameters
+        ----------
+        show : bool
+            If True, the figure is shown.
+        export : bool
+            If True, the figure is exported.
+        """
+
+        fig = self._plot_2_keys(
+            key_x="computation_time",
+            key_y="rotation_error",
+            x_label="time (s)",
+            y_label="final rotation RMSE (degree)",
+            y_log=True,
+        )
+
+        if show:
+            fig.show()
+        if export:
+            format_type = ["png", "pdf", "svg", "eps"]
+            for f in format_type:
+                fig.write_image(self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}." + f)
+            fig.write_html(
+                self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}.html", include_mathjax="cdn"
+            )
+
+    def plot_time_vs_obj(self, show: bool = True, export: bool = True, export_suffix : str = None):
+        """
+        This function plots the time and number of iterations need to make the OCP converge
+
+        Parameters
+        ----------
+        show : bool
+            If True, the figure is shown.
+        export : bool
+            If True, the figure is exported.
+        """
+
+        fig = self._plot_2_keys(
+            key_x="computation_time",
+            key_y="cost",
+            x_label="time (s)",
+            y_label="objective value",
+        )
+
+        if show:
+            fig.show()
+        if export:
+            format_type = ["png", "pdf", "svg", "eps"]
+            for f in format_type:
+                fig.write_image(self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}." + f)
+            fig.write_html(
+                self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}.html", include_mathjax="cdn"
+            )
+
+    def plot_detailed_obj_values(self, show: bool = True, export: bool = True, export_suffix : str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
         # todo
@@ -696,7 +905,6 @@ class ResultsAnalyse:
         df_results = self.df[self.df["status"] == 0]
 
         nb_costs = df_results["detailed_cost"][0].__len__()
-
         rows, cols = generate_windows_size(nb_costs)
 
         # indices of rows and cols for each axe of the subplot
@@ -706,15 +914,18 @@ class ResultsAnalyse:
 
         titles = []
         for i in range(nb_costs):
-            key = df_results[f"cost{i}_key"][0]
-            key = key if key is not None else ""
-            titles.append(df_results[f"cost{i}_name"][0] + " " + key)
+            name = df_results[f"cost{i}_details"][0]["name"]
+            # key = " " if df_results[f"cost{i}_details"][0]["params"]["key"] is not None else ""
+            # if param is not empty, key is ""
+            param = df_results[f"cost{i}_details"][0]["params"]
+            key = " " + param["key"] if param else ""
+
+            derivative = "delta " if df_results[f"cost{i}_details"][0]["derivative"] else ""
+            titles.append(f"{derivative}{name}{key}")
 
         fig = make_subplots(rows=rows, cols=cols, subplot_titles=titles)
 
         for i in range(nb_costs):
-            key = df_results[f"cost{i}_key"][0]
-            key = key if key is not None else ""
 
             fig = my_traces(
                 fig,
@@ -725,7 +936,7 @@ class ResultsAnalyse:
                 row=idx_rows[i],
                 col=idx_cols[i],
                 # title_str=df_results[f"cost{i}_name"][0] + " " + key,
-                # ylabel="objective value",
+                ylabel="objective value",
             )
 
         fig.update_layout(
@@ -758,25 +969,25 @@ class ResultsAnalyse:
         if show:
             fig.show()
         if export:
-            fig.write_image(self.path_to_figures + "/analyse_obj.png")
-            fig.write_image(self.path_to_figures + "/analyse_obj.pdf")
-            fig.write_image(self.path_to_figures + "/analyse_obj.svg")
-            fig.write_image(self.path_to_figures + "/analyse_obj.eps")
+            format_type = ["png", "pdf", "svg", "eps"]
+            for f in format_type:
+                fig.write_image(self.path_to_figures + f"/analyse_detailed_obj{export_suffix}." + f)
             fig.write_html(
-                self.path_to_figures + "/analyse_obj.html", include_mathjax="cdn"
+                self.path_to_figures + f"/analyse_obj{export_suffix}.html", include_mathjax="cdn"
             )
 
     def plot_state(
-        self,
-        key: str = None,
-        show: bool = True,
-        export: bool = True,
-        label_dofs: list[str] = None,
-        row_col: tuple[int, int] = None,
-        ylabel_rotations: str = "q",
-        ylabel_translations: str = "q",
-        xlabel: str = "Time (s)",
-        until_consistent: bool = False,
+            self,
+            key: str = None,
+            show: bool = True,
+            export: bool = True,
+            label_dofs: list[str] = None,
+            row_col: tuple[int, int] = None,
+            ylabel_rotations: str = "q",
+            ylabel_translations: str = "q",
+            xlabel: str = "Time (s)",
+            until_consistent: bool = False,
+            export_suffix : str = None,
     ) -> plotly.graph_objects.Figure:
         """
         This function plots generalized coordinates of each OCPs
@@ -870,55 +1081,106 @@ class ResultsAnalyse:
         if export:
             format_type = ["png", "pdf", "svg", "eps"]
             for f in format_type:
-                fig.write_image(self.path_to_figures + f"/analyse_{key}." + f)
+                fig.write_image(self.path_to_figures + f"/analyse_{key}{export_suffix}." + f)
             fig.write_html(
-                self.path_to_figures + f"/analyse_{key}.html", include_mathjax="cdn"
+                self.path_to_figures + f"/analyse_{key}{export_suffix}.html", include_mathjax="cdn"
             )
 
         return fig
 
+    def analyse(self, show=True, export=True, cluster_analyse=False):
+        self.print()
+        self.plot_time_iter(show=show, export=export, time_unit="min")
+        # self.plot_obj_values(show=show, export=export)
+        # # self.plot_detailed_obj_values(show=show, export=export)
+        self.plot_time_vs_obj(show=show, export=export)
+        self.plot_time_vs_consistency(show=show, export=export)
+        self.plot_cost_vs_consistency(show=show, export=export)
+        # self.plot_integration_frame_to_frame_error(
+        #     show=show, export=export, until_consistent=False
+        # )
+        # self.plot_integration_final_error(show=show, export=export)
+        # self.plot_state(
+        #     key="q", show=show, export=export, row_col=(5, 3), until_consistent=False
+        # )
+        # self.plot_state(
+        #     key="q_integrated",
+        #     show=show,
+        #     export=export,
+        #     row_col=(5, 3),
+        #     until_consistent=False,
+        # )
 
-def main():
-    # path_to_files = ResultFolders.MILLER_2.value
-    # model_path = Models.ACROBAT.value
+    def cluster_analyse(self, show=True, animate=False):
+        self.cluster(n_clusters=2)
+        self.print()
+        export = True
 
-    # path_to_files = ResultFolders.MILLER_2.value
-    # model_path = Models.ACROBAT.value
+        for i in range(self.n_clusters):
+            export_suffix = f"_cluster{i}"
+            cluster_results = ResultsAnalyse(
+                path_to_files=self.path_to_files,
+                model_path=self.model_path,
+                df=self.df[self.df["cluster"] == i]
+            )
+            if animate:
+                cluster_results.animate()
+            # cluster_results.plot_time_iter(show=show, export=export, time_unit="min", export_suffix=export_suffix)
+            # cluster_results.plot_obj_values(show=show, export=export, export_suffix=export_suffix)
+            # cluster_results.plot_detailed_obj_values(show=show, export=export, export_suffix=export_suffix)
 
-    path_to_files = (
-         "/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_28-09-22_2"
-        #"/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_31-08-22_2"
-        # "/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_30-08-22_2"
-        # "/home/mickaelbegon/Documents/ipuch/dms-vs-dc-results/ACROBAT_26-08-22_2"
-    )
-    model_path = Models.ACROBAT.value
-    export = True
-    show = True
+            cluster_results.plot_time_vs_obj(show=show, export=export, export_suffix=export_suffix)
+            cluster_results.plot_time_vs_consistency(show=show, export=export, export_suffix=export_suffix)
+            cluster_results.plot_cost_vs_consistency(show=show, export=export, export_suffix=export_suffix)
 
-    results = ResultsAnalyse(path_to_files=path_to_files, model_path=model_path)
-    # results.animate(num=5)
-    # results.plot_time_iter(show=show, export=export, time_unit="min")
-    # results.plot_obj_values(show=show, export=export)
-    results.plot_detailed_obj_values(show=show, export=export)
-    # results.plot_integration_frame_to_frame_error(
-    #     show=show, export=export, until_consistent=False
-    # )
-    # results.plot_integration_final_error(show=show, export=export)
-    # results.plot_state(
-    #     key="q", show=show, export=export, row_col=(5, 3), until_consistent=False
-    # )
-    # results.plot_state(
-    #     key="q_integrated",
-    #     show=show,
-    #     export=export,
-    #     row_col=(5, 3),
-    #     until_consistent=False,
-    # )
+            # cluster_results.plot_integration_frame_to_frame_error(
+            #     show=show, export=export, until_consistent=False, export_suffix=export_suffix)
+            # cluster_results.plot_integration_final_error(show=show, export=export, export_suffix=export_suffix)
+            # cluster_results.plot_state(
+            #     key="q", show=show, export=export, row_col=(5, 3), until_consistent=False, export_suffix=export_suffix)
+            # cluster_results.plot_state(
+            #     key="q_integrated",
+            #     show=show,
+            #     export=export,
+            #     row_col=(5, 3),
+            #     until_consistent=False,
+            #     export_suffix=export_suffix,
+            # )
 
-
-    # results.plot_state(key="tau", show=show, export=export, row_col=(5, 3))
-    # results.plot_state(key="qddot", show=show, export=export, row_col=(5, 3))
-    # results.plot_state(key="tau", show=show, export=export, row_col=(5, 3))
 
 if __name__ == "__main__":
-    main()
+
+    # results = ResultsAnalyse.from_folder(
+    #     model_path=Models.LEG.value,
+    #     path_to_files="/home/puchaud/Projets_Python/dms-vs-dc-results/LEG_30-09-22_2",
+    #     export=True,
+    # )
+    # results.analyse(
+    #     show=True,
+    #     export=True,
+    # )
+
+    results = ResultsAnalyse.from_folder(
+        model_path=Models.ARM.value,
+        path_to_files="/home/puchaud/Projets_Python/dms-vs-dc-results/ARM_30-09-22_2",
+        export=True,
+    )
+    # results.animate(num=5)
+    results.analyse(
+        show=True,
+        export=True,
+        cluster_analyse=True,
+    )
+    results.cluster_analyse(
+        show=True,
+    )
+
+    results = ResultsAnalyse.from_folder(
+            model_path=Models.ACROBAT.value,
+            path_to_files="/home/puchaud/Projets_Python/dms-vs-dc-results/ACROBAT_30-09-22_2",
+            export=True,
+        )
+    results.analyse(
+        show=True,
+        export=True,
+    )

@@ -333,6 +333,123 @@ def my_traces(
     return fig
 
 
+def my_twokey_traces(
+    fig: go.Figure,
+    dyn: str,
+    grps: list,
+    df: DataFrame,
+    key_x: str,
+    key_y: str,
+    row: int,
+    col: int,
+    xlabel: str = None,
+    ylabel: str = None,
+    title_str: str = None,
+    ylog: bool = False,
+    xlog: bool = False,
+    color: list = None,
+    show_legend: bool = False,
+):
+    """
+    This function is used to boxplot the data in the dataframe.
+
+    Parameters
+    ----------
+    fig : go.Figure
+        The figure to which the boxplot is added.
+    dyn : str
+        The name of the dynamic system.
+    grps : list
+        The list of groups to be plotted.
+    df : DataFrame
+        The dataframe containing the data.
+    key_x : str
+        The key of the dataframe such as "q" or "tau".
+    key_y : str
+        The key of the dataframe such as "q" or "tau".
+    row : int
+        The row of the subplot.
+    col : int
+        The column of the subplot.
+    xlabel : str
+        The label of the x-axis.
+    ylabel : str
+        The label of the y-axis.
+    title_str : str
+        The title of the subplot.
+    ylog : bool
+        If true, the y-axis is logarithmic.
+    color : list
+        The colors of the boxplot.
+    show_legend : bool
+        If true, the legend is shown.
+    """
+
+    ylog = "log" if ylog == True else None
+    xlog = "log" if xlog == True else None
+
+    if (col == 1 and row == 1) or (col is None or row is None) or show_legend == True:
+        showleg = True
+    else:
+        showleg = False
+
+    for ii, d in enumerate(dyn):
+        # manage color
+        c = (
+            px.colors.hex_to_rgb(px.colors.qualitative.D3[ii % 9])
+            if color is None
+            else color[ii]
+        )
+        c = str(f"rgba({c[0]},{c[1]},{c[2]},0.5)")
+        c1 = (
+            px.colors.qualitative.D3[ii % 9]
+            if color is None
+            else px.colors.label_rgb(color[ii])
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=df[key_x][df["grps"] == d],
+                y=df[key_y][df["grps"] == d],
+                name=d,
+                # boxpoints="all",
+                # width=0.4,
+                # pointpos=-2,
+                legendgroup=grps[ii],
+                fillcolor=c,
+                mode="markers",
+                marker=dict(opacity=0.5),
+                line=dict(color=c1),
+            ),
+            row=row,
+            col=col,
+        )
+
+    fig.update_traces(
+        # jitter=0.8,  # add some jitter on points for better visibility
+        marker=dict(size=15),
+        row=row,
+        col=col,
+        showlegend=showleg,
+        # selector=dict(type="box"),
+    )
+    fig.update_yaxes(
+        type=ylog,
+        row=row,
+        col=col,
+        title=ylabel,
+        title_standoff=2,
+        exponentformat="e",
+    )
+    fig.update_xaxes(
+        type=xlog,
+        row=row,
+        col=col,
+        color=None,
+        title=xlabel,
+    )
+    return fig
+
+
 def add_annotation_letter(
     fig: go.Figure,
     letter: str,
