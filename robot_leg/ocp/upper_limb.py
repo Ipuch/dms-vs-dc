@@ -27,6 +27,7 @@ from bioptim import (
 )
 
 from ..models.utils import thorax_variables, add_header
+from ..models.enums import Models
 from ..data.load_events import LoadEvent
 from ..data.load_experimental_data import LoadData
 
@@ -193,9 +194,7 @@ class UpperLimbOCP:
             )
 
     def _get_experimental_data(self):
-        c3d_path = self.task.value
         n_shooting_points = 100
-        nb_iteration = 3500
 
         data_path = c3d_path.removesuffix(c3d_path.split("/")[-1])
         file_path = data_path + Models.WU_INVERSE_KINEMATICS_XYZ.name + "_" + c3d_path.split("/")[-1].removesuffix(
@@ -309,6 +308,7 @@ class UpperLimbOCP:
         Set the initial guess for the optimal control problem (states and controls)
         """
         # --- Initial guess --- #
+        # todo
         self.x_init = InitialGuess(x_init_ref, interpolation=InterpolationType.EACH_FRAME)
         self.u_init = InitialGuess([tau_init] * n_torque + [muscle_init] * biorbd_model.nbMuscles())
 
