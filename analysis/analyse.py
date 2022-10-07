@@ -1152,17 +1152,16 @@ if __name__ == "__main__":
 
     # results = ResultsAnalyse.from_folder(
     #     model_path=Models.LEG.value,
-    #     path_to_files="/home/puchaud/Projets_Python/dms-vs-dc-results/LEG_30-09-22_2",
+    #     path_to_files=ResultFolders.LEG.value,
     #     export=True,
     # )
     # results.analyse(
     #     show=True,
     #     export=True,
     # )
-
     results = ResultsAnalyse.from_folder(
         model_path=Models.ARM.value,
-        path_to_files="/home/puchaud/Projets_Python/dms-vs-dc-results/ARM_30-09-22_2",
+        path_to_files=ResultFolders.ARM.value,
         export=True,
     )
     # results.animate(num=5)
@@ -1177,7 +1176,7 @@ if __name__ == "__main__":
 
     results = ResultsAnalyse.from_folder(
             model_path=Models.ACROBAT.value,
-            path_to_files="/home/puchaud/Projets_Python/dms-vs-dc-results/ACROBAT_30-09-22_2",
+            path_to_files=ResultFolders.ACROBAT.value,
             export=True,
         )
     results.analyse(
