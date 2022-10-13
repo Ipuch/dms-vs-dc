@@ -943,19 +943,25 @@ class ResultsAnalyse:
                 # n_shooting as str
                 df["n_shooting"] = df["n_shooting"].astype(str)
 
-                fig = fig.add_trace(go.Histogram(x=df["ode_solver_defects"],
+                fig = fig.add_trace(go.Bar(x=df["ode_solver_defects"],
                                         y=df["percent_of_near_optimal_ocp"],
                                                  ),
                                         row=row,
                                         col=col,
                                         )
                 # apply colors to each bar of the histogram a color from px.colors.qualitative.D3
-                fig.update_traces(marker_color="rgb(31, 119, 180)", opacity=0.75, row=row, col=col)
+                # 6 colors of D3
+                marker_colors = px.colors.qualitative.D3[:6]
+                fig.update_traces(marker_color=marker_colors, opacity=0.75, row=row, col=col)
+
+                # hide x ticks
+                fig.update_xaxes(showticklabels=False, row=row, col=col)
+                # remove ticks tips
 
 
                 # Update axis
                 fig.update_xaxes(title_text="Number of nodes", row=row, col=col)
-                fig.update_yaxes(title_text="Percentage of near optimal OCPs (%)", row=row, col=col)
+                fig.update_yaxes(title_text=ylabel[i] if ylabel is not None else ylabel, row=row, col=col)
 
                 # # set the colors of the bars with px.colors.qualitative.D3 for each ode_solver
                 # for i, ode_solver in enumerate(self.near_optimal['ode_solver_defects'].unique()):
@@ -972,6 +978,8 @@ class ResultsAnalyse:
 
                 # y-axis from 0 to 1
                 fig.update_yaxes(range=[0, 1], row=row, col=col)
+
+                #todo: same legend, interactive legend, range x of near optimal grpahs,
 
         return fig
 
@@ -1467,19 +1475,20 @@ def load_results_objects():
 
 def big_figure(results_leg: ResultsAnalyse, results_arm: ResultsAnalyse, results_acrobat: ResultsAnalyse):
     fig = make_subplots(
-        rows=3,
+        rows=4,
         cols=3,
         vertical_spacing=0.05,
         horizontal_spacing=0.10,
         subplot_titles=("LEG", "ARM", "ACROBAT"),
     )
 
-    df = ["main", "near_optimal", "df"]
-    keys = ["computation_time", "near_optimal", "rotation_error"]
-    ylog = [False, True, True]
+    df = ["df", "df", "near_optimal", "df"]
+    keys = ["computation_time", "cost", "near_optimal", "rotation_error"]
+    ylabels = ["CPU time (s)", "Cost function value", "Near optimal frequency (%)", "Rotation error RMSE (deg)"]
+    ylog = [False, True, False, True]
     fig = results_leg.plot_keys \
         (keys=keys, fig=fig, col=1,
-         ylabel=["Time (s)", "Near optimal frequency (%)", "Rotation error RMSE (deg)"],
+         ylabel=ylabels,
          df_list=df, ylog=ylog)
     fig = results_arm.plot_keys(keys=keys, fig=fig, col=2, ylog=ylog, df_list=df)
     fig = results_acrobat.plot_keys(keys=keys, fig=fig, col=3, ylog=ylog, df_list=df)
@@ -1514,6 +1523,10 @@ def big_figure(results_leg: ResultsAnalyse, results_arm: ResultsAnalyse, results
     # custom ranges
     fig.update_yaxes(range=[0, 4], row=1, col=1)
     fig.update_yaxes(range=[0, 0.6e4], row=1, col=3)
+
+    # todo: time / nombre de noeuds/ nombre de ddl
+    # todo: erreur de rotation time / vitesse moyenne ou vitesse max. total rmse ou pour chaque ddl.
+    #
 
     fig.show()
 
