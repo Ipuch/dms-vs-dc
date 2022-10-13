@@ -3,13 +3,14 @@ This script is reading and organizing the raw data results from Miller Optimal c
 It requires the all the raw data to run the script.
 """
 import os
+from typing import List
 from pathlib import Path
 import pickle
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 
-import plotly
+from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
 
@@ -79,7 +80,7 @@ class ResultsAnalyse:
 
         self.path_to_files = path_to_files
         self.model_path = model_path
-        self.model = biorbd.Model(self.model_path)
+        # self.model = biorbd.Model(self.model_path)
 
         # create a subfolder of self.path_to_files to export figures and data
         self.path_to_figures = f"{self.path_to_files}/figures"
@@ -92,6 +93,15 @@ class ResultsAnalyse:
         self.df = df
 
         self.convergence_rate = pd.DataFrame(columns=["n_shooting", "convergence_rate", "ode_solver_defects", "grps"])
+        self.near_optimal = pd.DataFrame(columns=[
+            "n_shooting",
+            "ode_solver_defects",
+            "grps",
+            "number of ocp",
+            "number of near optimal ocp",
+            "percent of near optimal ocp",
+        ])
+        self.compute_near_optimality()
         self.ode_solvers = ode_solvers
 
     @classmethod
@@ -227,25 +237,6 @@ class ResultsAnalyse:
                 df_dictionary = pd.DataFrame([data])
                 df_results = pd.concat([df_results, df_dictionary], ignore_index=True)
 
-        # set parameters of pandas to display all the columns of the pandas dataframe in the console
-        pd.set_option("display.max_columns", None)
-        pd.set_option("display.max_rows", None)
-        pd.set_option("display.width", None)
-        pd.set_option("display.max_colwidth", None)
-        # don't return line with columns of pandas dataframe
-        pd.set_option("display.expand_frame_repr", False)
-        # display all the rows of the dataframe
-        pd.set_option("display.max_rows", 20)
-
-        # print(df_results[["dynamics_type", "n_shooting", "ode_solver", "translation_error", "rotation_error"]])
-        # df_results[["dynamics_type", "ode_solver", "status", "translation_error", "rotation_error"]].to_csv(
-        #     f"{self.path_to_files}/results.csv"
-        # )
-
-        # for each type of elements of grps, identify unique elements of grps
-        df_results["grps_cat"] = pd.Categorical(df_results["grps"])
-        df_results["grp_number"] = df_results["grps_cat"].cat.codes
-
         # sort the dataframe by the column by ode_solver_defects
         # rk4, rk8, irk explicit, irk implicit, collocation explicit, collocation implicit
         ode_solver_defects_list = [
@@ -256,12 +247,50 @@ class ResultsAnalyse:
             "COLLOCATION legendre 4_explicit",
             "COLLOCATION legendre 4_implicit",
         ]
-        ode_solver_defects_list_updated = [cat for cat in ode_solver_defects_list if cat in df_results["ode_solver_defects"].unique()]
-        df_results["ode_solver_defects"] = pd.Categorical(df_results["ode_solver_defects"], ode_solver_defects_list_updated)
+        ode_solver_defects_list_updated = [cat for cat in ode_solver_defects_list if
+                                           cat in df_results["ode_solver_defects"].unique()]
+        df_results["ode_solver_defects"] = pd.Categorical(df_results["ode_solver_defects"],
+                                                          ode_solver_defects_list_updated)
 
         df_results.sort_values("ode_solver_defects", ascending=True, inplace=True)
         # reindex the dataframe
         df_results = df_results.reset_index(drop=True)
+
+        # find the global minimum cost whatever the ode_solver_defects
+        min_cost = df_results["cost"].min()
+        # find the costs that are within 15% of the global minimum cost
+        min_cost_15 = min_cost * 1.15
+        # find the index of the costs that are within 15% of the global minimum cost
+        idx_min_cost_15 = df_results["cost"] < min_cost_15
+        # set a new argument "near_optimal" to True else False if the cost is within 15% of the global minimum cost
+        df_results["near_optimal"] = False
+        df_results.loc[idx_min_cost_15, "near_optimal"] = True
+
+        # find the global minimum cost for each ode_solver_defects
+        for ode_solver_defects in df_results["ode_solver_defects"].unique():
+            idx = df_results["ode_solver_defects"] == ode_solver_defects
+            min_cost = df_results.loc[idx, "cost"].min()
+            # find the costs that are within 15% of the global minimum cost
+            min_cost_15 = min_cost * 1.15
+            # find the index of the costs that are within 15% of the global minimum cost
+            idx_min_cost_15 = df_results.loc[idx, "cost"] < min_cost_15
+            # set a new argument "near_optimal" to True else False if the cost is within 15% of the global minimum cost
+            df_results.loc[idx, "near_optimal_ode"] = False
+            df_results.loc[idx & idx_min_cost_15, "near_optimal_ode"] = True
+
+        # set parameters of pandas to display all the columns of the pandas dataframe in the console
+        pd.set_option("display.max_columns", None)
+        pd.set_option("display.max_rows", None)
+        pd.set_option("display.width", None)
+        pd.set_option("display.max_colwidth", None)
+        # don't return line with columns of pandas dataframe
+        pd.set_option("display.expand_frame_repr", False)
+        # display all the rows of the dataframe
+        pd.set_option("display.max_rows", 20)
+
+        # for each type of elements of grps, identify unique elements of grps
+        df_results["grps_cat"] = pd.Categorical(df_results["grps"])
+        df_results["grp_number"] = df_results["grps_cat"].cat.codes
 
         # saves the dataframe
         if export:
@@ -339,10 +368,147 @@ class ResultsAnalyse:
                         print(f"{a} / {b} converge to cluster {i}")
 
         # sort the convergence rate dataframe
-        self.convergence_rate["ode_solver_defects"] = pd.Categorical(self.convergence_rate["ode_solver_defects"], self.ode_solvers)
+        self.convergence_rate["ode_solver_defects"] = pd.Categorical(self.convergence_rate["ode_solver_defects"],
+                                                                     self.ode_solvers)
         self.convergence_rate.sort_values(by=["n_shooting", "ode_solver_defects"], ascending=True, inplace=True)
         # reindex the dataframe
         self.convergence_rate = self.convergence_rate.reset_index(drop=True)
+
+    def plot_convergence_rate(self, show: bool = True, export: bool = True, export_suffix: str = None):
+        """
+        This function plots the number of problem that converged for each ode_solver and each number of nodes
+
+        Parameters
+        ----------
+        show : bool
+            If True, the figure is shown.
+        export : bool
+            If True, the figure is exported.
+        """
+
+        # set the n_shooting column as categorical
+        df = self.convergence_rate.copy()
+        # n_shooting as str
+        df["n_shooting"] = df["n_shooting"].astype(str)
+
+        fig = px.histogram(df,
+                           x="n_shooting",
+                           y="convergence_rate",
+                           color='ode_solver_defects',
+                           barmode='group',
+                           height=400)
+
+        fig.update_layout(
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font_color='black',
+        )
+        # sh
+
+        # Update axis
+        fig.update_xaxes(title_text="Number of nodes")
+        fig.update_yaxes(title_text="Convergence rate (%)")
+
+        # display horinzontal line grid
+        fig.update_yaxes(showgrid=True, gridwidth=5)
+
+        # set the colors of the bars with px.colors.qualitative.D3 for each ode_solver
+        for i, ode_solver in enumerate(self.convergence_rate['ode_solver_defects'].unique()):
+            fig.data[i].marker.color = px.colors.qualitative.D3[i]  # px.colors.qualitative.D3[i]
+
+        # bars are transparent a bit
+        for i in range(len(fig.data)):
+            fig.data[i].marker.opacity = 0.9
+
+        # contours of bars are black
+        for i in range(len(fig.data)):
+            fig.data[i].marker.line.color = 'black'
+            fig.data[i].marker.line.width = 1
+
+        if show:
+            fig.show()
+        if export:
+            format_type = ["png", "pdf", "svg", "eps"]
+            for f in format_type:
+                fig.write_image(self.path_to_figures + f"/analyse_convergence_rate{export_suffix}." + f)
+            fig.write_html(
+                self.path_to_figures + f"/analyse_convergence_rate{export_suffix}.html", include_mathjax="cdn"
+            )
+
+    def compute_near_optimality(self):
+        """
+        This function fills the dictionnay self.near_optimal with the number of near optimal OCPs for each formulation
+        """
+        # compute the number of near optimal OCPs for each formulation
+        for ode in self.df["ode_solver_defects"].unique():
+            sub_df = self.df[self.df["ode_solver_defects"] == ode]
+            data = dict(
+                n_shooting=sub_df["n_shooting"].unique()[0],
+                ode_solver_defects=sub_df["ode_solver_defects"].unique()[0],
+                number_of_ocp=len(sub_df),
+                number_of_near_optimal_ocp=len(sub_df[sub_df["near_optimal_ode"] == True]),
+                percent_of_near_optimal_ocp=len(sub_df[sub_df["near_optimal_ode"] == True]) / len(sub_df),
+            )
+            df_dictionary = pd.DataFrame([data])
+            self.near_optimal = pd.concat([self.near_optimal, df_dictionary], ignore_index=True)
+
+    def plot_near_optimality(self, show: bool = True, export: bool = True, export_suffix: str = None):
+        """
+        This function plots the number of near optimal OCPs for each formulation
+
+        Parameters
+        ----------
+        show : bool
+            If True, the figure is shown.
+        export : bool
+            If True, the figure is exported.
+        """
+        # set the n_shooting column as categorical
+        df = self.near_optimal.copy()
+        # n_shooting as str
+        df["n_shooting"] = df["n_shooting"].astype(str)
+
+        fig = px.bar(df,
+                     x="n_shooting",
+                     y="percent_of_near_optimal_ocp",
+                     color='ode_solver_defects',
+                     barmode='group',
+                     height=400)
+
+        fig.update_layout(
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font_color='black',
+        )
+        # sh
+
+        # Update axis
+        fig.update_xaxes(title_text="Number of nodes")
+        fig.update_yaxes(title_text="Percentage of near optimal OCPs (%)")
+
+        # display horinzontal line grid
+        fig.update_yaxes(showgrid=True, gridwidth=5)
+
+        # set the colors of the bars with px.colors.qualitative.D3 for each ode_solver
+        for i, ode_solver in enumerate(self.near_optimal['ode_solver_defects'].unique()):
+            fig.data[i].marker.color = px.colors.qualitative.D3[i]
+
+        # bars are transparent a bit
+        for i in range(len(fig.data)):
+            fig.data[i].marker.opacity = 0.9
+
+        # contours of bars are black
+        for i in range(len(fig.data)):
+            fig.data[i].marker.line.color = 'black'
+            fig.data[i].marker.line.width = 1
+
+        # y-axis from 0 to 1
+        fig.update_yaxes(range=[0, 1])
+
+        if show:
+            fig.show()
+        if export:
+            self.export(fig, "analyse_near_optimality", export_suffix)
 
     def animate(self, num: int = 0):
         """
@@ -400,7 +566,7 @@ class ResultsAnalyse:
         biorbd_viz.exec()
 
     def plot_time_iter(
-            self, show: bool = True, export: bool = True, time_unit: str = "s", export_suffix : str = None):
+            self, show: bool = True, export: bool = True, time_unit: str = "s", export_suffix: str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -487,18 +653,13 @@ class ResultsAnalyse:
         if show:
             fig.show()
         if export:
-            format_type = ["png", "pdf", "svg", "eps"]
-            for f in format_type:
-                fig.write_image(self.path_to_figures + f"/analyse_time_iter{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_time_iter{export_suffix}.html", include_mathjax="cdn"
-            )
+            self.export(fig, "analyse_time_iter", export_suffix)
 
     def plot_integration_frame_to_frame_error(
             self, show: bool = True,
             export: bool = True,
             until_consistent: bool = False,
-            export_suffix : str = None
+            export_suffix: str = None
     ):
         """
         This function plots the time and number of iterations need to make the OCP converge
@@ -606,15 +767,9 @@ class ResultsAnalyse:
         if show:
             fig.show()
         if export:
-            format_type = ["png", "pdf", "svg", "eps"]
-            for f in format_type:
-                fig.write_image(self.path_to_figures + f"/analyse_integration_each_frame{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_integration_each_frame{export_suffix}.html",
-                include_mathjax="cdn",
-            )
+            self.export(fig, "analyse_integration_each_frame", export_suffix)
 
-    def plot_integration_final_error(self, show: bool = True, export: bool = True, export_suffix : str = None):
+    def plot_integration_final_error(self, show: bool = True, export: bool = True, export_suffix: str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -682,15 +837,9 @@ class ResultsAnalyse:
         if show:
             fig.show()
         if export:
-            format_type = ["png", "pdf", "svg", "eps"]
-            for f in format_type:
-                fig.write_image(self.path_to_figures + f"/analyse_integration{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_integration{export_suffix}.html",
-                include_mathjax="cdn",
-            )
+            self.export(fig, "analyse_integration", export_suffix)
 
-    def plot_obj_values(self, show: bool = True, export: bool = True, export_suffix : str = None):
+    def plot_obj_values(self, show: bool = True, export: bool = True, export_suffix: str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -752,12 +901,79 @@ class ResultsAnalyse:
         if show:
             fig.show()
         if export:
-            format_type = ["png", "pdf", "svg", "eps"]
-            for f in format_type:
-                fig.write_image(self.path_to_figures + f"/analyse_obj{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_obj{export_suffix}.html", include_mathjax="cdn"
-            )
+            self.export(fig, "analyse_obj", export_suffix)
+
+    def plot_keys(
+            self,
+            keys: List[str],
+            df_list: List[str] = None,
+            ylabel: List[str] = None,
+            ylog: List[bool] = None,
+            fig: go.Figure = None,
+            col: int = 1,
+            show: bool = True,
+            export: bool = True,
+            export_suffix: str = None,
+    ):
+        if fig is None:
+            fig = make_subplots(cols=1, rows=len(keys))
+
+        dyn = self.df["grps"].unique().tolist()
+        grps = dyn
+
+        # select only the one who converged
+        df_results = self.df[self.df["status"] == 0]
+
+        for i, key in enumerate(keys):
+            row = i + 1
+            if df_list is None or df_list[i] == "df":
+                fig = my_traces(
+                    fig,
+                    dyn,
+                    grps,
+                    df_results,
+                    key=key,
+                    row=row,
+                    col=col,
+                    ylabel=ylabel[i] if ylabel is not None else ylabel,
+                    ylog=ylog[i] if ylog is not None else True,
+                )
+            elif df_list[i] == "near_optimal":
+                df = self.near_optimal.copy()
+                # n_shooting as str
+                df["n_shooting"] = df["n_shooting"].astype(str)
+
+                fig = fig.add_trace(go.Histogram(x=df["ode_solver_defects"],
+                                        y=df["percent_of_near_optimal_ocp"],
+                                                 ),
+                                        row=row,
+                                        col=col,
+                                        )
+                # apply colors to each bar of the histogram a color from px.colors.qualitative.D3
+                fig.update_traces(marker_color="rgb(31, 119, 180)", opacity=0.75, row=row, col=col)
+
+
+                # Update axis
+                fig.update_xaxes(title_text="Number of nodes", row=row, col=col)
+                fig.update_yaxes(title_text="Percentage of near optimal OCPs (%)", row=row, col=col)
+
+                # # set the colors of the bars with px.colors.qualitative.D3 for each ode_solver
+                # for i, ode_solver in enumerate(self.near_optimal['ode_solver_defects'].unique()):
+                #     fig.data[i].marker.color = px.colors.qualitative.D3[i]
+                #
+                # # bars are transparent a bit
+                # for i in range(len(fig.data)):
+                #     fig.data[i].marker.opacity = 0.9
+                #
+                # # contours of bars are black
+                # for i in range(len(fig.data)):
+                #     fig.data[i].marker.line.color = 'black'
+                #     fig.data[i].marker.line.width = 1
+
+                # y-axis from 0 to 1
+                fig.update_yaxes(range=[0, 1], row=row, col=col)
+
+        return fig
 
     def _plot_2_keys(
             self,
@@ -769,7 +985,7 @@ class ResultsAnalyse:
             y_log: bool = False,
             show: bool = True,
             export: bool = True,
-            export_suffix : str = None,
+            export_suffix: str = None,
     ):
         """
         This function plots the time and number of iterations need to make the OCP converge
@@ -838,7 +1054,7 @@ class ResultsAnalyse:
 
         return fig
 
-    def plot_cost_vs_consistency(self, show: bool = True, export: bool = True, export_suffix : str = None):
+    def plot_cost_vs_consistency(self, show: bool = True, export: bool = True, export_suffix: str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -861,14 +1077,9 @@ class ResultsAnalyse:
         if show:
             fig.show()
         if export:
-            format_type = ["png", "pdf", "svg", "eps"]
-            for f in format_type:
-                fig.write_image(self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}.html", include_mathjax="cdn"
-            )
+            self.export(fig, "analyse_time_vs_obj", export_suffix)
 
-    def plot_time_vs_consistency(self, show: bool = True, export: bool = True, export_suffix : str = None):
+    def plot_time_vs_consistency(self, show: bool = True, export: bool = True, export_suffix: str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -891,14 +1102,30 @@ class ResultsAnalyse:
         if show:
             fig.show()
         if export:
-            format_type = ["png", "pdf", "svg", "eps"]
-            for f in format_type:
-                fig.write_image(self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}.html", include_mathjax="cdn"
-            )
+            self.export(fig, "analyse_time_vs_consistency", export_suffix)
 
-    def plot_time_vs_obj(self, show: bool = True, export: bool = True, export_suffix : str = None):
+    def export(self, fig: go.Figure, filename: str, export_suffix: str = None):
+        """
+        This function export the results in a csv file
+
+        Parameters
+        ----------
+        fig : go.Figure
+            The figure to export
+        filename : str
+            The name of the file
+        export_suffix : str
+            The suffix to add to the file name
+        """
+
+        format_type = ["png", "pdf", "svg", "eps"]
+        for f in format_type:
+            fig.write_image(self.path_to_figures + f"/{filename}{export_suffix}." + f)
+        fig.write_html(
+            self.path_to_figures + f"/{filename}{export_suffix}.html", include_mathjax="cdn"
+        )
+
+    def plot_time_vs_obj(self, show: bool = True, export: bool = True, export_suffix: str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -927,10 +1154,10 @@ class ResultsAnalyse:
                 self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}.html", include_mathjax="cdn"
             )
 
-    def plot_detailed_obj_values(self, show: bool = True, export: bool = True, export_suffix : str = None):
+    def plot_detailed_obj_values(self, show: bool = True, export: bool = True, export_suffix: str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
-        # todo
+
         Parameters
         ----------
         show : bool
@@ -946,7 +1173,7 @@ class ResultsAnalyse:
         # select only the one who converged
         df_results = self.df[self.df["status"] == 0]
 
-        nb_costs = df_results["detailed_cost"][0].__len__()
+        nb_costs = df_results["detailed_cost"].iloc[0].__len__()
         rows, cols = generate_windows_size(nb_costs)
 
         # indices of rows and cols for each axe of the subplot
@@ -956,19 +1183,18 @@ class ResultsAnalyse:
 
         titles = []
         for i in range(nb_costs):
-            name = df_results[f"cost{i}_details"][0]["name"]
+            name = df_results[f"cost{i}_details"].iloc[0]["name"]
             # key = " " if df_results[f"cost{i}_details"][0]["params"]["key"] is not None else ""
             # if param is not empty, key is ""
-            param = df_results[f"cost{i}_details"][0]["params"]
-            key = " " + param["key"] if param else ""
+            param = df_results[f"cost{i}_details"].iloc[0]["params"]
+            key = " " + param["key"] if param and "key" in param.keys() else ""
 
-            derivative = "delta " if df_results[f"cost{i}_details"][0]["derivative"] else ""
+            derivative = "delta " if df_results[f"cost{i}_details"].iloc[0]["derivative"] else ""
             titles.append(f"{derivative}{name}{key}")
 
         fig = make_subplots(rows=rows, cols=cols, subplot_titles=titles)
 
         for i in range(nb_costs):
-
             fig = my_traces(
                 fig,
                 dyn,
@@ -1029,8 +1255,8 @@ class ResultsAnalyse:
             ylabel_translations: str = "q",
             xlabel: str = "Time (s)",
             until_consistent: bool = False,
-            export_suffix : str = None,
-    ) -> plotly.graph_objects.Figure:
+            export_suffix: str = None,
+    ) -> go.Figure:
         """
         This function plots generalized coordinates of each OCPs
 
@@ -1053,15 +1279,17 @@ class ResultsAnalyse:
 
         Returns
         -------
-        fig : plotly.graph_objects.Figure
+        fig :go.Figure
             Figure object.
         """
+        model = biorbd.Model(self.model_path)
+
         if "tau" in key:
             nq = 9
-            list_dof = [dof.to_string() for dof in self.model.nameDof()][6:]
+            list_dof = [dof.to_string() for dof in model.nameDof()][6:]
         else:
-            nq = self.model.nbQ()
-            list_dof = [dof.to_string() for dof in self.model.nameDof()]
+            nq = model.nbQ()
+            list_dof = [dof.to_string() for dof in model.nameDof()]
 
         rows, cols = generate_windows_size(nq) if row_col is None else row_col
 
@@ -1085,7 +1313,7 @@ class ResultsAnalyse:
         df_results = self.df[self.df["status"] == 0]
 
         # handle translations and rotations
-        trans_idx, rot_idx = get_trans_and_rot_idx(self.model)
+        trans_idx, rot_idx = get_trans_and_rot_idx(model)
 
         fig = plot_all_dof(
             fig,
@@ -1103,7 +1331,7 @@ class ResultsAnalyse:
             fig.update_xaxes(row=rows, col=i, title=xlabel)
 
         # handle translations and rotations
-        trans_idx, rot_idx = get_trans_and_rot_idx(self.model)
+        trans_idx, rot_idx = get_trans_and_rot_idx(model)
 
         if "tau" in key:
             trans_idx = []
@@ -1132,12 +1360,13 @@ class ResultsAnalyse:
 
     def analyse(self, show=True, export=True, cluster_analyse=False):
         self.print()
-        self.plot_time_iter(show=show, export=export, time_unit="min")
-        # self.plot_obj_values(show=show, export=export)
-        # # self.plot_detailed_obj_values(show=show, export=export)
-        self.plot_time_vs_obj(show=show, export=export)
-        self.plot_time_vs_consistency(show=show, export=export)
-        self.plot_cost_vs_consistency(show=show, export=export)
+        self.plot_near_optimality(show=show, export=export)
+        # self.plot_time_iter(show=show, export=export, time_unit="min")
+        self.plot_obj_values(show=show, export=export)
+        self.plot_detailed_obj_values(show=show, export=export)
+        # self.plot_time_vs_obj(show=show, export=export)
+        # self.plot_time_vs_consistency(show=show, export=export)
+        # self.plot_cost_vs_consistency(show=show, export=export)
         # self.plot_integration_frame_to_frame_error(
         #     show=show, export=export, until_consistent=False
         # )
@@ -1168,12 +1397,13 @@ class ResultsAnalyse:
             if animate:
                 cluster_results.animate()
             # cluster_results.plot_time_iter(show=show, export=export, time_unit="min", export_suffix=export_suffix)
-            # cluster_results.plot_obj_values(show=show, export=export, export_suffix=export_suffix)
+            cluster_results.plot_obj_values(show=show, export=export, export_suffix=export_suffix)
             # cluster_results.plot_detailed_obj_values(show=show, export=export, export_suffix=export_suffix)
+            cluster_results.plot_near_optimality(show=show, export=export, export_suffix=export_suffix)
 
-            cluster_results.plot_time_vs_obj(show=show, export=export, export_suffix=export_suffix)
-            cluster_results.plot_time_vs_consistency(show=show, export=export, export_suffix=export_suffix)
-            cluster_results.plot_cost_vs_consistency(show=show, export=export, export_suffix=export_suffix)
+            # cluster_results.plot_time_vs_obj(show=show, export=export, export_suffix=export_suffix)
+            # cluster_results.plot_time_vs_consistency(show=show, export=export, export_suffix=export_suffix)
+            # cluster_results.plot_cost_vs_consistency(show=show, export=export, export_suffix=export_suffix)
 
             # cluster_results.plot_integration_frame_to_frame_error(
             #     show=show, export=export, until_consistent=False, export_suffix=export_suffix)
@@ -1190,38 +1420,129 @@ class ResultsAnalyse:
             # )
 
 
-if __name__ == "__main__":
+def generate_results_objects():
+    results_leg = ResultsAnalyse.from_folder(
+        model_path=Models.LEG.value,
+        path_to_files=ResultFolders.LEG.value,
+        export=True,
+    )
+    results_leg.print()
+    # export the entire object results_leg in a pickle file
+    with open("results_leg.pickle", "wb") as f:
+        pickle.dump(results_leg, f)
 
-    # results = ResultsAnalyse.from_folder(
-    #     model_path=Models.LEG.value,
-    #     path_to_files=ResultFolders.LEG.value,
-    #     export=True,
-    # )
-    # results.analyse(
-    #     show=True,
-    #     export=True,
-    # )
-    results = ResultsAnalyse.from_folder(
+    results_arm = ResultsAnalyse.from_folder(
         model_path=Models.ARM.value,
         path_to_files=ResultFolders.ARM.value,
         export=True,
     )
-    # results.animate(num=5)
-    results.analyse(
-        show=True,
+    results_arm.print()
+    # export the entire object results_arm in a pickle file
+    with open("results_arm.pickle", "wb") as f:
+        pickle.dump(results_arm, f)
+
+    results_acrobat = ResultsAnalyse.from_folder(
+        model_path=Models.ACROBAT.value,
+        path_to_files=ResultFolders.ACROBAT.value,
         export=True,
-        cluster_analyse=True,
     )
-    results.cluster_analyse(
-        show=True,
+    results_acrobat.print()
+    # export the entire object results_acrobat in a pickle file
+    with open("results_acrobat.pickle", "wb") as f:
+        pickle.dump(results_acrobat, f)
+
+    return results_leg, results_arm, results_acrobat
+
+
+def load_results_objects():
+    with open("results_leg.pickle", "rb") as f:
+        results_leg = pickle.load(f)
+    with open("results_arm.pickle", "rb") as f:
+        results_arm = pickle.load(f)
+    with open("results_acrobat.pickle", "rb") as f:
+        results_acrobat = pickle.load(f)
+
+    return results_leg, results_arm, results_acrobat
+
+
+def big_figure(results_leg: ResultsAnalyse, results_arm: ResultsAnalyse, results_acrobat: ResultsAnalyse):
+    fig = make_subplots(
+        rows=3,
+        cols=3,
+        vertical_spacing=0.05,
+        horizontal_spacing=0.10,
+        subplot_titles=("LEG", "ARM", "ACROBAT"),
     )
 
-    results = ResultsAnalyse.from_folder(
-            model_path=Models.ACROBAT.value,
-            path_to_files=ResultFolders.ACROBAT.value,
-            export=True,
-        )
-    results.analyse(
-        show=True,
-        export=True,
+    df = ["main", "near_optimal", "df"]
+    keys = ["computation_time", "near_optimal", "rotation_error"]
+    ylog = [False, True, True]
+    fig = results_leg.plot_keys \
+        (keys=keys, fig=fig, col=1,
+         ylabel=["Time (s)", "Near optimal frequency (%)", "Rotation error RMSE (deg)"],
+         df_list=df, ylog=ylog)
+    fig = results_arm.plot_keys(keys=keys, fig=fig, col=2, ylog=ylog, df_list=df)
+    fig = results_acrobat.plot_keys(keys=keys, fig=fig, col=3, ylog=ylog, df_list=df)
+
+    fig.update_layout(
+        height=800,
+        width=1500,
+        paper_bgcolor="rgba(255,255,255,1)",
+        plot_bgcolor="rgba(255,255,255,1)",
+        legend=dict(
+            title_font_family="Times New Roman",
+            font=dict(family="Times New Roman", color="black", size=11),
+            orientation="h",
+            xanchor="center",
+            x=0.5,
+            y=-0.05,
+        ),
+        font=dict(
+            size=12,
+            family="Times New Roman",
+        ),
+        yaxis=dict(color="black"),
+        template="simple_white",
+        boxgap=0.2,
     )
+
+    # display the horizontal lines for each grid of the figure
+    for i in range(1, 4):
+        for j in range(1, 4):
+            fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="lightgrey", row=i, col=j)
+
+    # custom ranges
+    fig.update_yaxes(range=[0, 4], row=1, col=1)
+    fig.update_yaxes(range=[0, 0.6e4], row=1, col=3)
+
+    fig.show()
+
+
+if __name__ == "__main__":
+    # results_leg, results_arm, results_acrobat = generate_results_objects()
+    results_leg, results_arm, results_acrobat = load_results_objects()
+    big_figure(
+        results_leg=results_leg,
+        results_arm=results_arm,
+        results_acrobat=results_acrobat,
+    )
+
+    # results_leg.analyse(
+    #     show=True,
+    #     export=True,
+    # )
+
+    # results.animate(num=5)
+    # results_arm.analyse(
+    #     show=True,
+    #     export=True,
+    #     cluster_analyse=True,
+    # )
+    # results_arm.cluster_analyse(
+    #     show=True,
+    # )
+
+    # results_acrobat.analyse(
+    #     show=True,
+    #     export=True,
+    # )

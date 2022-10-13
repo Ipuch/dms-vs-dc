@@ -99,74 +99,6 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
         for i, id in enumerate(idx):
             self.df.loc[id, "cluster"] = kmeans.labels_[i]
 
-    def plot_convergence_rate(self, show: bool = True, export: bool = True, export_suffix : str = None):
-        """
-        This function plots the number of problem that converged for each ode_solver and each number of nodes
-
-        Parameters
-        ----------
-        show : bool
-            If True, the figure is shown.
-        export : bool
-            If True, the figure is exported.
-        """
-
-        # set the n_shooting column as categorical
-        df = self.convergence_rate.copy()
-        # n_shooting as str
-        df["n_shooting"] = df["n_shooting"].astype(str)
-
-        fig = px.histogram(df,
-                           x="n_shooting",
-                           y="convergence_rate",
-                           color='ode_solver_defects',
-                           barmode='group',
-                           height=400)
-
-        fig.update_layout(
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            font_color='black',
-        )
-        # sh
-
-        # Update axis
-        fig.update_xaxes(title_text="Number of nodes")
-        fig.update_yaxes(title_text="Convergence rate (%)")
-
-        # display horinzontal line grid
-        fig.update_yaxes(showgrid=True, gridwidth=5)
-
-        # xticks labels are exactly the same as n_shooting
-        # fig.update_xaxes(tickvals=self.convergence_rate['n_shooting'].unique())
-
-        # center the bar groups around the xticks
-        # fig.update_layout(bargap=0.1)
-
-
-        # set the colors of the bars with px.colors.qualitative.D3 for each ode_solver
-        for i, ode_solver in enumerate(self.convergence_rate['ode_solver_defects'].unique()):
-            fig.data[i].marker.color = px.colors.qualitative.D3[i] # px.colors.qualitative.D3[i]
-
-        # bars are transparent a bit
-        for i in range(len(fig.data)):
-            fig.data[i].marker.opacity = 0.9
-
-        # contours of bars are black
-        for i in range(len(fig.data)):
-            fig.data[i].marker.line.color = 'black'
-            fig.data[i].marker.line.width = 1
-
-        if show:
-            fig.show()
-        if export:
-            format_type = ["png", "pdf", "svg", "eps"]
-            for f in format_type:
-                fig.write_image(self.path_to_figures + f"/analyse_convergence_rate{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_convergence_rate{export_suffix}.html", include_mathjax="cdn"
-            )
-
     def animate(self, num: int = 0):
         """
         This method animates the motion with bioviz
@@ -498,11 +430,11 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
             template="simple_white",
         )
 
-        fig.update_yaxes(
-            row=1,
-            col=1,
-            tickformat=".1f",
-        )
+        # fig.update_yaxes(
+        #     row=1,
+        #     col=1,
+        #     tickformat=".1f",
+        # )
 
         if show:
             fig.show()
@@ -561,8 +493,8 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
         )
 
         fig.update_layout(
-            height=400,
-            width=600,
+            height=800,
+            width=800,
             paper_bgcolor="rgba(255,255,255,1)",
             plot_bgcolor="rgba(255,255,255,1)",
             legend=dict(
@@ -582,11 +514,11 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
             template="simple_white",
         )
 
-        fig.update_yaxes(
-            row=1,
-            col=1,
-            tickformat=".1f",
-        )
+        # fig.update_yaxes(
+        #     row=1,
+        #     col=1,
+        #     # tickformat=".1f",
+        # )
 
         if show:
             fig.show()
@@ -1037,9 +969,9 @@ if __name__ == "__main__":
         export=True,
     )
     results.print()
-    # results.plot_convergence_rate(show=True, export=True)
-    # results.plot_time_iter(show=True, export=True, time_unit="s")
-    # results.plot_integration_final_error(show=True, export=True)
+    results.plot_convergence_rate(show=True, export=True)
+    results.plot_time_iter(show=True, export=True, time_unit="s")
+    results.plot_integration_final_error(show=True, export=True)
     results.plot_obj_values(show=True, export=True)
 
     results = ResultsAnalyseConvergence.from_folder(
@@ -1048,20 +980,20 @@ if __name__ == "__main__":
         export=True,
     )
     results.print()
-    # results.plot_convergence_rate(show=True, export=True)
-    # results.plot_time_iter(show=True, export=True, time_unit="min")
-    # results.plot_integration_final_error(show=True, export=True)
+    results.plot_convergence_rate(show=True, export=True)
+    results.plot_time_iter(show=True, export=True, time_unit="min")
+    results.plot_integration_final_error(show=True, export=True)
     results.plot_obj_values(show=True, export=True)
-
+    #
     results = ResultsAnalyseConvergence.from_folder(
         model_path=Models.ACROBAT.value,
         path_to_files=ResultFolders.ALL_ACROBAT.value,
         export=True,
     )
     results.print()
-    # results.plot_convergence_rate(show=True, export=True)
-    # results.plot_time_iter(show=True, export=True, time_unit="min")
-    # results.plot_integration_final_error(show=True, export=True)
+    results.plot_convergence_rate(show=True, export=True)
+    results.plot_time_iter(show=True, export=True, time_unit="min")
+    results.plot_integration_final_error(show=True, export=True)
     results.plot_obj_values(show=True, export=True)
 
     # # results.animate(num=5)

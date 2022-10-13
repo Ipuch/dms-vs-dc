@@ -683,7 +683,7 @@ def my_shaded_trace(
 
     fig.add_scatter(
         x=x_shoot,
-        y=get_all(df, d, key, "mean"),
+        y=get_all(df, d, key, "q2"),
         mode="lines",
         marker=dict(color=color, size=8, line=dict(width=0.5, color="DarkSlateGrey")),
         name=d,
@@ -693,9 +693,9 @@ def my_shaded_trace(
         showlegend=show_legend,
     )
 
-    y_upper = get_all(df, d, key, "ci_up")
+    y_upper = get_all(df, d, key, "q3")
     y_upper = [0 if math.isnan(x) else x for x in y_upper]
-    y_lower = get_all(df, d, key, "ci_low")
+    y_lower = get_all(df, d, key, "q1")
     y_lower = [0 if math.isnan(x) else x for x in y_lower]
 
     fig.add_scatter(
@@ -833,6 +833,24 @@ def get_all(df: DataFrame, dyn_label: str, data_key: str, key: str = "mean"):
     elif key == "ci_low":
         return [
             fn_ci_low(df[my_bool & (df["n_shooting"] == ii)][data_key])
+            for ii in sorted(df[my_bool]["n_shooting"].unique())
+        ]
+    # first quartile
+    elif key == "q1":
+        return [
+            df[my_bool & (df["n_shooting"] == ii)][data_key].quantile(0.25)
+            for ii in sorted(df[my_bool]["n_shooting"].unique())
+        ]
+    # second quartile
+    elif key == "q2":
+        return [
+            df[my_bool & (df["n_shooting"] == ii)][data_key].quantile(0.5)
+            for ii in sorted(df[my_bool]["n_shooting"].unique())
+        ]
+    # third quartile
+    elif key == "q3":
+        return [
+            df[my_bool & (df["n_shooting"] == ii)][data_key].quantile(0.75)
             for ii in sorted(df[my_bool]["n_shooting"].unique())
         ]
     else:
