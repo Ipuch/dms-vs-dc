@@ -1,13 +1,14 @@
 from typing import Any, Union, Tuple
+import math
 import numpy as np
 from numpy import ndarray
+from scipy import stats
 
 from plotly import graph_objects as go
 import plotly.express as px
 from pandas import DataFrame
 
 import biorbd
-from bioptim import Solution
 
 
 def compute_error_single_shooting(
@@ -624,3 +625,215 @@ def plot_all_dof(
         boxgap=0.2,
     )
     return fig
+
+
+def my_shaded_trace(
+    fig: go.Figure, df: DataFrame, d: str, color: str, grps: list, key: str, col=None, row=None, show_legend=True
+) -> go.Figure:
+    """
+    Add a shaded trace to a plotly figure
+
+    Parameters
+    ----------
+    fig : go.Figure
+        The figure to which the trace will be added
+    df : DataFrame
+        The dataframe containing the data
+    d : str
+        The dynamics type of concern
+    color : str
+        The color of the trace
+    grps : list
+        The legend groups
+    key : str
+        The data key such as "tau" or "qddot" or "qddot_joints" or "q"
+    col : int
+        The column of the subplot
+    row : int
+        The row of the subplot
+    show_legend : bool
+        If true, the legend is shown
+
+    Returns
+    -------
+    fig : go.Figure
+        The figure with the trace added
+    """
+    my_boolean = df["ode_solver_defects"] == d
+
+    c_rgb = px.colors.hex_to_rgb(color)
+    c_alpha = str(f"rgba({c_rgb[0]},{c_rgb[1]},{c_rgb[2]},0.2)")
+
+    fig.add_scatter(
+        x=df[my_boolean]["n_shooting"],
+        y=df[my_boolean][key],
+        mode="markers",
+        marker=dict(
+            color=color,
+            size=3,
+        ),
+        name=d,
+        legendgroup=grps,
+        showlegend=False,
+        row=row,
+        col=col,
+    )
+
+    x_shoot = sorted(df[my_boolean]["n_shooting"].unique())
+
+    fig.add_scatter(
+        x=x_shoot,
+        y=get_all(df, d, key, "mean"),
+        mode="lines",
+        marker=dict(color=color, size=8, line=dict(width=0.5, color="DarkSlateGrey")),
+        name=d,
+        legendgroup=grps,
+        row=row,
+        col=col,
+        showlegend=show_legend,
+    )
+
+    y_upper = get_all(df, d, key, "ci_up")
+    y_upper = [0 if math.isnan(x) else x for x in y_upper]
+    y_lower = get_all(df, d, key, "ci_low")
+    y_lower = [0 if math.isnan(x) else x for x in y_lower]
+
+    fig.add_scatter(
+        x=x_shoot + x_shoot[::-1],  # x, then x reversed
+        y=y_upper + y_lower[::-1],  # upper, then lower reversed
+        fill="toself",
+        fillcolor=c_alpha,
+        line=dict(color="rgba(255,255,255,0)"),
+        hoverinfo="skip",
+        showlegend=False,
+        legendgroup=grps,
+        row=row,
+        col=col,
+    )
+    return fig
+
+
+def mean_confidence_interval(data, confidence: float = 0.95):
+    """
+    Computes the mean and confidence interval for a given confidence level.
+
+    Parameters
+    ----------
+    data : array-like, shape = [n_samples]
+        Sample data.
+    confidence : float
+        The desired confidence level.
+
+    Returns
+    -------
+    mean : float
+        The mean of the data, the mean minus the confidence interval, and the mean plus the confidence interval.
+    """
+    a = 1.0 * np.array(data)
+    n = len(a)
+    m, se = np.mean(a), stats.sem(a)
+    h = se * stats.t.ppf((1 + confidence) / 2.0, n - 1)
+    return m, m - h, m + h
+
+
+def fn_ci_up(data, confidence: float = 0.95):
+    """
+    Computes the mean plus upper confidence interval for a given confidence level.
+
+    Parameters
+    ----------
+    data : array-like, shape = [n_samples]
+        Sample data.
+    confidence : float
+        The desired confidence level.
+
+    Returns
+    -------
+    mean : float
+        The mean of the data plus the confidence interval.
+    """
+    a = 1.0 * np.array(data)
+    n = len(a)
+    m, se = np.mean(a), stats.sem(a)
+    h = se * stats.t.ppf((1 + confidence) / 2.0, n - 1)
+    return m + h
+
+
+def fn_ci_low(data, confidence: float = 0.95):
+    """
+    Computes the mean minus lower confidence interval for a given confidence level.
+
+    Parameters
+    ----------
+    data : array-like, shape = [n_samples]
+        Sample data.
+    confidence : float
+        The desired confidence level.
+
+    Returns
+    -------
+    mean : float
+        The mean of the data minus the confidence interval.
+    """
+    a = 1.0 * np.array(data)
+    n = len(a)
+    m, se = np.mean(a), stats.sem(a)
+    h = se * stats.t.ppf((1 + confidence) / 2.0, n - 1)
+    return m - h
+
+
+def get_all(df: DataFrame, dyn_label: str, data_key: str, key: str = "mean"):
+    """
+    This function gets all the values for a given data key for a given dynamics type.
+
+    Parameters
+    ----------
+    df : DataFrame
+        The dataframe containing the data
+    dyn_label : str
+        The dynamics type of concern
+    data_key : str
+        The data key such as "tau" or "qddot" or "qddot_joints" or "q"
+    key : str
+        The data key such as "mean", "ci_up", "ci_low", "std", "min", "max"
+    """
+    my_bool = df["ode_solver_defects"] == dyn_label
+    if key == "mean":
+        return [
+            df[my_bool & (df["n_shooting"] == ii)][data_key].mean()
+            for ii in sorted(df[my_bool]["n_shooting"].unique())
+        ]
+    if key == "max":
+        return [
+            df[my_bool & (df["n_shooting"] == ii)][data_key].max()
+            - df[my_bool & (df["n_shooting"] == ii)][data_key].median()
+            for ii in sorted(df[my_bool]["n_shooting"].unique())
+        ]
+    if key == "min":
+        return [
+            df[my_bool & (df["n_shooting"] == ii)][data_key].min()
+            - df[my_bool & (df["n_shooting"] == ii)][data_key].median()
+            for ii in sorted(df[my_bool]["n_shooting"].unique())
+        ]
+    if key == "median":
+        return [
+            df[my_bool & (df["n_shooting"] == ii)][data_key].median()
+            for ii in sorted(df[my_bool]["n_shooting"].unique())
+        ]
+    elif key == "std":
+        return [
+            df[my_bool & (df["n_shooting"] == ii)][data_key].std()
+            for ii in sorted(df[my_bool]["n_shooting"].unique())
+        ]
+    elif key == "ci_up":
+        return [
+            fn_ci_up(df[my_bool & (df["n_shooting"] == ii)][data_key])
+            for ii in sorted(df[my_bool]["n_shooting"].unique())
+        ]
+    elif key == "ci_low":
+        return [
+            fn_ci_low(df[my_bool & (df["n_shooting"] == ii)][data_key])
+            for ii in sorted(df[my_bool]["n_shooting"].unique())
+        ]
+    else:
+        raise ValueError("key must be one of mean, max, min, std, ci_up, ci_low")

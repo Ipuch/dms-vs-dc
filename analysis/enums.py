@@ -3,6 +3,10 @@ from pathlib import Path
 
 
 class ResultFolders(Enum):
+    ALL_LEG = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ALL_LEG"
+    ALL_ARM = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ALL_ARM"
+    ALL_ACROBAT = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ALL_ACROBAT"
+
     LEG = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "LEG_30-09-22_2"
     ARM = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ARM_30-09-22_2"
     ACROBAT = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ACROBAT_30-09-22_2"

@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 
 def main():
     n_shooting = 50
-    ode_solver = OdeSolver.RK4(n_integration_steps=5)
+    # ode_solver = OdeSolver.RK4(n_integration_steps=5)
     # ode_solver = OdeSolver.IRK(polynomial_degree=4, defects_type=DefectType.IMPLICIT)
     # ode_solver = OdeSolver.COLLOCATION(polynomial_degree=4, defects_type=DefectType.IMPLICIT)
     # ode_solver = OdeSolver.RK4()
-    # ode_solver = OdeSolver.COLLOCATION()
+    ode_solver = OdeSolver.COLLOCATION(defects_type=DefectType.IMPLICIT)
     time = 0.25
     n_threads = 8
     model_path = "../robot_leg/models/robot_arm.bioMod"

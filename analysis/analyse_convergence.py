@@ -14,27 +14,24 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 
 import biorbd
-from bioptim import OptimalControlProgram
+
+from analyse import ResultsAnalyse
 
 from utils import (
-    stack_states,
-    stack_controls,
-    define_time,
-    compute_error_single_shooting,
-    compute_error_single_shooting_each_frame,
     my_traces,
     my_twokey_traces,
     add_annotation_letter,
     generate_windows_size,
     plot_all_dof,
     get_trans_and_rot_idx,
+    my_shaded_trace,
 )
 
 from enums import ResultFolders
 from robot_leg import Models
 
 
-class ResultsAnalyse:
+class ResultsAnalyseConvergence(ResultsAnalyse):
     """
     This class is used to plot the results of the analysis.
 
@@ -73,211 +70,13 @@ class ResultsAnalyse:
             model_path: str,
             df_path: str = None,
             df: pd.DataFrame = None,
-            ode_solvers: list = None,
             consistent_threshold: float = 10,
+            ode_solvers: list = None,
     ):
 
-        self.path_to_files = path_to_files
-        self.model_path = model_path
-        self.model = biorbd.Model(self.model_path)
-
-        # create a subfolder of self.path_to_files to export figures and data
-        self.path_to_figures = f"{self.path_to_files}/figures"
-        Path(self.path_to_figures).mkdir(parents=True, exist_ok=True)
-        self.path_to_data = f"{self.path_to_files}/data"
-        Path(self.path_to_data).mkdir(parents=True, exist_ok=True)
+        super().__init__(path_to_files, model_path, df_path, df, ode_solvers)
 
         self.consistent_threshold = consistent_threshold
-        self.df_path = df_path
-        self.df = df
-
-        self.convergence_rate = pd.DataFrame(columns=["n_shooting", "convergence_rate", "ode_solver_defects", "grps"])
-        self.ode_solvers = ode_solvers
-
-    @classmethod
-    def from_folder(
-            cls,
-            path_to_files: str,
-            model_path: str,
-            consistent_threshold: float = 10,
-            export: bool = True,
-    ):
-        """
-        Convert the data to a pandas dataframe.
-
-        Parameters
-        ----------
-        path_to_files: str
-            The path to the folder containing the results.
-        model_path: str
-            The path to the model.
-        consistent_threshold: float
-            The threshold to consider the OCP results.
-        export : bool
-            Export the dataframe as a pickle file.
-
-        Returns
-        -------
-        df_results : pd.DataFrame
-            The pandas dataframe with the results.
-        """
-
-        # open files
-        files = os.listdir(path_to_files)
-        files.sort()
-
-        column_names = [
-            "model_path",
-            "irand",
-            "extra_obj",
-            "computation_time",
-            "cost",
-            "detailed_cost",
-            "iterations",
-            "status",
-            "states" "controls",
-            "parameters",
-            "time",
-            "dynamics_type",
-            "q",
-            "qdot",
-            "q_integrated",
-            "qdot_integrated",
-            "tau",
-            "n_shooting",
-            "n_shooting_per_second",
-            "n_theads",
-            "grps",
-            "grps_cat",
-            "grp_number",
-            "translation_error_traj",
-            "rotation_error_traj",
-            "index_10_deg_rmse",
-        ]
-        df_results = pd.DataFrame(columns=column_names)
-
-        for i, file in enumerate(files):
-            if file.endswith(".pckl"):
-                print(file)
-                p = Path(f"{path_to_files}/{file}")
-                file_path = open(p, "rb")
-                data = pickle.load(file_path)
-
-                # _, sol = OptimalControlProgram.load(f"{self.path_to_files}/{p.stem}.bo")
-                # DM to array
-                data["filename"] = file
-                data["tau"] = data["controls"]["tau"]
-
-                data["cost"] = np.array(data["cost"])[0][0]
-                # print(data["n_threads"])
-                # compute error
-                model = biorbd.Model(model_path)
-
-                data["n_shooting_per_second"] = data["n_shooting"] / data["time"][-1]
-
-                n_shooting = data["n_shooting"]
-                q = data["q"]
-                q_integrated = data["q_integrated"]
-                # # print(data["q_integrated"].shape)
-
-                (
-                    data["translation_error"],
-                    data["rotation_error"],
-                ) = compute_error_single_shooting(
-                    model=model,
-                    n_shooting=n_shooting,
-                    time=np.array(data["time"]),
-                    q=q,
-                    q_integrated=q_integrated,
-                )
-
-                (
-                    data["translation_error_traj"],
-                    data["rotation_error_traj"],
-                ) = compute_error_single_shooting_each_frame(
-                    model=model,
-                    n_shooting=n_shooting,
-                    time=np.array(data["time"]),
-                    q=q,
-                    q_integrated=q_integrated,
-                )
-
-                # to identify the point at which the consistency is sufficient
-                idx = np.where(
-                    data["rotation_error_traj"] > consistent_threshold
-                )[0]
-                data["consistent_threshold"] = idx[0] if idx.shape[0] != 0 else None
-
-                data["ode_solver_defects"] = f"{data['ode_solver'].__str__()}_{data['defects_type'].value}"
-                data[
-                    "grps"
-                ] = f"{data['ode_solver'].__str__()}_{data['defects_type'].value}_{n_shooting}"
-
-                # remove element of the list[dict] data["detailed_cost"] if key name contains "ConstraintFcn"
-                data["detailed_cost"] = [
-                    {k: v for k, v in d.items() if "ConstraintFcn" not in d["name"]}
-                    for d in data["detailed_cost"]
-                ]
-                data["detailed_cost"] = [d for d in data["detailed_cost"] if d]
-
-                for i, cost in enumerate(data["detailed_cost"]):
-                    data[f"cost{i}"] = cost["cost_value_weighted"]
-                    data[f"cost{i}_details"] = cost
-
-                df_dictionary = pd.DataFrame([data])
-                df_results = pd.concat([df_results, df_dictionary], ignore_index=True)
-
-        # set parameters of pandas to display all the columns of the pandas dataframe in the console
-        pd.set_option("display.max_columns", None)
-        pd.set_option("display.max_rows", None)
-        pd.set_option("display.width", None)
-        pd.set_option("display.max_colwidth", None)
-        # don't return line with columns of pandas dataframe
-        pd.set_option("display.expand_frame_repr", False)
-        # display all the rows of the dataframe
-        pd.set_option("display.max_rows", 20)
-
-        # print(df_results[["dynamics_type", "n_shooting", "ode_solver", "translation_error", "rotation_error"]])
-        # df_results[["dynamics_type", "ode_solver", "status", "translation_error", "rotation_error"]].to_csv(
-        #     f"{self.path_to_files}/results.csv"
-        # )
-
-        # for each type of elements of grps, identify unique elements of grps
-        df_results["grps_cat"] = pd.Categorical(df_results["grps"])
-        df_results["grp_number"] = df_results["grps_cat"].cat.codes
-
-        # sort the dataframe by the column by ode_solver_defects
-        # rk4, rk8, irk explicit, irk implicit, collocation explicit, collocation implicit
-        ode_solver_defects_list = [
-            "RK4 5 steps_not_applicable",
-            "RK8 2 steps_not_applicable",
-            "IRK legendre 4_explicit",
-            "IRK legendre 4_implicit",
-            "COLLOCATION legendre 4_explicit",
-            "COLLOCATION legendre 4_implicit",
-        ]
-        ode_solver_defects_list_updated = [cat for cat in ode_solver_defects_list if cat in df_results["ode_solver_defects"].unique()]
-        df_results["ode_solver_defects"] = pd.Categorical(df_results["ode_solver_defects"], ode_solver_defects_list_updated)
-
-        df_results.sort_values("ode_solver_defects", ascending=True, inplace=True)
-        # reindex the dataframe
-        df_results = df_results.reset_index(drop=True)
-
-        # saves the dataframe
-        if export:
-            path_to_data = f"{path_to_files}/data"
-            Path(path_to_data).mkdir(parents=True, exist_ok=True)
-            df_path = f"{path_to_data}/Dataframe_results_metrics.pkl"
-            df_results.to_pickle(df_path)
-
-        return cls(
-            path_to_files=path_to_files,
-            model_path=model_path,
-            consistent_threshold=consistent_threshold,
-            df_path=df_path,
-            df=df_results,
-            ode_solvers=ode_solver_defects_list_updated,
-        )
 
     def cluster(self, n_clusters: int = 2):
         """
@@ -300,49 +99,73 @@ class ResultsAnalyse:
         for i, id in enumerate(idx):
             self.df.loc[id, "cluster"] = kmeans.labels_[i]
 
-    def print(self):
+    def plot_convergence_rate(self, show: bool = True, export: bool = True, export_suffix : str = None):
         """
-        Prints some info about the dataframe and convergence of OCPs
+        This function plots the number of problem that converged for each ode_solver and each number of nodes
+
+        Parameters
+        ----------
+        show : bool
+            If True, the figure is shown.
+        export : bool
+            If True, the figure is exported.
         """
 
-        # Did everything converge ?
-        a = len(self.df[self.df["status"] == 1])
-        b = len(self.df)
-        print(f"{a} / {b} did not converge to an optimal solutions")
-        formulation = self.df["grps"].unique()
+        # set the n_shooting column as categorical
+        df = self.convergence_rate.copy()
+        # n_shooting as str
+        df["n_shooting"] = df["n_shooting"].astype(str)
 
-        for f in formulation:
-            sub_df = self.df[self.df["grps"] == f]
-            str_formulation = f.replace("_", " ").replace("-", " ").replace("\n", " ")
-            a = len(sub_df[sub_df["status"] == 1])
-            b = len(sub_df)
-            print(
-                f"{a} / {b} {str_formulation} did not converge to an optimal solutions"
+        fig = px.histogram(df,
+                           x="n_shooting",
+                           y="convergence_rate",
+                           color='ode_solver_defects',
+                           barmode='group',
+                           height=400)
+
+        fig.update_layout(
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font_color='black',
+        )
+        # sh
+
+        # Update axis
+        fig.update_xaxes(title_text="Number of nodes")
+        fig.update_yaxes(title_text="Convergence rate (%)")
+
+        # display horinzontal line grid
+        fig.update_yaxes(showgrid=True, gridwidth=5)
+
+        # xticks labels are exactly the same as n_shooting
+        # fig.update_xaxes(tickvals=self.convergence_rate['n_shooting'].unique())
+
+        # center the bar groups around the xticks
+        # fig.update_layout(bargap=0.1)
+
+
+        # set the colors of the bars with px.colors.qualitative.D3 for each ode_solver
+        for i, ode_solver in enumerate(self.convergence_rate['ode_solver_defects'].unique()):
+            fig.data[i].marker.color = px.colors.qualitative.D3[i] # px.colors.qualitative.D3[i]
+
+        # bars are transparent a bit
+        for i in range(len(fig.data)):
+            fig.data[i].marker.opacity = 0.9
+
+        # contours of bars are black
+        for i in range(len(fig.data)):
+            fig.data[i].marker.line.color = 'black'
+            fig.data[i].marker.line.width = 1
+
+        if show:
+            fig.show()
+        if export:
+            format_type = ["png", "pdf", "svg", "eps"]
+            for f in format_type:
+                fig.write_image(self.path_to_figures + f"/analyse_convergence_rate{export_suffix}." + f)
+            fig.write_html(
+                self.path_to_figures + f"/analyse_convergence_rate{export_suffix}.html", include_mathjax="cdn"
             )
-
-            data = dict(convergence_rate=1 - (a / b),
-                        ode_solver_defects=sub_df["ode_solver_defects"].unique()[0],
-                        n_shooting=sub_df["n_shooting"].unique()[0],
-                        number_of_ocp=b,
-                        number_of_convergence=a,
-                        grps=f)
-            df_dictionary = pd.DataFrame([data])
-            self.convergence_rate = pd.concat([self.convergence_rate, df_dictionary], ignore_index=True)
-
-            if "cluster" in self.df.keys():
-                # print the number of element in each cluster
-                for i in sub_df["cluster"].unique().tolist():
-                    if i is not None:
-                        sub_df_cluster = sub_df[sub_df["cluster"] == i]
-                        a = len(sub_df_cluster)
-                        b = len(sub_df)
-                        print(f"{a} / {b} converge to cluster {i}")
-
-        # sort the convergence rate dataframe
-        self.convergence_rate["ode_solver_defects"] = pd.Categorical(self.convergence_rate["ode_solver_defects"], self.ode_solvers)
-        self.convergence_rate.sort_values(by=["n_shooting", "ode_solver_defects"], ascending=True, inplace=True)
-        # reindex the dataframe
-        self.convergence_rate = self.convergence_rate.reset_index(drop=True)
 
     def animate(self, num: int = 0):
         """
@@ -414,11 +237,10 @@ class ResultsAnalyse:
             The time unit of the figure.
         """
 
-        # dyn = [i for i in df_results["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
-        dyn = self.df["grps"].unique().tolist()
+        dyn = self.df["ode_solver_defects"].unique().tolist()
         grps = dyn
 
-        fig = make_subplots(rows=1, cols=2)
+        fig = make_subplots(rows=1, cols=1)
 
         # select only the one who converged
         df_results = self.df[self.df["status"] == 0]
@@ -426,62 +248,57 @@ class ResultsAnalyse:
         if time_unit == "min":
             df_results["computation_time"] = df_results["computation_time"] / 60
 
-        fig = my_traces(
-            fig,
-            dyn,
-            grps,
-            df_results,
-            "computation_time",
-            1,
-            1,
-            "time (s)",
-            ylog=False,
+        palette = px.colors.qualitative.D3[:]
+
+        for jj, d in enumerate(dyn):
+            fig = my_shaded_trace(
+                fig, df_results, d, palette[jj], d, key="computation_time",
+                col=1, row=1, show_legend=True)
+
+        fig.update_xaxes(
+            title_text="Knot points",
+            showline=True,
+            linecolor="black",
+            ticks="outside",
+            title_font=dict(size=15),
         )
-        fig = my_traces(
-            fig,
-            dyn,
-            grps,
-            df_results,
-            "iterations",
-            1,
-            2,
-            r"$\text{iterations}$",
-            ylog=False,
+
+        fig.update_yaxes(
+            title_text="CPU time (" + time_unit + ")",
+            showline=True,
+            linecolor="black",
+            ticks="outside",
+            type="linear",
+            title_standoff=0,
+            exponentformat="e",
         )
 
         fig.update_layout(
-            height=800,
-            width=1500,
+            height=400,
+            width=600,
             paper_bgcolor="rgba(255,255,255,1)",
             plot_bgcolor="rgba(255,255,255,1)",
             legend=dict(
                 title_font_family="Times New Roman",
-                font=dict(family="Times New Roman", color="black", size=11),
-                orientation="h",
-                xanchor="center",
-                x=0.5,
-                y=-0.05,
+                font=dict(family="Times New Roman", color="black", size=15),
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.99,
             ),
             font=dict(
-                size=12,
+                size=15,
                 family="Times New Roman",
             ),
+            xaxis=dict(color="black"),
             yaxis=dict(color="black"),
             template="simple_white",
-            boxgap=0.2,
         )
-        fig = add_annotation_letter(fig, "A", x=0.01, y=0.99, on_paper=True)
-        fig = add_annotation_letter(fig, "B", x=0.56, y=0.99, on_paper=True)
 
         fig.update_yaxes(
             row=1,
             col=1,
             tickformat=".1f",
-        )
-        fig.update_yaxes(
-            row=1,
-            col=2,
-            tickformat=".0f",
         )
 
         if show:
@@ -626,8 +443,7 @@ class ResultsAnalyse:
             If True, the figure is exported.
         """
 
-        # dyn = [i for i in self.df["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
-        dyn = self.df["grps"].unique().tolist()
+        dyn = self.df["ode_solver_defects"].unique().tolist()
         grps = dyn
 
         fig = make_subplots(rows=1, cols=1)
@@ -635,48 +451,57 @@ class ResultsAnalyse:
         # select only the one who converged
         df_results = self.df[self.df["status"] == 0]
 
-        fig = my_traces(
-            fig,
-            dyn,
-            grps,
-            df_results,
-            "rotation_error",
-            row=1,
-            col=1,
-            ylabel="degrees",
-            ylog=True,
+        palette = px.colors.qualitative.D3[:]
+
+        for jj, d in enumerate(dyn):
+            fig = my_shaded_trace(
+                fig, df_results, d, palette[jj], d, key="rotation_error",
+                col=1, row=1, show_legend=True)
+
+        fig.update_xaxes(
+            title_text="Knot points",
+            showline=True,
+            linecolor="black",
+            ticks="outside",
+            title_font=dict(size=15),
+        )
+
+        fig.update_yaxes(
+            title_text="Rotation error RMSE (deg)",
+            showline=True,
+            linecolor="black",
+            ticks="outside",
+            type="linear",
+            title_standoff=0,
+            exponentformat="e",
         )
 
         fig.update_layout(
-            height=800,
-            width=1500,
+            height=400,
+            width=600,
             paper_bgcolor="rgba(255,255,255,1)",
             plot_bgcolor="rgba(255,255,255,1)",
             legend=dict(
                 title_font_family="Times New Roman",
-                font=dict(family="Times New Roman", color="black", size=11),
-                orientation="h",
-                xanchor="center",
-                x=0.5,
-                y=-0.05,
+                font=dict(family="Times New Roman", color="black", size=15),
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.99,
             ),
             font=dict(
-                size=12,
+                size=15,
                 family="Times New Roman",
             ),
+            xaxis=dict(color="black"),
             yaxis=dict(color="black"),
             template="simple_white",
-            boxgap=0.2,
         )
-        fig = add_annotation_letter(fig, "A", x=0.01, y=0.99, on_paper=True)
 
         fig.update_yaxes(
             row=1,
             col=1,
-        )
-        fig.update_yaxes(
-            row=1,
-            col=2,
+            tickformat=".1f",
         )
 
         if show:
@@ -702,8 +527,7 @@ class ResultsAnalyse:
             If True, the figure is exported.
         """
 
-        # dyn = [i for i in self.df["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
-        dyn = self.df["grps"].unique().tolist()
+        dyn = self.df["ode_solver_defects"].unique().tolist()
         grps = dyn
 
         fig = make_subplots(rows=1, cols=1)
@@ -711,42 +535,57 @@ class ResultsAnalyse:
         # select only the one who converged
         df_results = self.df[self.df["status"] == 0]
 
-        fig = my_traces(
-            fig,
-            dyn,
-            grps,
-            df_results,
-            key="cost",
-            row=1,
-            col=1,
-            ylabel="objective value",
+        palette = px.colors.qualitative.D3[:]
+
+        for jj, d in enumerate(dyn):
+            fig = my_shaded_trace(
+                fig, df_results, d, palette[jj], d, key="cost",
+                col=1, row=1, show_legend=True)
+
+        fig.update_xaxes(
+            title_text="Knot points",
+            showline=True,
+            linecolor="black",
+            ticks="outside",
+            title_font=dict(size=15),
+        )
+
+        fig.update_yaxes(
+            title_text="Objective Function Value",
+            showline=True,
+            linecolor="black",
+            ticks="outside",
+            type="linear",
+            title_standoff=0,
+            exponentformat="e",
         )
 
         fig.update_layout(
-            height=800,
-            width=1500,
+            height=400,
+            width=600,
             paper_bgcolor="rgba(255,255,255,1)",
             plot_bgcolor="rgba(255,255,255,1)",
             legend=dict(
                 title_font_family="Times New Roman",
-                font=dict(family="Times New Roman", color="black", size=11),
-                orientation="h",
-                xanchor="center",
-                x=0.5,
-                y=-0.05,
+                font=dict(family="Times New Roman", color="black", size=15),
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.99,
             ),
             font=dict(
-                size=12,
+                size=15,
                 family="Times New Roman",
             ),
+            xaxis=dict(color="black"),
             yaxis=dict(color="black"),
             template="simple_white",
-            boxgap=0.2,
         )
 
         fig.update_yaxes(
             row=1,
             col=1,
+            tickformat=".1f",
         )
 
         if show:
@@ -1192,36 +1031,55 @@ class ResultsAnalyse:
 
 if __name__ == "__main__":
 
-    # results = ResultsAnalyse.from_folder(
-    #     model_path=Models.LEG.value,
-    #     path_to_files=ResultFolders.LEG.value,
+    results = ResultsAnalyseConvergence.from_folder(
+        model_path=Models.LEG.value,
+        path_to_files=ResultFolders.ALL_LEG.value,
+        export=True,
+    )
+    results.print()
+    # results.plot_convergence_rate(show=True, export=True)
+    # results.plot_time_iter(show=True, export=True, time_unit="s")
+    # results.plot_integration_final_error(show=True, export=True)
+    results.plot_obj_values(show=True, export=True)
+
+    results = ResultsAnalyseConvergence.from_folder(
+        model_path=Models.ARM.value,
+        path_to_files=ResultFolders.ALL_ARM.value,
+        export=True,
+    )
+    results.print()
+    # results.plot_convergence_rate(show=True, export=True)
+    # results.plot_time_iter(show=True, export=True, time_unit="min")
+    # results.plot_integration_final_error(show=True, export=True)
+    results.plot_obj_values(show=True, export=True)
+
+    results = ResultsAnalyseConvergence.from_folder(
+        model_path=Models.ACROBAT.value,
+        path_to_files=ResultFolders.ALL_ACROBAT.value,
+        export=True,
+    )
+    results.print()
+    # results.plot_convergence_rate(show=True, export=True)
+    # results.plot_time_iter(show=True, export=True, time_unit="min")
+    # results.plot_integration_final_error(show=True, export=True)
+    results.plot_obj_values(show=True, export=True)
+
+    # # results.animate(num=5)
+    # results.analyse(
+    #     show=True,
     #     export=True,
+    #     cluster_analyse=True,
     # )
+    # results.cluster_analyse(
+    #     show=True,
+    # )
+    #
+    # results = ResultsAnalyse.from_folder(
+    #         model_path=Models.ACROBAT.value,
+    #         path_to_files=ResultFolders.ACROBAT.value,
+    #         export=True,
+    #     )
     # results.analyse(
     #     show=True,
     #     export=True,
     # )
-    results = ResultsAnalyse.from_folder(
-        model_path=Models.ARM.value,
-        path_to_files=ResultFolders.ARM.value,
-        export=True,
-    )
-    # results.animate(num=5)
-    results.analyse(
-        show=True,
-        export=True,
-        cluster_analyse=True,
-    )
-    results.cluster_analyse(
-        show=True,
-    )
-
-    results = ResultsAnalyse.from_folder(
-            model_path=Models.ACROBAT.value,
-            path_to_files=ResultFolders.ACROBAT.value,
-            export=True,
-        )
-    results.analyse(
-        show=True,
-        export=True,
-    )
