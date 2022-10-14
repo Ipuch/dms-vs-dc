@@ -12,7 +12,7 @@ import pandas as pd
 from bioptim import OdeSolver, RigidBodyDynamics, DefectType
 
 from utils import generate_calls, run_pool, run_the_missing_ones
-from robot_leg import ArmOCP, LegOCP, MillerOcpOnePhase, Models
+from robot_leg import ArmOCP, LegOCP, MillerOcpOnePhase, Models, UpperLimbOCP, HumanoidOCP
 from run_ocp import RunOCP
 
 
@@ -20,8 +20,8 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
 
     if model == Models.LEG:
         # n_shooting = [(20, 20)]
-        # n_shooting = [20]
-        n_shooting = [5, 10, 15, 25]
+        n_shooting = [20]
+        # n_shooting = [5, 10, 15, 25]
         run_ocp = RunOCP(
             ocp_class=LegOCP,
             show_optim=show_optim,
@@ -31,9 +31,9 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
         )
         running_function = run_ocp.main
     elif model == Models.ARM:
-        # n_shooting = [50]
+        n_shooting = [50]
         # n_shooting = [5, 10, 15, 20, 25, 30, 40, 45, 50]
-        n_shooting = [10, 15, 20, 25, 30, 40, 45, 50]
+        # n_shooting = [10, 15, 20, 25, 30, 40, 45, 50]
         run_ocp = RunOCP(
             ocp_class=ArmOCP,
             show_optim=show_optim,
@@ -43,7 +43,8 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
         )
         running_function = run_ocp.main
     elif model == Models.ACROBAT:
-        n_shooting = [75, 100, 150]
+        n_shooting = [125]
+        # n_shooting = [75, 100, 150]
         run_ocp = RunOCP(
             ocp_class=MillerOcpOnePhase,
             show_optim=show_optim,
@@ -52,6 +53,28 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
             ignore_already_run=ignore_already_run,
         )
         running_function = run_ocp.main
+    elif model == Models.UPPER_LIMB_XYZ_VARIABLES:
+        n_shooting = [100]
+        run_ocp = RunOCP(
+            ocp_class=UpperLimbOCP,
+            show_optim=show_optim,
+            iteration=iterations,
+            print_level=print_level,
+            ignore_already_run=ignore_already_run,
+        )
+        running_function = run_ocp.main
+
+    elif model == Models.HUMANOID_10DOF:
+        n_shooting = [30]
+        run_ocp = RunOCP(
+            ocp_class=HumanoidOCP,
+            show_optim=show_optim,
+            iteration=iterations,
+            print_level=print_level,
+            ignore_already_run=ignore_already_run,
+        )
+        running_function = run_ocp.main
+
     else:
         raise ValueError("Unknown model")
 
@@ -67,7 +90,10 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
             # OdeSolver.IRK(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
         ]
     if model != Models.ACROBAT:
-        ode_list.append(OdeSolver.IRK(defects_type=DefectType.IMPLICIT, polynomial_degree=4))
+        if model == Models.HUMANOID_10DOF:  # no implicit
+            ode_list = ode_list[1:]
+        else:
+            ode_list.append(OdeSolver.IRK(defects_type=DefectType.IMPLICIT, polynomial_degree=4))
 
 
     # --- Generate the output path --- #
