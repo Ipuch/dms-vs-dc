@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def main(nb_phases: int = 1):
+def main():
 
     ode_solver = OdeSolver.RK4(n_integration_steps=5)
     # ode_solver = OdeSolver.COLLOCATION()
@@ -25,7 +25,7 @@ def main(nb_phases: int = 1):
     myocp.ocp.add_plot_penalty(CostType.ALL)
     # humanoid.ocp.print()
 
-    solv = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
+    solv = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
     solv.set_maximum_iterations(10000)
     solv.set_linear_solver("ma57")
     solv.set_print_level(5)
