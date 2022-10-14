@@ -85,14 +85,12 @@ class UpperLimbOCP:
         self,
         biorbd_model_path: str = None,
         n_shooting: int = 100,
-        phase_durations: float = 1.50187,  # actualized with results from https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4096894
+        phase_durations: float = 1,
         n_threads: int = 8,
         ode_solver: OdeSolver = OdeSolver.RK4(),
         rigidbody_dynamics: RigidBodyDynamics = RigidBodyDynamics.ODE,
         task: Tasks = Tasks.HEAD,
         use_sx: bool = False,
-        initial_x: InitialGuessList = None,
-        initial_u: InitialGuessList = None,
         seed: int = None,
     ):
         """
@@ -228,7 +226,9 @@ class UpperLimbOCP:
         # else:
         start_frame = event.get_frame(0)
         end_frame = event.get_frame(1)
-        phase_time = event.get_time(2) - event.get_time(1)
+
+        # enforced time in most cases
+        phase_time = event.get_time(2) - event.get_time(1) if self.phase_time is None else self.phase_time
 
         # get target
         data = LoadData(biorbd_model, self.c3d_path, q_filepath, qdot_filepath)
@@ -327,7 +327,6 @@ class UpperLimbOCP:
         # --- Initial guess --- #
         # todo
         self.x_init = InitialGuess(self.x_init_ref, interpolation=InterpolationType.EACH_FRAME)
-
         self.u_init = InitialGuess([self.tau_init] * self.n_tau + [self.muscle_init] * self.biorbd_model.nbMuscles())
         # self.u_init = InitialGuess(self.u_init_ref, interpolation=InterpolationType.EACH_FRAME)
 
