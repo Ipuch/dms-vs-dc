@@ -9,6 +9,7 @@ from itertools import product
 def generate_calls(
     call_number: int,
     parameters: dict,
+    seed_start: int = 0,
 ) -> list:
     """
     Generate the list of calls to be used in multiprocessing
@@ -37,6 +38,8 @@ def generate_calls(
             The date to be used in the output folder
         - n_shooting : tuple
             The number of shooting nodes to be used
+    seed_start : int, optional
+        The start seed to be used, by default 0
 
     Returns
     -------
@@ -45,7 +48,7 @@ def generate_calls(
     """
     call_lists = set_product_list(parameters)
     all_calls = [
-        [*call, i_rand] for i_rand in range(call_number) for call in call_lists
+        [*call, seed_start + i_rand] for i_rand in range(call_number) for call in call_lists
     ]
 
     return all_calls

@@ -16,7 +16,7 @@ from robot_leg import ArmOCP, LegOCP, MillerOcpOnePhase, Models
 from run_ocp import RunOCP
 
 
-def main(model: Models = None, iterations=10000, print_level=5, ignore_already_run=False, show_optim=False):
+def main(model: Models = None, iterations=10000, print_level=5, ignore_already_run=False, show_optim=False, seed_start=0, calls=1):
 
     if model == Models.LEG:
         # n_shooting = [(20, 20)]
@@ -98,11 +98,12 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
         ],
         out_path=[out_path.absolute().__str__()],
     )
-    calls = int(30)
+    calls = int(calls)
 
     my_calls = generate_calls(
         call_number=calls,
         parameters=param,
+        seed_start=seed_start,
     )
 
     cpu_number = cpu_count()
@@ -125,7 +126,12 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
 
 
 if __name__ == "__main__":
-    # main(model=Models.LEG, iterations=3000, print_level=5, ignore_already_run=True, show_optim=False)
-    # main(model=Models.ARM, iterations=3000, print_level=5, ignore_already_run=False, show_optim=False)
-    main(model=Models.ACROBAT, iterations=2500, print_level=5, ignore_already_run=True, show_optim=False)
+
+    main(model=Models.LEG, iterations=3000, print_level=5, ignore_already_run=True, show_optim=False, seed_start=30, calls=70)
+    main(model=Models.ARM, iterations=3000, print_level=5, ignore_already_run=False, show_optim=False, seed_start=30, calls=70)
+    main(model=Models.ACROBAT, iterations=2500, print_level=5, ignore_already_run=True, show_optim=False, seed_start=30, calls=70)
+
+    main(model=Models.UPPER_LIMB_XYZ_VARIABLES, iterations=3000, print_level=5, ignore_already_run=False, show_optim=False, seed_start=0, calls=100)
+    main(model=Models.HUMANOID_10DOF, iterations=3000, print_level=5, ignore_already_run=False,
+         show_optim=False, seed_start=0, calls=100)
 

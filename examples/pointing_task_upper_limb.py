@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 
 def main():
 
-    ode_solver = OdeSolver.RK4(n_integration_steps=5)
-    # ode_solver = OdeSolver.COLLOCATION()
+    # ode_solver = OdeSolver.RK4(n_integration_steps=5)
+    ode_solver = OdeSolver.COLLOCATION()
 
     n_threads = 8
     model_path = Models.UPPER_LIMB_XYZ_VARIABLES.value
@@ -15,7 +15,7 @@ def main():
     # --- Solve the program --- #
     myocp = UpperLimbOCP(
         biorbd_model_path=model_path,
-        n_shooting=100,
+        n_shooting=150,
         ode_solver=ode_solver,
         rigidbody_dynamics=RigidBodyDynamics.ODE,
         n_threads=n_threads,
@@ -42,14 +42,13 @@ def main():
         integrator=SolutionIntegrator.SCIPY_DOP853,
     )
 
-    # sol.animate(n_frames=0, show_floor=False, show_gravity=False)
-    # sol.graphs(show_bounds=True)
-
     plt.figure()
     plt.plot(sol.time, sol.states["q"].T, label="ocp", marker=".")
     plt.plot(out.time, out.states["q"].T, label="integrated", marker="+")
     plt.legend()
     plt.show()
+
+    sol.animate(n_frames=0, show_floor=False, show_gravity=False)
 
 
 if __name__ == "__main__":
