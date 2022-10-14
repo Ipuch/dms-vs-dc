@@ -76,6 +76,7 @@ class ResultsAnalyse:
             df: pd.DataFrame = None,
             ode_solvers: list = None,
             consistent_threshold: float = 10,
+            colors: dict = None,
     ):
 
         self.path_to_files = path_to_files
@@ -92,7 +93,12 @@ class ResultsAnalyse:
         self.df_path = df_path
         self.df = df
 
+        self.ode_solvers = ode_solvers
+        self.colors = colors
+
         self.convergence_rate = pd.DataFrame(columns=["n_shooting", "convergence_rate", "ode_solver_defects", "grps"])
+        self.print()
+
         self.near_optimal = pd.DataFrame(columns=[
             "n_shooting",
             "ode_solver_defects",
@@ -102,7 +108,6 @@ class ResultsAnalyse:
             "percent of near optimal ocp",
         ])
         self.compute_near_optimality()
-        self.ode_solvers = ode_solvers
 
     @classmethod
     def from_folder(
@@ -183,6 +188,11 @@ class ResultsAnalyse:
                 # compute error
                 model = biorbd.Model(model_path)
 
+                df_results["computation_time_per_shooting"] = df_results["computation_time"] / df_results[
+                    "n_shooting"]
+                df_results["computation_time_per_shooting_per_var"] = df_results["computation_time"] / df_results[
+                    "n_shooting"] / (model.nbQ() + model.nbQdot() + model.nbGeneralizedTorque())
+
                 data["n_shooting_per_second"] = data["n_shooting"] / data["time"][-1]
 
                 n_shooting = data["n_shooting"]
@@ -218,6 +228,12 @@ class ResultsAnalyse:
                 )[0]
                 data["consistent_threshold"] = idx[0] if idx.shape[0] != 0 else None
 
+                # errors per second
+                data["rotation_error_per_second"] = data["rotation_error"] / data["time"][-1]
+                data["rotation_error_per_second_per_velocity_max"] = data["rotation_error"] / data["time"][-1] / data[
+                    "qdot"].max() / (model.nbQ() + model.nbQdot() + model.nbGeneralizedTorque())
+
+                # labels and groups with ode solvers
                 data["ode_solver_defects"] = f"{data['ode_solver'].__str__()}_{data['defects_type'].value}"
                 data[
                     "grps"
@@ -247,6 +263,8 @@ class ResultsAnalyse:
             "COLLOCATION legendre 4_explicit",
             "COLLOCATION legendre 4_implicit",
         ]
+        colors = {ode: px.colors.qualitative.D3[i] for i, ode in enumerate(ode_solver_defects_list)}
+
         ode_solver_defects_list_updated = [cat for cat in ode_solver_defects_list if
                                            cat in df_results["ode_solver_defects"].unique()]
         df_results["ode_solver_defects"] = pd.Categorical(df_results["ode_solver_defects"],
@@ -306,6 +324,7 @@ class ResultsAnalyse:
             df_path=df_path,
             df=df_results,
             ode_solvers=ode_solver_defects_list_updated,
+            colors=colors,
         )
 
     def cluster(self, n_clusters: int = 2):
@@ -414,7 +433,7 @@ class ResultsAnalyse:
 
         # set the colors of the bars with px.colors.qualitative.D3 for each ode_solver
         for i, ode_solver in enumerate(self.convergence_rate['ode_solver_defects'].unique()):
-            fig.data[i].marker.color = px.colors.qualitative.D3[i]  # px.colors.qualitative.D3[i]
+            fig.data[i].marker.color = self.colors[ode_solver]
 
         # bars are transparent a bit
         for i in range(len(fig.data)):
@@ -491,7 +510,7 @@ class ResultsAnalyse:
 
         # set the colors of the bars with px.colors.qualitative.D3 for each ode_solver
         for i, ode_solver in enumerate(self.near_optimal['ode_solver_defects'].unique()):
-            fig.data[i].marker.color = px.colors.qualitative.D3[i]
+            fig.data[i].marker.color = self.colors[ode_solver]
 
         # bars are transparent a bit
         for i in range(len(fig.data)):
@@ -705,7 +724,7 @@ class ResultsAnalyse:
                 mode="lines",
                 marker=dict(
                     size=1,
-                    color=px.colors.qualitative.D3[row.grp_number],
+                    color=self.colors[row.ode_solver_defects],
                     line=dict(width=0.05, color="DarkSlateGrey"),
                 ),
                 name=row.grps if row.irand == 0 else None,
@@ -719,7 +738,7 @@ class ResultsAnalyse:
                 mode="lines",
                 marker=dict(
                     size=1,
-                    color=px.colors.qualitative.D3[row.grp_number],
+                    color=self.colors[row.ode_solver_defects],
                     line=dict(width=0.05, color="DarkSlateGrey"),
                 ),
                 name=row.grps if row.irand == 0 else None,
@@ -937,30 +956,33 @@ class ResultsAnalyse:
                     col=col,
                     ylabel=ylabel[i] if ylabel is not None else ylabel,
                     ylog=ylog[i] if ylog is not None else True,
+                    colors=[self.colors[ode] for ode in self.ode_solvers],
                 )
             elif df_list[i] == "near_optimal":
                 df = self.near_optimal.copy()
                 # n_shooting as str
                 df["n_shooting"] = df["n_shooting"].astype(str)
 
-                fig = fig.add_trace(go.Bar(x=df["ode_solver_defects"],
-                                        y=df["percent_of_near_optimal_ocp"],
-                                                 ),
+                for j, ode in enumerate(self.ode_solvers):
+                    df_ode = df[df["ode_solver_defects"] == ode]
+                    fig = fig.add_trace(go.Bar(x=[1],
+                                               y=df_ode["percent_of_near_optimal_ocp"],
+                                               legendgroup=grps[j],
+                                               showlegend=False,
+                                               ),
                                         row=row,
                                         col=col,
                                         )
-                # apply colors to each bar of the histogram a color from px.colors.qualitative.D3
-                # 6 colors of D3
-                marker_colors = px.colors.qualitative.D3[:6]
-                fig.update_traces(marker_color=marker_colors, opacity=0.75, row=row, col=col)
+                    marker_colors = self.colors[ode]
+                    # udpate the color of the bar
+                    fig.data[-1].marker.color = marker_colors
+                    # opacity
+                    fig.data[-1].opacity = 0.75
 
                 # hide x ticks
                 fig.update_xaxes(showticklabels=False, row=row, col=col)
-                # remove ticks tips
-
 
                 # Update axis
-                fig.update_xaxes(title_text="Number of nodes", row=row, col=col)
                 fig.update_yaxes(title_text=ylabel[i] if ylabel is not None else ylabel, row=row, col=col)
 
                 # # set the colors of the bars with px.colors.qualitative.D3 for each ode_solver
@@ -979,7 +1001,7 @@ class ResultsAnalyse:
                 # y-axis from 0 to 1
                 fig.update_yaxes(range=[0, 1], row=row, col=col)
 
-                #todo: same legend, interactive legend, range x of near optimal grpahs,
+                # todo: same legend, interactive legend, range x of near optimal grpahs,
 
         return fig
 
@@ -1478,12 +1500,14 @@ def big_figure(results_leg: ResultsAnalyse, results_arm: ResultsAnalyse, results
         rows=4,
         cols=3,
         vertical_spacing=0.05,
-        horizontal_spacing=0.10,
+        horizontal_spacing=0.05,
         subplot_titles=("LEG", "ARM", "ACROBAT"),
     )
 
     df = ["df", "df", "near_optimal", "df"]
     keys = ["computation_time", "cost", "near_optimal", "rotation_error"]
+    # keys = ["computation_time_per_shooting_per_var", "cost", "near_optimal", "rotation_error"]
+    # keys = ["computation_time", "cost", "near_optimal", "rotation_error_per_second_per_velocity_max"]
     ylabels = ["CPU time (s)", "Cost function value", "Near optimal frequency (%)", "Rotation error RMSE (deg)"]
     ylog = [False, True, False, True]
     fig = results_leg.plot_keys \
@@ -1494,8 +1518,8 @@ def big_figure(results_leg: ResultsAnalyse, results_arm: ResultsAnalyse, results
     fig = results_acrobat.plot_keys(keys=keys, fig=fig, col=3, ylog=ylog, df_list=df)
 
     fig.update_layout(
-        height=800,
-        width=1500,
+        height=900,
+        width=1200,
         paper_bgcolor="rgba(255,255,255,1)",
         plot_bgcolor="rgba(255,255,255,1)",
         legend=dict(
@@ -1523,10 +1547,6 @@ def big_figure(results_leg: ResultsAnalyse, results_arm: ResultsAnalyse, results
     # custom ranges
     fig.update_yaxes(range=[0, 4], row=1, col=1)
     fig.update_yaxes(range=[0, 0.6e4], row=1, col=3)
-
-    # todo: time / nombre de noeuds/ nombre de ddl
-    # todo: erreur de rotation time / vitesse moyenne ou vitesse max. total rmse ou pour chaque ddl.
-    #
 
     fig.show()
 

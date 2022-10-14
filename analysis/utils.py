@@ -239,7 +239,7 @@ def my_traces(
     ylabel: str = None,
     title_str: str = None,
     ylog: bool = True,
-    color: list = None,
+    colors: list = None,
     show_legend: bool = False,
 ):
     """
@@ -267,7 +267,7 @@ def my_traces(
         The title of the subplot.
     ylog : bool
         If true, the y-axis is logarithmic.
-    color : list
+    colors : list
         The colors of the boxplot.
     show_legend : bool
         If true, the legend is shown.
@@ -282,14 +282,14 @@ def my_traces(
         # manage color
         c = (
             px.colors.hex_to_rgb(px.colors.qualitative.D3[ii % 9])
-            if color is None
-            else color[ii]
+            if colors is None
+            else px.colors.hex_to_rgb(colors[ii])
         )
         c = str(f"rgba({c[0]},{c[1]},{c[2]},0.5)")
         c1 = (
             px.colors.qualitative.D3[ii % 9]
-            if color is None
-            else px.colors.label_rgb(color[ii])
+            if colors is None
+            else colors[ii]
         )
         fig.add_trace(
             go.Box(
