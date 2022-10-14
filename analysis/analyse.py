@@ -1001,8 +1001,6 @@ class ResultsAnalyse:
                 # y-axis from 0 to 1
                 fig.update_yaxes(range=[0, 1], row=row, col=col)
 
-                # todo: same legend, interactive legend, range x of near optimal grpahs,
-
         return fig
 
     def _plot_2_keys(
@@ -1547,6 +1545,10 @@ def big_figure(results_leg: ResultsAnalyse, results_arm: ResultsAnalyse, results
     # custom ranges
     fig.update_yaxes(range=[0, 4], row=1, col=1)
     fig.update_yaxes(range=[0, 0.6e4], row=1, col=3)
+    # todo: case vide quand ça n'a pas tournée ode_solver
+    # todo: regler le pb d'échelle
+    # todo: faire un truc pour le near optimal mauvais pour le leg
+
 
     fig.show()
 
