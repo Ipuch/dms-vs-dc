@@ -27,7 +27,8 @@ from bioptim import (
     Dynamics,
 )
 
-from ..models.utils import thorax_variables, add_header
+from ..models.utils import thorax_variables
+from ..models.utils import add_header
 from ..models.enums import Models
 from ..data.load_events import LoadEvent
 from ..data.load_experimental_data import LoadData
@@ -138,17 +139,10 @@ class UpperLimbOCP:
             self.nb_root = self.biorbd_model.nbRoot()
 
             self.n_tau = self.biorbd_model.nbGeneralizedTorque() - self.biorbd_model.nbRoot()
+            self.n_mus = self.biorbd_model.nbMuscleTotal()
 
             self.tau_min, self.tau_init, self.tau_max = -50, 0, 50
-            self.muscle_min, self.muscle_max, self.muscle_init = 0, 1, 0.05
-
-            self.velocity_max = 100  # qdot
-            self.velocity_max_phase_transition = 10  # qdot hips, thorax in phase 2
-
-            self.random_scale = 0.02  # relative to the maximal bounds of the states or controls
-            self.random_scale_qdot = 0.02
-            self.random_scale_qddot = 0.02
-            self.random_scale_tau = 0.02
+            self.muscle_min, self.muscle_max, self.muscle_init = 0, 1, 0.10
 
             self.dynamics = DynamicsList()
             self.constraints = ConstraintList()
@@ -162,27 +156,60 @@ class UpperLimbOCP:
             self.x_init = InitialGuessList()
             self.u_init = InitialGuessList()
 
-            np.random.seed(seed)
-            # todo
-
             self._get_experimental_data()
             # reload it to get the new thorax values
             self.biorbd_model = biorbd.Model(biorbd_model_path)
 
-            self._set_initial_guesses()  # noise is into the initial guess
             self._set_boundary_conditions()
+            self._set_initial_guesses()
 
             self._set_dynamics()
             self._set_objective_functions()
+
+            if seed is not None:
+                self.xn_init = InitialGuessList()
+                self.un_init = InitialGuessList()
+
+                q_noise_magnitude = np.repeat(0.5, self.n_q)
+                qdot_noise_magnitude = np.repeat(0.1, self.n_qdot)
+                x_noise_magnitude = np.concatenate((q_noise_magnitude, qdot_noise_magnitude))
+
+                self.xn_init.add(
+                    NoisedInitialGuess(
+                        initial_guess=self.x_init,
+                        bounds=self.x_bounds,
+                        noise_magnitude=x_noise_magnitude,
+                        n_shooting=self.n_shooting,
+                        interpolation=InterpolationType.EACH_FRAME,
+                        bound_push=0.1,
+                        seed=seed,
+                    )
+                )
+
+                torque_noise_magnitude = np.repeat(0.1, self.n_tau)
+                torque_noise_magnitude[5:8] = 0
+                muscle_noise_magnitude = np.repeat(0.1, self.n_mus)
+                u_noise_magnitude = np.concatenate((torque_noise_magnitude, muscle_noise_magnitude))
+
+                self.un_init.add(
+                    NoisedInitialGuess(
+                        initial_guess=self.u_init,
+                        bounds=self.u_bounds[0],
+                        noise_magnitude=u_noise_magnitude,
+                        n_shooting=self.n_shooting - 1,
+                        bound_push=0,
+                        seed=seed,
+                    )
+                )
 
             self.ocp = OptimalControlProgram(
                 self.biorbd_model,
                 self.dynamics,
                 n_shooting=self.n_shooting,
                 phase_time=self.phase_durations,
-                x_init=self.x_init,
+                x_init=self.x_init if seed is None else self.xn_init,
                 x_bounds=self.x_bounds,
-                u_init=self.u_init,
+                u_init=self.u_init if seed is None else self.un_init,
                 u_bounds=self.u_bounds,
                 objective_functions=self.objective_functions,
                 n_threads=n_threads,
@@ -205,7 +232,6 @@ class UpperLimbOCP:
         thorax_values = thorax_variables(q_filepath)  # load c3d floating base pose
         model_template_path = Models.UPPER_LIMB_XYZ_TEMPLATE.value
         new_biomod_file = Models.UPPER_LIMB_XYZ_VARIABLES.value
-        # todo: find the file first.
 
         biorbd_model = add_header(
             biomod_file_name=model_template_path,
@@ -333,8 +359,13 @@ class UpperLimbOCP:
         Set the initial guess for the optimal control problem (states and controls)
         """
         # --- Initial guess --- #
-        # todo
-        self.x_init = InitialGuess(self.x_init_ref, interpolation=InterpolationType.EACH_FRAME)
+
+        # linear interpolation between initial and final states of x_init_ref[0, :] and x_init_ref[-1, :]
+        x_init_linear = np.zeros((self.n_q + self.n_qdot, self.n_shooting + 1))
+        for i in range(self.n_q + self.n_qdot):
+            x_init_linear[i, :] = np.linspace(self.x_init_ref[0, i], self.x_init_ref[-1, i], self.n_shooting + 1)
+
+        self.x_init = InitialGuess(x_init_linear, interpolation=InterpolationType.EACH_FRAME)
         self.u_init = InitialGuess([self.tau_init] * self.n_tau + [self.muscle_init] * self.biorbd_model.nbMuscles())
         # self.u_init = InitialGuess(self.u_init_ref, interpolation=InterpolationType.EACH_FRAME)
 

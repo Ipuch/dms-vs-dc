@@ -15,18 +15,18 @@ def main():
     # --- Solve the program --- #
     myocp = UpperLimbOCP(
         biorbd_model_path=model_path,
-        n_shooting=150,
+        n_shooting=100,
         ode_solver=ode_solver,
         rigidbody_dynamics=RigidBodyDynamics.ODE,
         n_threads=n_threads,
-        seed=20,
+        seed=0,
     )
 
     myocp.ocp.add_plot_penalty(CostType.ALL)
     # humanoid.ocp.print()
 
     solv = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
-    solv.set_maximum_iterations(10000)
+    solv.set_maximum_iterations(0)
     solv.set_linear_solver("ma57")
     solv.set_print_level(5)
     sol = myocp.ocp.solve(solv)
