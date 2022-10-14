@@ -16,7 +16,15 @@ from robot_leg import ArmOCP, LegOCP, MillerOcpOnePhase, Models, UpperLimbOCP, H
 from run_ocp import RunOCP
 
 
-def main(model: Models = None, iterations=10000, print_level=5, ignore_already_run=False, show_optim=False, seed_start=0, calls=1):
+def main(
+    model: Models = None,
+    iterations=10000,
+    print_level=5,
+    ignore_already_run=False,
+    show_optim=False,
+    seed_start=0,
+    calls=1,
+):
 
     if model == Models.LEG:
         # n_shooting = [(20, 20)]
@@ -79,28 +87,25 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
         raise ValueError("Unknown model")
 
     ode_list = [
-            OdeSolver.COLLOCATION(
-                defects_type=DefectType.IMPLICIT, polynomial_degree=4
-            ),
-            OdeSolver.COLLOCATION(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
-            OdeSolver.RK4(n_integration_steps=5),
-            OdeSolver.RK8(n_integration_steps=2),
-            # # OdeSolver.CVODES(),
-            OdeSolver.IRK(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
-            # OdeSolver.IRK(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
-        ]
+        OdeSolver.COLLOCATION(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
+        OdeSolver.COLLOCATION(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
+        OdeSolver.RK4(n_integration_steps=5),
+        OdeSolver.RK8(n_integration_steps=2),
+        # # OdeSolver.CVODES(),
+        OdeSolver.IRK(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
+        # OdeSolver.IRK(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
+    ]
     if model != Models.ACROBAT:
         if model == Models.HUMANOID_10DOF:  # no implicit
             ode_list = ode_list[1:]
         else:
             ode_list.append(OdeSolver.IRK(defects_type=DefectType.IMPLICIT, polynomial_degree=4))
 
-
     # --- Generate the output path --- #
     Date = date.today().strftime("%d-%m-%y")
     out_path = Path(
         Path(__file__).parent.__str__()
-        #+ f"/../../dms-vs-dc-results/{model.name}_{Date}_2"
+        # + f"/../../dms-vs-dc-results/{model.name}_{Date}_2"
         + f"/../../dms-vs-dc-results/{model.name}_07-10-22_2"
     )
     try:
@@ -145,19 +150,57 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
         sub_df = df[df["ode_solver"] == ode_solver]
         my_calls = sub_df.to_numpy().tolist()
         run_pool(
-             running_function=running_function,
-             calls=my_calls,
-             pool_nb=my_pool_number,
+            running_function=running_function,
+            calls=my_calls,
+            pool_nb=my_pool_number,
         )
 
 
 if __name__ == "__main__":
 
-    main(model=Models.LEG, iterations=3000, print_level=5, ignore_already_run=True, show_optim=False, seed_start=30, calls=70)
-    main(model=Models.ARM, iterations=3000, print_level=5, ignore_already_run=False, show_optim=False, seed_start=30, calls=70)
-    main(model=Models.ACROBAT, iterations=2500, print_level=5, ignore_already_run=True, show_optim=False, seed_start=30, calls=70)
+    main(
+        model=Models.LEG,
+        iterations=3000,
+        print_level=5,
+        ignore_already_run=True,
+        show_optim=False,
+        seed_start=30,
+        calls=70,
+    )
+    main(
+        model=Models.ARM,
+        iterations=3000,
+        print_level=5,
+        ignore_already_run=False,
+        show_optim=False,
+        seed_start=30,
+        calls=70,
+    )
+    main(
+        model=Models.ACROBAT,
+        iterations=2500,
+        print_level=5,
+        ignore_already_run=True,
+        show_optim=False,
+        seed_start=30,
+        calls=70,
+    )
 
-    main(model=Models.UPPER_LIMB_XYZ_VARIABLES, iterations=3000, print_level=5, ignore_already_run=False, show_optim=False, seed_start=0, calls=100)
-    main(model=Models.HUMANOID_10DOF, iterations=3000, print_level=5, ignore_already_run=False,
-         show_optim=False, seed_start=0, calls=100)
-
+    main(
+        model=Models.UPPER_LIMB_XYZ_VARIABLES,
+        iterations=3000,
+        print_level=5,
+        ignore_already_run=False,
+        show_optim=False,
+        seed_start=0,
+        calls=100,
+    )
+    main(
+        model=Models.HUMANOID_10DOF,
+        iterations=3000,
+        print_level=5,
+        ignore_already_run=False,
+        show_optim=False,
+        seed_start=0,
+        calls=100,
+    )

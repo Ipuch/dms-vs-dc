@@ -52,5 +52,6 @@ def main():
 
     sol.graphs(show_bounds=True)
 
+
 if __name__ == "__main__":
     main()

@@ -47,9 +47,7 @@ def generate_calls(
         The list of calls to be run
     """
     call_lists = set_product_list(parameters)
-    all_calls = [
-        [*call, seed_start + i_rand] for i_rand in range(call_number) for call in call_lists
-    ]
+    all_calls = [[*call, seed_start + i_rand] for i_rand in range(call_number) for call in call_lists]
 
     return all_calls
 

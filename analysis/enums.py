@@ -11,9 +11,7 @@ class ResultFolders(Enum):
     ARM = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ARM_30-09-22_2"
     ACROBAT = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ACROBAT_30-09-22_2"
 
-    LEG_2022_08_12_TEST = (
-        "/home/puchaud/Projets_Python/dms-vs-dc-results/LEG_19-08-22_2"
-    )
+    LEG_2022_08_12_TEST = "/home/puchaud/Projets_Python/dms-vs-dc-results/LEG_19-08-22_2"
     LEG_2022_07_19 = "/home/puchaud/Projets_Python/dms-vs-dc-results/raw_17-07-22"
     ARM_2022_07_29 = "/home/puchaud/Projets_Python/dms-vs-dc-results/arm_29-07-22"
     LEG_2022_08_01 = "/home/puchaud/Projets_Python/dms-vs-dc-results/LEG_01-08-22"

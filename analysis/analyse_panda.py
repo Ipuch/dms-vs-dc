@@ -64,10 +64,7 @@ for i, file in enumerate(files):
         # compute error
         model = biorbd.Model(model_path)
 
-        (
-            data["translation_error"],
-            data["rotation_error"],
-        ) = compute_error_single_shooting(
+        (data["translation_error"], data["rotation_error"],) = compute_error_single_shooting(
             model=model,
             n_shooting=data["n_shooting"],
             time=np.array(data["time"]),
@@ -105,9 +102,9 @@ print(
         ]
     ]
 )
-df_results[
-    ["dynamics_type", "ode_solver", "status", "translation_error", "rotation_error"]
-].to_csv(f"{out_path_raw}/results.csv")
+df_results[["dynamics_type", "ode_solver", "status", "translation_error", "rotation_error"]].to_csv(
+    f"{out_path_raw}/results.csv"
+)
 # print(df_results[["ode_solver", ]])
 
 # fill new columns

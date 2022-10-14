@@ -69,14 +69,14 @@ class ResultsAnalyse:
     """
 
     def __init__(
-            self,
-            path_to_files: str,
-            model_path: str,
-            df_path: str = None,
-            df: pd.DataFrame = None,
-            ode_solvers: list = None,
-            consistent_threshold: float = 10,
-            colors: dict = None,
+        self,
+        path_to_files: str,
+        model_path: str,
+        df_path: str = None,
+        df: pd.DataFrame = None,
+        ode_solvers: list = None,
+        consistent_threshold: float = 10,
+        colors: dict = None,
     ):
 
         self.path_to_files = path_to_files
@@ -99,23 +99,25 @@ class ResultsAnalyse:
         self.convergence_rate = pd.DataFrame(columns=["n_shooting", "convergence_rate", "ode_solver_defects", "grps"])
         self.print()
 
-        self.near_optimal = pd.DataFrame(columns=[
-            "n_shooting",
-            "ode_solver_defects",
-            "grps",
-            "number of ocp",
-            "number of near optimal ocp",
-            "percent of near optimal ocp",
-        ])
+        self.near_optimal = pd.DataFrame(
+            columns=[
+                "n_shooting",
+                "ode_solver_defects",
+                "grps",
+                "number of ocp",
+                "number of near optimal ocp",
+                "percent of near optimal ocp",
+            ]
+        )
         self.compute_near_optimality()
 
     @classmethod
     def from_folder(
-            cls,
-            path_to_files: str,
-            model_path: str,
-            consistent_threshold: float = 10,
-            export: bool = True,
+        cls,
+        path_to_files: str,
+        model_path: str,
+        consistent_threshold: float = 10,
+        export: bool = True,
     ):
         """
         Convert the data to a pandas dataframe.
@@ -188,10 +190,12 @@ class ResultsAnalyse:
                 # compute error
                 model = biorbd.Model(model_path)
 
-                df_results["computation_time_per_shooting"] = df_results["computation_time"] / df_results[
-                    "n_shooting"]
-                df_results["computation_time_per_shooting_per_var"] = df_results["computation_time"] / df_results[
-                    "n_shooting"] / (model.nbQ() + model.nbQdot() + model.nbGeneralizedTorque())
+                df_results["computation_time_per_shooting"] = df_results["computation_time"] / df_results["n_shooting"]
+                df_results["computation_time_per_shooting_per_var"] = (
+                    df_results["computation_time"]
+                    / df_results["n_shooting"]
+                    / (model.nbQ() + model.nbQdot() + model.nbGeneralizedTorque())
+                )
 
                 data["n_shooting_per_second"] = data["n_shooting"] / data["time"][-1]
 
@@ -200,10 +204,7 @@ class ResultsAnalyse:
                 q_integrated = data["q_integrated"]
                 # # print(data["q_integrated"].shape)
 
-                (
-                    data["translation_error"],
-                    data["rotation_error"],
-                ) = compute_error_single_shooting(
+                (data["translation_error"], data["rotation_error"],) = compute_error_single_shooting(
                     model=model,
                     n_shooting=n_shooting,
                     time=np.array(data["time"]),
@@ -223,26 +224,25 @@ class ResultsAnalyse:
                 )
 
                 # to identify the point at which the consistency is sufficient
-                idx = np.where(
-                    data["rotation_error_traj"] > consistent_threshold
-                )[0]
+                idx = np.where(data["rotation_error_traj"] > consistent_threshold)[0]
                 data["consistent_threshold"] = idx[0] if idx.shape[0] != 0 else None
 
                 # errors per second
                 data["rotation_error_per_second"] = data["rotation_error"] / data["time"][-1]
-                data["rotation_error_per_second_per_velocity_max"] = data["rotation_error"] / data["time"][-1] / data[
-                    "qdot"].max() / (model.nbQ() + model.nbQdot() + model.nbGeneralizedTorque())
+                data["rotation_error_per_second_per_velocity_max"] = (
+                    data["rotation_error"]
+                    / data["time"][-1]
+                    / data["qdot"].max()
+                    / (model.nbQ() + model.nbQdot() + model.nbGeneralizedTorque())
+                )
 
                 # labels and groups with ode solvers
                 data["ode_solver_defects"] = f"{data['ode_solver'].__str__()}_{data['defects_type'].value}"
-                data[
-                    "grps"
-                ] = f"{data['ode_solver'].__str__()}_{data['defects_type'].value}_{n_shooting}"
+                data["grps"] = f"{data['ode_solver'].__str__()}_{data['defects_type'].value}_{n_shooting}"
 
                 # remove element of the list[dict] data["detailed_cost"] if key name contains "ConstraintFcn"
                 data["detailed_cost"] = [
-                    {k: v for k, v in d.items() if "ConstraintFcn" not in d["name"]}
-                    for d in data["detailed_cost"]
+                    {k: v for k, v in d.items() if "ConstraintFcn" not in d["name"]} for d in data["detailed_cost"]
                 ]
                 data["detailed_cost"] = [d for d in data["detailed_cost"] if d]
 
@@ -265,10 +265,12 @@ class ResultsAnalyse:
         ]
         colors = {ode: px.colors.qualitative.D3[i] for i, ode in enumerate(ode_solver_defects_list)}
 
-        ode_solver_defects_list_updated = [cat for cat in ode_solver_defects_list if
-                                           cat in df_results["ode_solver_defects"].unique()]
-        df_results["ode_solver_defects"] = pd.Categorical(df_results["ode_solver_defects"],
-                                                          ode_solver_defects_list_updated)
+        ode_solver_defects_list_updated = [
+            cat for cat in ode_solver_defects_list if cat in df_results["ode_solver_defects"].unique()
+        ]
+        df_results["ode_solver_defects"] = pd.Categorical(
+            df_results["ode_solver_defects"], ode_solver_defects_list_updated
+        )
 
         df_results.sort_values("ode_solver_defects", ascending=True, inplace=True)
         # reindex the dataframe
@@ -342,9 +344,7 @@ class ResultsAnalyse:
         self.df["cluster"] = None
         idx = np.where(self.df["status"] == 0)[0]
         df = self.df[self.df["status"] == 0]
-        kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(
-            df[["cost"]].values
-        )
+        kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(df[["cost"]].values)
         for i, id in enumerate(idx):
             self.df.loc[id, "cluster"] = kmeans.labels_[i]
 
@@ -364,16 +364,16 @@ class ResultsAnalyse:
             str_formulation = f.replace("_", " ").replace("-", " ").replace("\n", " ")
             a = len(sub_df[sub_df["status"] == 1])
             b = len(sub_df)
-            print(
-                f"{a} / {b} {str_formulation} did not converge to an optimal solutions"
-            )
+            print(f"{a} / {b} {str_formulation} did not converge to an optimal solutions")
 
-            data = dict(convergence_rate=1 - (a / b),
-                        ode_solver_defects=sub_df["ode_solver_defects"].unique()[0],
-                        n_shooting=sub_df["n_shooting"].unique()[0],
-                        number_of_ocp=b,
-                        number_of_convergence=a,
-                        grps=f)
+            data = dict(
+                convergence_rate=1 - (a / b),
+                ode_solver_defects=sub_df["ode_solver_defects"].unique()[0],
+                n_shooting=sub_df["n_shooting"].unique()[0],
+                number_of_ocp=b,
+                number_of_convergence=a,
+                grps=f,
+            )
             df_dictionary = pd.DataFrame([data])
             self.convergence_rate = pd.concat([self.convergence_rate, df_dictionary], ignore_index=True)
 
@@ -387,8 +387,9 @@ class ResultsAnalyse:
                         print(f"{a} / {b} converge to cluster {i}")
 
         # sort the convergence rate dataframe
-        self.convergence_rate["ode_solver_defects"] = pd.Categorical(self.convergence_rate["ode_solver_defects"],
-                                                                     self.ode_solvers)
+        self.convergence_rate["ode_solver_defects"] = pd.Categorical(
+            self.convergence_rate["ode_solver_defects"], self.ode_solvers
+        )
         self.convergence_rate.sort_values(by=["n_shooting", "ode_solver_defects"], ascending=True, inplace=True)
         # reindex the dataframe
         self.convergence_rate = self.convergence_rate.reset_index(drop=True)
@@ -410,17 +411,14 @@ class ResultsAnalyse:
         # n_shooting as str
         df["n_shooting"] = df["n_shooting"].astype(str)
 
-        fig = px.histogram(df,
-                           x="n_shooting",
-                           y="convergence_rate",
-                           color='ode_solver_defects',
-                           barmode='group',
-                           height=400)
+        fig = px.histogram(
+            df, x="n_shooting", y="convergence_rate", color="ode_solver_defects", barmode="group", height=400
+        )
 
         fig.update_layout(
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            font_color='black',
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            font_color="black",
         )
         # sh
 
@@ -432,7 +430,7 @@ class ResultsAnalyse:
         fig.update_yaxes(showgrid=True, gridwidth=5)
 
         # set the colors of the bars with px.colors.qualitative.D3 for each ode_solver
-        for i, ode_solver in enumerate(self.convergence_rate['ode_solver_defects'].unique()):
+        for i, ode_solver in enumerate(self.convergence_rate["ode_solver_defects"].unique()):
             fig.data[i].marker.color = self.colors[ode_solver]
 
         # bars are transparent a bit
@@ -441,7 +439,7 @@ class ResultsAnalyse:
 
         # contours of bars are black
         for i in range(len(fig.data)):
-            fig.data[i].marker.line.color = 'black'
+            fig.data[i].marker.line.color = "black"
             fig.data[i].marker.line.width = 1
 
         if show:
@@ -487,17 +485,14 @@ class ResultsAnalyse:
         # n_shooting as str
         df["n_shooting"] = df["n_shooting"].astype(str)
 
-        fig = px.bar(df,
-                     x="n_shooting",
-                     y="percent_of_near_optimal_ocp",
-                     color='ode_solver_defects',
-                     barmode='group',
-                     height=400)
+        fig = px.bar(
+            df, x="n_shooting", y="percent_of_near_optimal_ocp", color="ode_solver_defects", barmode="group", height=400
+        )
 
         fig.update_layout(
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            font_color='black',
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            font_color="black",
         )
         # sh
 
@@ -509,7 +504,7 @@ class ResultsAnalyse:
         fig.update_yaxes(showgrid=True, gridwidth=5)
 
         # set the colors of the bars with px.colors.qualitative.D3 for each ode_solver
-        for i, ode_solver in enumerate(self.near_optimal['ode_solver_defects'].unique()):
+        for i, ode_solver in enumerate(self.near_optimal["ode_solver_defects"].unique()):
             fig.data[i].marker.color = self.colors[ode_solver]
 
         # bars are transparent a bit
@@ -518,7 +513,7 @@ class ResultsAnalyse:
 
         # contours of bars are black
         for i in range(len(fig.data)):
-            fig.data[i].marker.line.color = 'black'
+            fig.data[i].marker.line.color = "black"
             fig.data[i].marker.line.width = 1
 
         # y-axis from 0 to 1
@@ -547,21 +542,23 @@ class ResultsAnalyse:
         model_path = self.model_path if not p.exists() else p.__str__()
 
         import bioviz
-        biorbd_viz = bioviz.Viz(model_path,
-                                show_now=False,
-                                show_meshes=True,
-                                show_global_center_of_mass=False,
-                                show_gravity_vector=False,
-                                show_floor=False,
-                                show_segments_center_of_mass=False,
-                                show_global_ref_frame=False,
-                                show_local_ref_frame=False,
-                                show_markers=False,
-                                show_muscles=False,
-                                show_wrappings=False,
-                                background_color=(1, 1, 1),
-                                mesh_opacity=0.97,
-                                )
+
+        biorbd_viz = bioviz.Viz(
+            model_path,
+            show_now=False,
+            show_meshes=True,
+            show_global_center_of_mass=False,
+            show_gravity_vector=False,
+            show_floor=False,
+            show_segments_center_of_mass=False,
+            show_global_ref_frame=False,
+            show_local_ref_frame=False,
+            show_markers=False,
+            show_muscles=False,
+            show_wrappings=False,
+            background_color=(1, 1, 1),
+            mesh_opacity=0.97,
+        )
 
         biorbd_viz.resize(600, 900)
 
@@ -584,8 +581,7 @@ class ResultsAnalyse:
         biorbd_viz.load_movement(q)
         biorbd_viz.exec()
 
-    def plot_time_iter(
-            self, show: bool = True, export: bool = True, time_unit: str = "s", export_suffix: str = None):
+    def plot_time_iter(self, show: bool = True, export: bool = True, time_unit: str = "s", export_suffix: str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -675,10 +671,7 @@ class ResultsAnalyse:
             self.export(fig, "analyse_time_iter", export_suffix)
 
     def plot_integration_frame_to_frame_error(
-            self, show: bool = True,
-            export: bool = True,
-            until_consistent: bool = False,
-            export_suffix: str = None
+        self, show: bool = True, export: bool = True, until_consistent: bool = False, export_suffix: str = None
     ):
         """
         This function plots the time and number of iterations need to make the OCP converge
@@ -697,9 +690,7 @@ class ResultsAnalyse:
         dyn = self.df["grps"].unique().tolist()
         grps = dyn
 
-        fig = make_subplots(
-            rows=1, cols=2, subplot_titles=["translation error", "rotation error"]
-        )
+        fig = make_subplots(rows=1, cols=2, subplot_titles=["translation error", "rotation error"])
         # update the font size of the subplot_titles
         for i in fig["layout"]["annotations"]:
             i["font"] = dict(size=18)
@@ -708,11 +699,7 @@ class ResultsAnalyse:
         df_results = self.df[self.df["status"] == 0]
 
         for _, row in df_results.iterrows():
-            idx_end = (
-                int(row.consistent_threshold)
-                if until_consistent
-                else int(len(row.time))
-            )
+            idx_end = int(row.consistent_threshold) if until_consistent else int(len(row.time))
             print(idx_end)
             time = row.time[:idx_end]
             y1 = row["translation_error_traj"][:idx_end]
@@ -923,16 +910,16 @@ class ResultsAnalyse:
             self.export(fig, "analyse_obj", export_suffix)
 
     def plot_keys(
-            self,
-            keys: List[str],
-            df_list: List[str] = None,
-            ylabel: List[str] = None,
-            ylog: List[bool] = None,
-            fig: go.Figure = None,
-            col: int = 1,
-            show: bool = True,
-            export: bool = True,
-            export_suffix: str = None,
+        self,
+        keys: List[str],
+        df_list: List[str] = None,
+        ylabel: List[str] = None,
+        ylog: List[bool] = None,
+        fig: go.Figure = None,
+        col: int = 1,
+        show: bool = True,
+        export: bool = True,
+        export_suffix: str = None,
     ):
         if fig is None:
             fig = make_subplots(cols=1, rows=len(keys))
@@ -965,14 +952,16 @@ class ResultsAnalyse:
 
                 for j, ode in enumerate(self.ode_solvers):
                     df_ode = df[df["ode_solver_defects"] == ode]
-                    fig = fig.add_trace(go.Bar(x=[1],
-                                               y=df_ode["percent_of_near_optimal_ocp"],
-                                               legendgroup=grps[j],
-                                               showlegend=False,
-                                               ),
-                                        row=row,
-                                        col=col,
-                                        )
+                    fig = fig.add_trace(
+                        go.Bar(
+                            x=[1],
+                            y=df_ode["percent_of_near_optimal_ocp"],
+                            legendgroup=grps[j],
+                            showlegend=False,
+                        ),
+                        row=row,
+                        col=col,
+                    )
                     marker_colors = self.colors[ode]
                     # udpate the color of the bar
                     fig.data[-1].marker.color = marker_colors
@@ -1004,16 +993,16 @@ class ResultsAnalyse:
         return fig
 
     def _plot_2_keys(
-            self,
-            key_x: str,
-            key_y: str,
-            x_label: str,
-            y_label: str,
-            x_log: bool = False,
-            y_log: bool = False,
-            show: bool = True,
-            export: bool = True,
-            export_suffix: str = None,
+        self,
+        key_x: str,
+        key_y: str,
+        x_label: str,
+        y_label: str,
+        x_log: bool = False,
+        y_log: bool = False,
+        show: bool = True,
+        export: bool = True,
+        export_suffix: str = None,
     ):
         """
         This function plots the time and number of iterations need to make the OCP converge
@@ -1149,9 +1138,7 @@ class ResultsAnalyse:
         format_type = ["png", "pdf", "svg", "eps"]
         for f in format_type:
             fig.write_image(self.path_to_figures + f"/{filename}{export_suffix}." + f)
-        fig.write_html(
-            self.path_to_figures + f"/{filename}{export_suffix}.html", include_mathjax="cdn"
-        )
+        fig.write_html(self.path_to_figures + f"/{filename}{export_suffix}.html", include_mathjax="cdn")
 
     def plot_time_vs_obj(self, show: bool = True, export: bool = True, export_suffix: str = None):
         """
@@ -1178,9 +1165,7 @@ class ResultsAnalyse:
             format_type = ["png", "pdf", "svg", "eps"]
             for f in format_type:
                 fig.write_image(self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}.html", include_mathjax="cdn"
-            )
+            fig.write_html(self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}.html", include_mathjax="cdn")
 
     def plot_detailed_obj_values(self, show: bool = True, export: bool = True, export_suffix: str = None):
         """
@@ -1268,22 +1253,20 @@ class ResultsAnalyse:
             format_type = ["png", "pdf", "svg", "eps"]
             for f in format_type:
                 fig.write_image(self.path_to_figures + f"/analyse_detailed_obj{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_obj{export_suffix}.html", include_mathjax="cdn"
-            )
+            fig.write_html(self.path_to_figures + f"/analyse_obj{export_suffix}.html", include_mathjax="cdn")
 
     def plot_state(
-            self,
-            key: str = None,
-            show: bool = True,
-            export: bool = True,
-            label_dofs: list[str] = None,
-            row_col: tuple[int, int] = None,
-            ylabel_rotations: str = "q",
-            ylabel_translations: str = "q",
-            xlabel: str = "Time (s)",
-            until_consistent: bool = False,
-            export_suffix: str = None,
+        self,
+        key: str = None,
+        show: bool = True,
+        export: bool = True,
+        label_dofs: list[str] = None,
+        row_col: tuple[int, int] = None,
+        ylabel_rotations: str = "q",
+        ylabel_translations: str = "q",
+        xlabel: str = "Time (s)",
+        until_consistent: bool = False,
+        export_suffix: str = None,
     ) -> go.Figure:
         """
         This function plots generalized coordinates of each OCPs
@@ -1366,13 +1349,9 @@ class ResultsAnalyse:
             rot_idx = rot_idx[:-6]
 
         for idx in trans_idx:
-            fig.update_yaxes(
-                row=idx_rows[idx], col=idx_cols[idx], title=ylabel_translations
-            )
+            fig.update_yaxes(row=idx_rows[idx], col=idx_cols[idx], title=ylabel_translations)
         for idx in rot_idx:
-            fig.update_yaxes(
-                row=idx_rows[idx], col=idx_cols[idx], title=ylabel_rotations
-            )
+            fig.update_yaxes(row=idx_rows[idx], col=idx_cols[idx], title=ylabel_rotations)
 
         if show:
             fig.show()
@@ -1380,9 +1359,7 @@ class ResultsAnalyse:
             format_type = ["png", "pdf", "svg", "eps"]
             for f in format_type:
                 fig.write_image(self.path_to_figures + f"/analyse_{key}{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_{key}{export_suffix}.html", include_mathjax="cdn"
-            )
+            fig.write_html(self.path_to_figures + f"/analyse_{key}{export_suffix}.html", include_mathjax="cdn")
 
         return fig
 
@@ -1418,9 +1395,7 @@ class ResultsAnalyse:
         for i in range(self.n_clusters):
             export_suffix = f"_cluster{i}"
             cluster_results = ResultsAnalyse(
-                path_to_files=self.path_to_files,
-                model_path=self.model_path,
-                df=self.df[self.df["cluster"] == i]
+                path_to_files=self.path_to_files, model_path=self.model_path, df=self.df[self.df["cluster"] == i]
             )
             if animate:
                 cluster_results.animate()
@@ -1508,10 +1483,7 @@ def big_figure(results_leg: ResultsAnalyse, results_arm: ResultsAnalyse, results
     # keys = ["computation_time", "cost", "near_optimal", "rotation_error_per_second_per_velocity_max"]
     ylabels = ["CPU time (s)", "Cost function value", "Near optimal frequency (%)", "Rotation error RMSE (deg)"]
     ylog = [False, True, False, True]
-    fig = results_leg.plot_keys \
-        (keys=keys, fig=fig, col=1,
-         ylabel=ylabels,
-         df_list=df, ylog=ylog)
+    fig = results_leg.plot_keys(keys=keys, fig=fig, col=1, ylabel=ylabels, df_list=df, ylog=ylog)
     fig = results_arm.plot_keys(keys=keys, fig=fig, col=2, ylog=ylog, df_list=df)
     fig = results_acrobat.plot_keys(keys=keys, fig=fig, col=3, ylog=ylog, df_list=df)
 
@@ -1548,7 +1520,6 @@ def big_figure(results_leg: ResultsAnalyse, results_arm: ResultsAnalyse, results
     # todo: case vide quand ça n'a pas tournée ode_solver
     # todo: regler le pb d'échelle
     # todo: faire un truc pour le near optimal mauvais pour le leg
-
 
     fig.show()
 

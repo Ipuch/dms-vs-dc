@@ -137,10 +137,7 @@ class UpperLimbOCP:
             self.n_qdot = self.biorbd_model.nbQdot()
             self.nb_root = self.biorbd_model.nbRoot()
 
-            self.n_tau = (
-                self.biorbd_model.nbGeneralizedTorque()
-                - self.biorbd_model.nbRoot()
-            )
+            self.n_tau = self.biorbd_model.nbGeneralizedTorque() - self.biorbd_model.nbRoot()
 
             self.tau_min, self.tau_init, self.tau_max = -50, 0, 50
             self.muscle_min, self.muscle_max, self.muscle_init = 0, 1, 0.05
@@ -148,9 +145,7 @@ class UpperLimbOCP:
             self.velocity_max = 100  # qdot
             self.velocity_max_phase_transition = 10  # qdot hips, thorax in phase 2
 
-            self.random_scale = (
-                0.02  # relative to the maximal bounds of the states or controls
-            )
+            self.random_scale = 0.02  # relative to the maximal bounds of the states or controls
             self.random_scale_qdot = 0.02
             self.random_scale_qddot = 0.02
             self.random_scale_tau = 0.02
@@ -212,10 +207,11 @@ class UpperLimbOCP:
         new_biomod_file = Models.UPPER_LIMB_XYZ_VARIABLES.value
         # todo: find the file first.
 
-        biorbd_model = add_header(biomod_file_name=model_template_path,
-                   new_biomod_file_name=new_biomod_file,
-                   variables=thorax_values,
-                   )
+        biorbd_model = add_header(
+            biomod_file_name=model_template_path,
+            new_biomod_file_name=new_biomod_file,
+            variables=thorax_values,
+        )
 
         # get key events
         event = LoadEvent(c3d_path=self.c3d_path, marker_list=self.marker_labels)
@@ -248,7 +244,7 @@ class UpperLimbOCP:
         )
 
         # building initial guess
-        self.x_init_ref = np.concatenate([q_ref[6:, :], qdot_ref[6:, :]]) # without floating base
+        self.x_init_ref = np.concatenate([q_ref[6:, :], qdot_ref[6:, :]])  # without floating base
         self.u_init_ref = tau_ref[6:, :]
 
         nb_q = biorbd_model.nbQ()
@@ -281,30 +277,40 @@ class UpperLimbOCP:
         """
 
         if self.task == Tasks.TEETH:
-            self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="q", index=range(5), weight=200)  # added
+            self.objective_functions.add(
+                ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="q", index=range(5), weight=200
+            )  # added
             self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", weight=5)
             self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", derivative=True, weight=0.5)
             self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="muscles", weight=1000)
             self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=15)
-            self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", derivative=True, weight=1500)
+            self.objective_functions.add(
+                ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", derivative=True, weight=1500
+            )
 
         elif self.task == Tasks.EAT or self.task == Tasks.HEAD:
             self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="q", index=range(5), weight=200)
             self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", weight=50)
-            self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", derivative=True,
-                                    weight=0.5)  # added
+            self.objective_functions.add(
+                ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", derivative=True, weight=0.5
+            )  # added
             self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="muscles", weight=1000)
             self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=15)
-            self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", derivative=True, weight=1500)
+            self.objective_functions.add(
+                ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", derivative=True, weight=1500
+            )
 
         elif self.task == Tasks.ARMPIT:
             self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="q", index=range(5), weight=200)
             self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", weight=800)  # was 5
-            self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", derivative=True,
-                                    weight=0.5)  # added
+            self.objective_functions.add(
+                ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", derivative=True, weight=0.5
+            )  # added
             self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="muscles", weight=1000)
             self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=10)
-            self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", derivative=True, weight=1500)
+            self.objective_functions.add(
+                ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", derivative=True, weight=1500
+            )
 
         elif self.task == Tasks.DRINK:
             # converges but solution isn't adequate yet
@@ -313,7 +319,9 @@ class UpperLimbOCP:
             self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", derivative=True, weight=0.5)
             self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="muscles", weight=1000)
             self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=10)
-            self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", derivative=True, weight=1500)
+            self.objective_functions.add(
+                ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", derivative=True, weight=1500
+            )
             # tried minimizing the derivative of qdot without minimizing qdot
             # tried minimizing tau index = 8
 
@@ -335,13 +343,13 @@ class UpperLimbOCP:
         Set the boundary conditions for controls and states for each phase.
         """
         self.x_bounds = QAndQDotBounds(self.biorbd_model)
-        x_slack_start = 0.1 * np.ones(self.x_init_ref[:self.n_q, 0].shape)
-        self.x_bounds.min[:self.n_q, 0] = self.x_init_ref[:self.n_q, 0] - x_slack_start
-        self.x_bounds.max[:self.n_q, 0] = self.x_init_ref[:self.n_q, 0] + x_slack_start
+        x_slack_start = 0.1 * np.ones(self.x_init_ref[: self.n_q, 0].shape)
+        self.x_bounds.min[: self.n_q, 0] = self.x_init_ref[: self.n_q, 0] - x_slack_start
+        self.x_bounds.max[: self.n_q, 0] = self.x_init_ref[: self.n_q, 0] + x_slack_start
 
-        x_slack_end = 0.1 * np.ones(self.x_init_ref[:self.n_q, -1].shape)
-        self.x_bounds.min[:self.n_q, -1] = self.x_init_ref[:self.n_q, -1] - x_slack_end
-        self.x_bounds.max[:self.n_q, -1] = self.x_init_ref[:self.n_q, -1] + x_slack_end
+        x_slack_end = 0.1 * np.ones(self.x_init_ref[: self.n_q, -1].shape)
+        self.x_bounds.min[: self.n_q, -1] = self.x_init_ref[: self.n_q, -1] - x_slack_end
+        self.x_bounds.max[: self.n_q, -1] = self.x_init_ref[: self.n_q, -1] + x_slack_end
 
         # norm of the quaternion should be 1 at the start and at the end
         if self.biorbd_model.nbQuat() > 0:
@@ -355,10 +363,10 @@ class UpperLimbOCP:
             self.x_bounds.min[10, -1] = self.x_init_ref[10, -1]
             self.x_bounds.max[10, -1] = self.x_init_ref[10, -1]
 
-        self.x_bounds.min[self.n_q:, 0] = [-1e-3] * self.biorbd_model.nbQdot()
-        self.x_bounds.max[self.n_q:, 0] = [1e-3] * self.biorbd_model.nbQdot()
-        self.x_bounds.min[self.n_q:, -1] = [-1e-1] * self.biorbd_model.nbQdot()
-        self.x_bounds.max[self.n_q:, -1] = [1e-1] * self.biorbd_model.nbQdot()
+        self.x_bounds.min[self.n_q :, 0] = [-1e-3] * self.biorbd_model.nbQdot()
+        self.x_bounds.max[self.n_q :, 0] = [1e-3] * self.biorbd_model.nbQdot()
+        self.x_bounds.min[self.n_q :, -1] = [-1e-1] * self.biorbd_model.nbQdot()
+        self.x_bounds.max[self.n_q :, -1] = [1e-1] * self.biorbd_model.nbQdot()
 
         if self.biorbd_model.nbQuat() > 0:
             self.x_bounds.min[8:10, 1], self.x_bounds.min[10, 1] = self.x_bounds.min[9:11, 1], -1
@@ -370,6 +378,3 @@ class UpperLimbOCP:
         )
         self.u_bounds[0][5:8] = 0
         self.u_bounds[0][5:8] = 0
-
-
-

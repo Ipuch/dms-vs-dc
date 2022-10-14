@@ -117,16 +117,12 @@ def merge_segment(Segment_master, Segment_child):
     # Compute the homogenous transform from child to master segment
     angles = Angles(Segment_child.rt[:, np.newaxis, np.newaxis])
     translations = Angles(Segment_child.xyz[:, np.newaxis, np.newaxis])
-    roto_trans = Rototrans.from_euler_angles(
-        angles=angles, angle_sequence="xyz", translations=translations
-    )
+    roto_trans = Rototrans.from_euler_angles(angles=angles, angle_sequence="xyz", translations=translations)
     T = roto_trans.values[:, :, 0]
 
     # Compute the child's com in master's frame
     child_com = Segment_child.com.to_array()[:, np.newaxis]
-    child_com_in_master = np.matmul(
-        T, np.concatenate([child_com, np.ones((1, 1))], axis=0)
-    )
+    child_com_in_master = np.matmul(T, np.concatenate([child_com, np.ones((1, 1))], axis=0))
     child_com_in_master = np.delete(child_com_in_master, 3)
 
     # weighted mean to compute the new com
@@ -157,9 +153,7 @@ def merge_segment(Segment_master, Segment_child):
 
     # mesh in the master frame
     n_mesh = Segment_child.mesh.shape[0]
-    mesh_in_master_frame = np.matmul(
-        T, np.concatenate([Segment_child.mesh.T, np.ones((1, n_mesh))], axis=0)
-    )
+    mesh_in_master_frame = np.matmul(T, np.concatenate([Segment_child.mesh.T, np.ones((1, n_mesh))], axis=0))
     mesh_in_master_frame = np.delete(mesh_in_master_frame, 3, axis=0).T
     all_mesh = np.concatenate((Segment_master.mesh, mesh_in_master_frame))
 
@@ -210,9 +204,7 @@ class Model:
 
     def add_contact(self, contact: Contact):
         parent_int = self.model.GetBodyRbdlId(contact.parent)
-        self.model.AddConstraint(
-            parent_int, contact.position, contact.axis, contact.name, contact.acc
-        )
+        self.model.AddConstraint(parent_int, contact.position, contact.axis, contact.name, contact.acc)
         print("ello")
 
     def add_marker(self, marker: Marker):

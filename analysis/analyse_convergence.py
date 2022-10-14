@@ -65,13 +65,13 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
     """
 
     def __init__(
-            self,
-            path_to_files: str,
-            model_path: str,
-            df_path: str = None,
-            df: pd.DataFrame = None,
-            consistent_threshold: float = 10,
-            ode_solvers: list = None,
+        self,
+        path_to_files: str,
+        model_path: str,
+        df_path: str = None,
+        df: pd.DataFrame = None,
+        consistent_threshold: float = 10,
+        ode_solvers: list = None,
     ):
 
         super().__init__(path_to_files, model_path, df_path, df, ode_solvers)
@@ -93,9 +93,7 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
         self.df["cluster"] = None
         idx = np.where(self.df["status"] == 0)[0]
         df = self.df[self.df["status"] == 0]
-        kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(
-            df[["cost"]].values
-        )
+        kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(df[["cost"]].values)
         for i, id in enumerate(idx):
             self.df.loc[id, "cluster"] = kmeans.labels_[i]
 
@@ -117,21 +115,23 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
         model_path = self.model_path if not p.exists() else p.__str__()
 
         import bioviz
-        biorbd_viz = bioviz.Viz(model_path,
-                                show_now=False,
-                                show_meshes=True,
-                                show_global_center_of_mass=False,
-                                show_gravity_vector=False,
-                                show_floor=False,
-                                show_segments_center_of_mass=False,
-                                show_global_ref_frame=False,
-                                show_local_ref_frame=False,
-                                show_markers=False,
-                                show_muscles=False,
-                                show_wrappings=False,
-                                background_color=(1, 1, 1),
-                                mesh_opacity=0.97,
-                                )
+
+        biorbd_viz = bioviz.Viz(
+            model_path,
+            show_now=False,
+            show_meshes=True,
+            show_global_center_of_mass=False,
+            show_gravity_vector=False,
+            show_floor=False,
+            show_segments_center_of_mass=False,
+            show_global_ref_frame=False,
+            show_local_ref_frame=False,
+            show_markers=False,
+            show_muscles=False,
+            show_wrappings=False,
+            background_color=(1, 1, 1),
+            mesh_opacity=0.97,
+        )
 
         biorbd_viz.resize(600, 900)
 
@@ -154,8 +154,7 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
         biorbd_viz.load_movement(q)
         biorbd_viz.exec()
 
-    def plot_time_iter(
-            self, show: bool = True, export: bool = True, time_unit: str = "s", export_suffix : str = None):
+    def plot_time_iter(self, show: bool = True, export: bool = True, time_unit: str = "s", export_suffix: str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -184,8 +183,8 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
 
         for jj, d in enumerate(dyn):
             fig = my_shaded_trace(
-                fig, df_results, d, palette[jj], d, key="computation_time",
-                col=1, row=1, show_legend=True)
+                fig, df_results, d, palette[jj], d, key="computation_time", col=1, row=1, show_legend=True
+            )
 
         fig.update_xaxes(
             title_text="Knot points",
@@ -239,15 +238,10 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
             format_type = ["png", "pdf", "svg", "eps"]
             for f in format_type:
                 fig.write_image(self.path_to_figures + f"/analyse_time_iter{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_time_iter{export_suffix}.html", include_mathjax="cdn"
-            )
+            fig.write_html(self.path_to_figures + f"/analyse_time_iter{export_suffix}.html", include_mathjax="cdn")
 
     def plot_integration_frame_to_frame_error(
-            self, show: bool = True,
-            export: bool = True,
-            until_consistent: bool = False,
-            export_suffix : str = None
+        self, show: bool = True, export: bool = True, until_consistent: bool = False, export_suffix: str = None
     ):
         """
         This function plots the time and number of iterations need to make the OCP converge
@@ -266,9 +260,7 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
         dyn = self.df["grps"].unique().tolist()
         grps = dyn
 
-        fig = make_subplots(
-            rows=1, cols=2, subplot_titles=["translation error", "rotation error"]
-        )
+        fig = make_subplots(rows=1, cols=2, subplot_titles=["translation error", "rotation error"])
         # update the font size of the subplot_titles
         for i in fig["layout"]["annotations"]:
             i["font"] = dict(size=18)
@@ -277,11 +269,7 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
         df_results = self.df[self.df["status"] == 0]
 
         for _, row in df_results.iterrows():
-            idx_end = (
-                int(row.consistent_threshold)
-                if until_consistent
-                else int(len(row.time))
-            )
+            idx_end = int(row.consistent_threshold) if until_consistent else int(len(row.time))
             print(idx_end)
             time = row.time[:idx_end]
             y1 = row["translation_error_traj"][:idx_end]
@@ -363,7 +351,7 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
                 include_mathjax="cdn",
             )
 
-    def plot_integration_final_error(self, show: bool = True, export: bool = True, export_suffix : str = None):
+    def plot_integration_final_error(self, show: bool = True, export: bool = True, export_suffix: str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -387,8 +375,8 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
 
         for jj, d in enumerate(dyn):
             fig = my_shaded_trace(
-                fig, df_results, d, palette[jj], d, key="rotation_error",
-                col=1, row=1, show_legend=True)
+                fig, df_results, d, palette[jj], d, key="rotation_error", col=1, row=1, show_legend=True
+            )
 
         fig.update_xaxes(
             title_text="Knot points",
@@ -447,7 +435,7 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
                 include_mathjax="cdn",
             )
 
-    def plot_obj_values(self, show: bool = True, export: bool = True, export_suffix : str = None):
+    def plot_obj_values(self, show: bool = True, export: bool = True, export_suffix: str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -470,9 +458,7 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
         palette = px.colors.qualitative.D3[:]
 
         for jj, d in enumerate(dyn):
-            fig = my_shaded_trace(
-                fig, df_results, d, palette[jj], d, key="cost",
-                col=1, row=1, show_legend=True)
+            fig = my_shaded_trace(fig, df_results, d, palette[jj], d, key="cost", col=1, row=1, show_legend=True)
 
         fig.update_xaxes(
             title_text="Knot points",
@@ -526,21 +512,19 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
             format_type = ["png", "pdf", "svg", "eps"]
             for f in format_type:
                 fig.write_image(self.path_to_figures + f"/analyse_obj{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_obj{export_suffix}.html", include_mathjax="cdn"
-            )
+            fig.write_html(self.path_to_figures + f"/analyse_obj{export_suffix}.html", include_mathjax="cdn")
 
     def _plot_2_keys(
-            self,
-            key_x: str,
-            key_y: str,
-            x_label: str,
-            y_label: str,
-            x_log: bool = False,
-            y_log: bool = False,
-            show: bool = True,
-            export: bool = True,
-            export_suffix : str = None,
+        self,
+        key_x: str,
+        key_y: str,
+        x_label: str,
+        y_label: str,
+        x_log: bool = False,
+        y_log: bool = False,
+        show: bool = True,
+        export: bool = True,
+        export_suffix: str = None,
     ):
         """
         This function plots the time and number of iterations need to make the OCP converge
@@ -609,7 +593,7 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
 
         return fig
 
-    def plot_cost_vs_consistency(self, show: bool = True, export: bool = True, export_suffix : str = None):
+    def plot_cost_vs_consistency(self, show: bool = True, export: bool = True, export_suffix: str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -635,11 +619,9 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
             format_type = ["png", "pdf", "svg", "eps"]
             for f in format_type:
                 fig.write_image(self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}.html", include_mathjax="cdn"
-            )
+            fig.write_html(self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}.html", include_mathjax="cdn")
 
-    def plot_time_vs_consistency(self, show: bool = True, export: bool = True, export_suffix : str = None):
+    def plot_time_vs_consistency(self, show: bool = True, export: bool = True, export_suffix: str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -665,11 +647,9 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
             format_type = ["png", "pdf", "svg", "eps"]
             for f in format_type:
                 fig.write_image(self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}.html", include_mathjax="cdn"
-            )
+            fig.write_html(self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}.html", include_mathjax="cdn")
 
-    def plot_time_vs_obj(self, show: bool = True, export: bool = True, export_suffix : str = None):
+    def plot_time_vs_obj(self, show: bool = True, export: bool = True, export_suffix: str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
 
@@ -694,11 +674,9 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
             format_type = ["png", "pdf", "svg", "eps"]
             for f in format_type:
                 fig.write_image(self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}.html", include_mathjax="cdn"
-            )
+            fig.write_html(self.path_to_figures + f"/analyse_time_vs_obj{export_suffix}.html", include_mathjax="cdn")
 
-    def plot_detailed_obj_values(self, show: bool = True, export: bool = True, export_suffix : str = None):
+    def plot_detailed_obj_values(self, show: bool = True, export: bool = True, export_suffix: str = None):
         """
         This function plots the time and number of iterations need to make the OCP converge
         # todo
@@ -785,22 +763,20 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
             format_type = ["png", "pdf", "svg", "eps"]
             for f in format_type:
                 fig.write_image(self.path_to_figures + f"/analyse_detailed_obj{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_obj{export_suffix}.html", include_mathjax="cdn"
-            )
+            fig.write_html(self.path_to_figures + f"/analyse_obj{export_suffix}.html", include_mathjax="cdn")
 
     def plot_state(
-            self,
-            key: str = None,
-            show: bool = True,
-            export: bool = True,
-            label_dofs: list[str] = None,
-            row_col: tuple[int, int] = None,
-            ylabel_rotations: str = "q",
-            ylabel_translations: str = "q",
-            xlabel: str = "Time (s)",
-            until_consistent: bool = False,
-            export_suffix : str = None,
+        self,
+        key: str = None,
+        show: bool = True,
+        export: bool = True,
+        label_dofs: list[str] = None,
+        row_col: tuple[int, int] = None,
+        ylabel_rotations: str = "q",
+        ylabel_translations: str = "q",
+        xlabel: str = "Time (s)",
+        until_consistent: bool = False,
+        export_suffix: str = None,
     ) -> plotly.graph_objects.Figure:
         """
         This function plots generalized coordinates of each OCPs
@@ -881,13 +857,9 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
             rot_idx = rot_idx[:-6]
 
         for idx in trans_idx:
-            fig.update_yaxes(
-                row=idx_rows[idx], col=idx_cols[idx], title=ylabel_translations
-            )
+            fig.update_yaxes(row=idx_rows[idx], col=idx_cols[idx], title=ylabel_translations)
         for idx in rot_idx:
-            fig.update_yaxes(
-                row=idx_rows[idx], col=idx_cols[idx], title=ylabel_rotations
-            )
+            fig.update_yaxes(row=idx_rows[idx], col=idx_cols[idx], title=ylabel_rotations)
 
         if show:
             fig.show()
@@ -895,9 +867,7 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
             format_type = ["png", "pdf", "svg", "eps"]
             for f in format_type:
                 fig.write_image(self.path_to_figures + f"/analyse_{key}{export_suffix}." + f)
-            fig.write_html(
-                self.path_to_figures + f"/analyse_{key}{export_suffix}.html", include_mathjax="cdn"
-            )
+            fig.write_html(self.path_to_figures + f"/analyse_{key}{export_suffix}.html", include_mathjax="cdn")
 
         return fig
 
@@ -932,9 +902,7 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
         for i in range(self.n_clusters):
             export_suffix = f"_cluster{i}"
             cluster_results = ResultsAnalyse(
-                path_to_files=self.path_to_files,
-                model_path=self.model_path,
-                df=self.df[self.df["cluster"] == i]
+                path_to_files=self.path_to_files, model_path=self.model_path, df=self.df[self.df["cluster"] == i]
             )
             if animate:
                 cluster_results.animate()

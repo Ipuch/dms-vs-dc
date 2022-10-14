@@ -80,11 +80,7 @@ class ArmOCP:
             self.u_init = InitialGuessList()
 
             self.control_type = control_type
-            self.control_nodes = (
-                Node.ALL
-                if self.control_type == ControlType.LINEAR_CONTINUOUS
-                else Node.ALL_SHOOTING
-            )
+            self.control_nodes = Node.ALL if self.control_type == ControlType.LINEAR_CONTINUOUS else Node.ALL_SHOOTING
 
             self._set_dynamics()
             self._set_constraints()
@@ -145,15 +141,9 @@ class ArmOCP:
     def _set_objective_functions(self):
 
         # --- Objective function --- #
-        self.objective_functions.add(
-            ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", phase=0
-        )
-        self.objective_functions.add(
-            ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", phase=0, derivative=True
-        )
-        self.objective_functions.add(
-            ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", phase=0, weight=0.01
-        )
+        self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", phase=0)
+        self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", phase=0, derivative=True)
+        self.objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", phase=0, weight=0.01)
 
         if (
             self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK
@@ -277,31 +267,19 @@ class ArmOCP:
         self._set_initial_controls()
 
     def _set_initial_states(self, X0: np.array = None):
-        X0 = (
-            np.zeros((self.n_q + self.n_qdot, self.n_shooting + 1))
-            if X0 is None
-            else X0
-        )
+        X0 = np.zeros((self.n_q + self.n_qdot, self.n_shooting + 1)) if X0 is None else X0
         self.x_init.add(X0, interpolation=InterpolationType.EACH_FRAME)
 
     def _set_initial_controls(self, U0: np.array = None):
         if U0 is None:
             if self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS:
-                self.u_init.add(
-                    [self.tau_init] * self.n_tau + [self.qddot_init] * self.n_qddot
-                )
+                self.u_init.add([self.tau_init] * self.n_tau + [self.qddot_init] * self.n_qddot)
             elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK:
-                self.u_init.add(
-                    [self.tau_init] * self.n_tau + [self.qdddot_init] * self.n_qdddot
-                )
+                self.u_init.add([self.tau_init] * self.n_tau + [self.qdddot_init] * self.n_qdddot)
             elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK:
-                self.u_init.add(
-                    [self.tau_init] * self.n_tau + [self.qdddot_init] * self.n_qdddot
-                )
+                self.u_init.add([self.tau_init] * self.n_tau + [self.qdddot_init] * self.n_qdddot)
             elif self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS:
-                self.u_init.add(
-                    [self.tau_init] * self.n_tau + [self.qddot_init] * self.n_qddot
-                )
+                self.u_init.add([self.tau_init] * self.n_tau + [self.qddot_init] * self.n_qddot)
             else:
                 self.u_init.add([self.tau_init] * self.n_tau)
         else:

@@ -10,8 +10,8 @@ def main(nb_phases: int = 1):
         n_shooting = 20
         time = 0.25
     elif nb_phases == 2:
-       n_shooting = (20, 20)
-       time = 0.25, 0.25
+        n_shooting = (20, 20)
+        time = 0.25, 0.25
 
     ode_solver = OdeSolver.RK4(n_integration_steps=5)
     # ode_solver = OdeSolver.COLLOCATION()

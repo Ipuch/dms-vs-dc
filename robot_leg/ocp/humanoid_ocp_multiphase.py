@@ -54,6 +54,7 @@ class HumanoidOcpMultiPhase:
 
 
     """
+
     def __init__(
         self,
         biorbd_model_path: Union[str, tuple[str]] = None,
