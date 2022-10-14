@@ -38,12 +38,12 @@ class Tasks(Enum):
     Selection of tasks
     """
 
-    ARMPIT = Path(__file__).parent.parent.__str__() + "data/F0_aisselle_05"
-    DRINK = Path(__file__).parent.parent.__str__() + "data/F0_boire_05"
-    TEETH = Path(__file__).parent.parent.__str__() + "data/F0_dents_05"
-    DRAW = Path(__file__).parent.parent.__str__() + "data/F0_dessiner_05"
-    EAT = Path(__file__).parent.parent.__str__() + "data/F0_manger_05"
-    HEAD = Path(__file__).parent.parent.__str__() + "data/F0_tete_05"
+    ARMPIT = Path(__file__).parent.parent.__str__() + "/data/F0_aisselle_05"
+    DRINK = Path(__file__).parent.parent.__str__() + "/data/F0_boire_05"
+    TEETH = Path(__file__).parent.parent.__str__() + "/data/F0_dents_05"
+    DRAW = Path(__file__).parent.parent.__str__() + "/data/F0_dessiner_05"
+    EAT = Path(__file__).parent.parent.__str__() + "/data/F0_manger_05"
+    HEAD = Path(__file__).parent.parent.__str__() + "/data/F0_tete_05"
 
 
 def eul2quat(eul: np.ndarray) -> np.ndarray:
@@ -89,7 +89,7 @@ class UpperLimbOCP:
         n_threads: int = 8,
         ode_solver: OdeSolver = OdeSolver.RK4(),
         rigidbody_dynamics: RigidBodyDynamics = RigidBodyDynamics.ODE,
-        task: Tasks = Tasks.TEETH,
+        task: Tasks = Tasks.HEAD,
         use_sx: bool = False,
         initial_x: InitialGuessList = None,
         initial_u: InitialGuessList = None,
@@ -176,14 +176,14 @@ class UpperLimbOCP:
             self.x_init = InitialGuessList() if initial_x is None else initial_x
             self.u_init = InitialGuessList() if initial_u is None else initial_u
 
-            self._set_boundary_conditions()
-
             np.random.seed(seed)
             # todo
 
-            if initial_x is None:
-                self._get_experimental_data()
-                self._set_initial_guesses()  # noise is into the initial guess
+            self._get_experimental_data()
+            # reload it to get the new thorax values
+            self.biorbd_model = biorbd.Model(biorbd_model_path)
+
+            self._set_initial_guesses()  # noise is into the initial guess
             self._set_boundary_conditions()
 
             self._set_dynamics()
@@ -207,64 +207,70 @@ class UpperLimbOCP:
 
     def _get_experimental_data(self):
 
-        data_path = self.task
-        file_path = data_path + Models.WU_INVERSE_KINEMATICS_XYZ.name + "_" + self.task
-        q_file_path = file_path + "_q.txt"
-        qdot_file_path = file_path + "_qdot.txt"
+        data_path = self.task.value
+        # find files in f"{Path(self.task.value).parent.__str__()}/" for which Path(self.task.value).name is in the filname
+        filenames = "WU_INVERSE_KINEMATICS_XYZ_OFFSET_F0_tete_05"
+        file_path = f"{Path(self.task.value).parent.__str__()}/"
 
-        thorax_values = thorax_variables(q_file_path)  # load c3d floating base pose
-        model_template_path = Models.WU_WITHOUT_FLOATING_BASE_QUAT_DEGROOTE_TEMPLATE.value
-        new_biomod_file = Models.WU_WITHOUT_FLOATING_BASE_QUAT_DEGROOTE_VARIABLES.value
-        add_header(model_template_path, new_biomod_file, thorax_values)
+        c3d_filepath = f"{file_path}{Path(self.task.value).name}.c3d"
+        q_filepath = f"{file_path}{filenames}_q.txt"
+        qdot_filepath = f"{file_path}{filenames}_qdot.txt"
 
-        biorbd_model = biorbd.Model(new_biomod_file)
-        marker_ref = [m.to_string() for m in biorbd_model.markerNames()]
+        thorax_values = thorax_variables(q_filepath)  # load c3d floating base pose
+        model_template_path = Models.UPPER_LIMB_XYZ_TEMPLATE.value
+        new_biomod_file = Models.UPPER_LIMB_XYZ_VARIABLES.value
+        # todo: find the file first.
+
+        biorbd_model = add_header(biomod_file_name=model_template_path,
+                   new_biomod_file_name=new_biomod_file,
+                   variables=thorax_values,
+                   )
 
         # get key events
-        event = LoadEvent(c3d_path=self.c3d_path, marker_list=marker_ref)
-        if self.c3d_path == Tasks.EAT.value:
-            start_frame = event.get_frame(1)
-            end_frame = event.get_frame(2)
-            phase_time = event.get_time(2) - event.get_time(1)
-        else:
-            start_frame = event.get_frame(0)
-            end_frame = event.get_frame(1)
-            phase_time = event.get_time(1) - event.get_time(0)
+        event = LoadEvent(c3d_path=self.c3d_path, marker_list=self.marker_labels)
+        # if self.c3d_path == Tasks.EAT.value:
+        #     start_frame = event.get_frame(1)
+        #     end_frame = event.get_frame(2)
+        #     phase_time = event.get_time(2) - event.get_time(1)
+        # else:
+        start_frame = event.get_frame(0)
+        end_frame = event.get_frame(1)
+        phase_time = event.get_time(2) - event.get_time(1)
 
         # get target
-        data = LoadData(biorbd_model, self.c3d_path, q_file_path, qdot_file_path)
+        data = LoadData(biorbd_model, self.c3d_path, q_filepath, qdot_filepath)
         target = data.get_marker_ref(
             number_shooting_points=[self.n_shooting],
             phase_time=[phase_time],
-            start=int(start_frame),
-            end=int(end_frame),
+            start=start_frame,
+            end=end_frame,
         )
 
         # load initial guesses
         q_ref, qdot_ref, tau_ref = data.get_variables_ref(
             number_shooting_points=[self.n_shooting],
             phase_time=[phase_time],
-            start=int(start_frame),
-            end=int(end_frame),
+            start=start_frame,
+            end=end_frame,
         )
 
         # building initial guess
-        x_init_ref = np.concatenate([q_ref[0][6:, :], qdot_ref[0][6:, :]])  # without floating base
-
-        self.u_init_ref = tau_ref[0][6:, :]
+        self.x_init_ref = np.concatenate([q_ref[6:, :], qdot_ref[6:, :]]) # without floating base
+        self.u_init_ref = tau_ref[6:, :]
 
         nb_q = biorbd_model.nbQ()
         nb_qdot = biorbd_model.nbQdot()
-        x_init_quat = np.vstack((np.zeros((nb_q, self.n_shooting + 1)), np.ones((nb_qdot, self.n_shooting + 1))))
-        for i in range(self.n_shooting + 1):
-            x_quat_shoulder = eul2quat(x_init_ref[5:8, i])
-            x_init_quat[5:8, i] = x_quat_shoulder[1:]
-            x_init_quat[10, i] = x_quat_shoulder[0]
-        x_init_quat[:5] = x_init_ref[:5]
-        x_init_quat[8:10] = x_init_ref[8:10]
-        x_init_quat[11:, :] = x_init_ref[10:, :]
+        if biorbd_model.nbQuat() > 0:
+            x_init_quat = np.vstack((np.zeros((nb_q, self.n_shooting + 1)), np.ones((nb_qdot, self.n_shooting + 1))))
+            for i in range(self.n_shooting + 1):
+                x_quat_shoulder = eul2quat(self.x_init_ref[5:8, i])
+                x_init_quat[5:8, i] = x_quat_shoulder[1:]
+                x_init_quat[10, i] = x_quat_shoulder[0]
+            x_init_quat[:5] = self.x_init_ref[:5]
+            x_init_quat[8:10] = self.x_init_ref[8:10]
+            x_init_quat[11:, :] = self.x_init_ref[10:, :]
 
-        self.x_init_ref = x_init_quat
+            self.x_init_ref = x_init_quat
 
     def _set_dynamics(self):
         """
@@ -330,7 +336,7 @@ class UpperLimbOCP:
         self.x_init = InitialGuess(self.x_init_ref, interpolation=InterpolationType.EACH_FRAME)
 
         self.u_init = InitialGuess([self.tau_init] * self.n_tau + [self.muscle_init] * self.biorbd_model.nbMuscles())
-        self.u_init = InitialGuess(self.u_init_ref, interpolation=InterpolationType.EACH_FRAME)
+        # self.u_init = InitialGuess(self.u_init_ref, interpolation=InterpolationType.EACH_FRAME)
 
     def _set_boundary_conditions(self):
         """
@@ -346,22 +352,25 @@ class UpperLimbOCP:
         self.x_bounds.max[:self.n_q, -1] = self.x_init_ref[:self.n_q, -1] + x_slack_end
 
         # norm of the quaternion should be 1 at the start and at the end
-        self.x_bounds.min[5:8, 0] = self.x_init_ref[5:8, 0]
-        self.x_bounds.max[5:8, 0] = self.x_init_ref[5:8, 0]
-        self.x_bounds.min[5:8, -1] = self.x_init_ref[5:8, -1]
-        self.x_bounds.max[5:8, -1] = self.x_init_ref[5:8, -1]
+        if self.biorbd_model.nbQuat() > 0:
+            self.x_bounds.min[5:8, 0] = self.x_init_ref[5:8, 0]
+            self.x_bounds.max[5:8, 0] = self.x_init_ref[5:8, 0]
+            self.x_bounds.min[5:8, -1] = self.x_init_ref[5:8, -1]
+            self.x_bounds.max[5:8, -1] = self.x_init_ref[5:8, -1]
 
-        self.x_bounds.min[10, 0] = self.x_init_ref[10, 0]
-        self.x_bounds.max[10, 0] = self.x_init_ref[10, 0]
-        self.x_bounds.min[10, -1] = self.x_init_ref[10, -1]
-        self.x_bounds.max[10, -1] = self.x_init_ref[10, -1]
+            self.x_bounds.min[10, 0] = self.x_init_ref[10, 0]
+            self.x_bounds.max[10, 0] = self.x_init_ref[10, 0]
+            self.x_bounds.min[10, -1] = self.x_init_ref[10, -1]
+            self.x_bounds.max[10, -1] = self.x_init_ref[10, -1]
 
         self.x_bounds.min[self.n_q:, 0] = [-1e-3] * self.biorbd_model.nbQdot()
         self.x_bounds.max[self.n_q:, 0] = [1e-3] * self.biorbd_model.nbQdot()
         self.x_bounds.min[self.n_q:, -1] = [-1e-1] * self.biorbd_model.nbQdot()
         self.x_bounds.max[self.n_q:, -1] = [1e-1] * self.biorbd_model.nbQdot()
-        self.x_bounds.min[8:10, 1], self.x_bounds.min[10, 1] = self.x_bounds.min[9:11, 1], -1
-        self.x_bounds.max[8:10, 1], self.x_bounds.max[10, 1] = self.x_bounds.max[9:11, 1], 1
+
+        if self.biorbd_model.nbQuat() > 0:
+            self.x_bounds.min[8:10, 1], self.x_bounds.min[10, 1] = self.x_bounds.min[9:11, 1], -1
+            self.x_bounds.max[8:10, 1], self.x_bounds.max[10, 1] = self.x_bounds.max[9:11, 1], 1
 
         self.u_bounds.add(
             [self.tau_min] * self.n_tau + [self.muscle_min] * self.biorbd_model.nbMuscleTotal(),

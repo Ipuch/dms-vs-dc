@@ -30,7 +30,7 @@ class LoadEvent:
         event_time = self.c3d["parameters"]["EVENT"]["TIMES"]["value"][1][idx]
         return np.array(event_time)
 
-    def get_frame(self, idx: int) -> np.ndarray:
+    def get_frame(self, idx: int) -> int:
         """
         find the frame corresponding to the event
 
@@ -41,7 +41,7 @@ class LoadEvent:
 
         Returns
         --------
-        event_values: ndarray
+        event_values: int
             array with the frame number
 
         """
@@ -49,7 +49,7 @@ class LoadEvent:
         frame = round(self.get_time(idx) * frame_rate)
         start_frame = self.c3d["parameters"]["TRIAL"]["ACTUAL_START_FIELD"]["value"][0]
         event_frame = frame - start_frame
-        return np.array(event_frame)
+        return int(event_frame)
 
     def get_markers(self, idx: int) -> np.ndarray:
         """

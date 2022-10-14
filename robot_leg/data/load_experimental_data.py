@@ -147,28 +147,24 @@ class LoadData:
 
         Returns
         --------
-        out: list[np.ndarray]
+        out: np.ndarray
             The array of adjusted data
 
         """
 
-        out = []
-
         if start and end:
             x = data[:, :, start : end + 1] if len(data.shape) == 3 else data[:, start : end + 1]
-            for i in range(end - start):
-                t_init = np.linspace(0, (i + 1) / (end + 1 - start), (end + 1 - start))
-                t_node = np.linspace(0, (i + 1) / (end + 1 - start), nb_shooting[0] + 1)
-                f = interp1d(t_init, x, kind="linear")
-                out.append(f(t_node))
+            t_init = np.linspace(0, phase_time[0], (end + 1 - start))
+            t_node = np.linspace(0, phase_time[0], nb_shooting[0] + 1)
+            f = interp1d(t_init, x, kind="linear", axis=-1)
+            out = f(t_node)
         else:
             idx = self.c3d_data.get_indices()
-            for i in range(len(nb_shooting)):
-                x = data[:, :, idx[i] : idx[i + 1] + 1] if len(data.shape) == 3 else data[:, idx[i] : idx[i + 1] + 1]
-                t_init = np.linspace(0, phase_time[i], (idx[i + 1] - idx[i]))
-                t_node = np.linspace(0, phase_time[i], nb_shooting[i] + 1)
-                f = interp1d(t_init, x, kind="linear")
-                out.append(f(t_node))
+            x = data[:, :, idx[0] : idx[-1] + 1] if len(data.shape) == 3 else data[:, idx[0] : idx[-1] + 1]
+            t_init = np.linspace(0, phase_time[0], (idx[-1] - idx[0]))
+            t_node = np.linspace(0, phase_time[0], nb_shooting[0] + 1)
+            f = interp1d(t_init, x, kind="linear")
+            out = f(t_node)
         return out
 
     def get_marker_ref(

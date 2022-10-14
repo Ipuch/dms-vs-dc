@@ -1,4 +1,5 @@
 import numpy as np
+import biorbd
 
 
 def add_header(biomod_file_name: str, new_biomod_file_name: str, variables: dict):
@@ -36,6 +37,8 @@ def add_header(biomod_file_name: str, new_biomod_file_name: str, variables: dict
             biomod_file.write(line)
 
     biomod_file.close()
+
+    return biorbd.Model(new_biomod_file_name)
 
 
 def thorax_variables(path: str) -> dict:
