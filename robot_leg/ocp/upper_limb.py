@@ -138,17 +138,17 @@ class UpperLimbOCP:
 
         if biorbd_model_path is not None:
 
-            self.biorbd_model = (biorbd.Model(biorbd_model_path),)
+            self.biorbd_model = biorbd.Model(biorbd_model_path)
             self.marker_labels = [m.to_string() for m in self.biorbd_model.markerNames()]
             self.rigidbody_dynamics = rigidbody_dynamics
 
-            self.n_q = self.biorbd_model[0].nbQ()
-            self.n_qdot = self.biorbd_model[0].nbQdot()
-            self.nb_root = self.biorbd_model[0].nbRoot()
+            self.n_q = self.biorbd_model.nbQ()
+            self.n_qdot = self.biorbd_model.nbQdot()
+            self.nb_root = self.biorbd_model.nbRoot()
 
             self.n_tau = (
-                self.biorbd_model[0].nbGeneralizedTorque()
-                - self.biorbd_model[0].nbRoot()
+                self.biorbd_model.nbGeneralizedTorque()
+                - self.biorbd_model.nbRoot()
             )
 
             self.tau_min, self.tau_init, self.tau_max = -50, 0, 50
