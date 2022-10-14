@@ -1,0 +1,196 @@
+version 4
+
+root_actuated 0
+external_forces 1
+
+
+
+segment Torso
+	rtinmatrix 0
+    	rt 0 0 0 xyz 0 0 0
+    	translations yz
+    	rotations x
+    	ranges
+    	-1    1
+    	0    1.5
+    	-pi/2  pi/6
+    	mass 52.8093248044798
+    	com 0 0 0.24
+    	inertia
+    	5 0 0
+    	0 0 0
+    	0 0 0
+	mesh  0 0 0
+	mesh  0 0 0.7
+endsegment
+
+segment Head
+	parent Torso
+	rtinmatrix 0
+    	rt 0 0 0 xyz 0 0 0.56
+    	rotations x
+    	ranges
+    	-pi/6  pi/6
+    	mass 5.41
+    	com 0 0 0.12
+    	inertia
+    	0.12 0 0
+    	0 0 0
+    	0 0 0
+	mesh  0 0 0
+	mesh  0 0 0.24
+endsegment
+
+segment RThigh
+	parent Torso
+	rtinmatrix 0
+    	rt 0 0 0 xyz 0 0 0
+    	rotations x
+    	ranges
+    	-pi/2  pi/2
+    	mass 10.6751189590988
+    	com 0 0 -0.18
+    	inertia
+    	0.7 0 0
+    	0 0 0
+    	0 0 0
+	mesh  0 0 0
+	mesh  0 0 -0.41
+endsegment
+
+segment LThigh
+	parent Torso
+	rtinmatrix 0
+    	rt 0 0 0 xyz 0 0 0
+    	rotations x
+    	ranges
+    	-pi/2  pi/2
+    	mass 10.6751189590988
+    	com 0 0 -0.18
+    	inertia
+    	0.7 0 0
+    	0 0 0
+    	0 0 0
+	mesh  0 0 0
+	mesh  0 0 -0.41
+endsegment
+
+segment RArm
+	parent Torso
+	rtinmatrix 0
+    	rt 0 0 0 xyz 0 0 0.56
+    	rotations x
+    	ranges
+    	-pi/2  pi/2
+    	mass 1.5
+    	com 0 0 -0.12
+    	inertia
+    	0.2 0 0
+    	0 0 0
+    	0 0 0
+	mesh  0 0 0
+	mesh  0 0 -0.3
+endsegment
+
+segment LArm
+	parent Torso
+	rtinmatrix 0
+    	rt 0 0 0 xyz 0 0 0.56
+    	rotations x
+    	ranges
+    	-pi/2  pi/2
+    	mass 1.5
+    	com 0 0 -0.12
+    	inertia
+    	0.2 0 0
+    	0 0 0
+    	0 0 0
+	mesh  0 0 0
+	mesh  0 0 -0.3
+endsegment
+
+segment RForearm
+	parent RArm
+	rtinmatrix 0
+    	rt 0 0 0 xyz 0 0 -0.3
+    	rotations x
+    	ranges
+    	0  pi
+    	mass 1.5
+    	com 0 0 -0.10
+    	inertia
+    	0.2 0 0
+    	0 0 0
+    	0 0 0
+	mesh  0 0 0
+	mesh  0 0 -0.2
+endsegment
+
+segment LForearm
+	parent LArm
+	rtinmatrix 0
+    	rt 0 0 0 xyz 0 0 -0.3
+    	rotations x
+    	ranges
+    	0  pi
+    	mass 1.5
+    	com 0 0 -0.10
+    	inertia
+    	0.2 0 0
+    	0 0 0
+    	0 0 0
+	mesh  0 0 0
+	mesh  0 0 -0.2
+endsegment
+
+segment RShank
+	parent RThigh
+	rtinmatrix 0
+    	rt 0 0 0 xyz 0 0 -0.41
+    	rotations x
+    	ranges
+    	-pi  0
+    	mass 4.25505875898884
+    	com 0 0 -0.2
+    	inertia
+    	0.7 0 0
+    	0 0 0
+    	0 0 0
+	mesh  0 0 0
+	mesh  0 0 -0.46
+endsegment
+
+segment LShank
+	parent LThigh
+	rtinmatrix 0
+    	rt 0 0 0 xyz 0 0 -0.41
+    	rotations x
+    	ranges
+    	-pi  0
+    	mass 4.25505875898884
+    	com 0 0 -0.2
+    	inertia
+    	0.7 0 0
+    	0 0 0
+    	0 0 0
+	mesh  0 0 0
+	mesh  0 0 -0.46
+endsegment
+
+
+contact RFoot
+	parent RShank
+	position 0 0 -0.46
+	axis yz
+endcontact
+
+marker RFoot
+	parent RShank
+	position 0 0 -0.46
+endmarker
+
+marker LFoot
+	parent LShank
+	position 0 0 -0.46
+endmarker
+

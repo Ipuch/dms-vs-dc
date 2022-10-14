@@ -112,10 +112,6 @@ class UpperLimbOCP:
             type of dynamics to use
         use_sx : bool
             use SX for the dynamics
-        initial_x : InitialGuessList
-            initial guess for the states
-        initial_u : InitialGuessList
-            initial guess for the controls
         seed : int
             seed for the random generator
         """
@@ -124,9 +120,6 @@ class UpperLimbOCP:
 
         self.task = task
         self.c3d_path = f"{self.task.value}.c3d"
-
-        self.x = None
-        self.u = None
 
         self.phase_durations = phase_durations
         self.phase_time = phase_durations
@@ -173,8 +166,8 @@ class UpperLimbOCP:
 
             self.initial_states = []
 
-            self.x_init = InitialGuessList() if initial_x is None else initial_x
-            self.u_init = InitialGuessList() if initial_u is None else initial_u
+            self.x_init = InitialGuessList()
+            self.u_init = InitialGuessList()
 
             np.random.seed(seed)
             # todo

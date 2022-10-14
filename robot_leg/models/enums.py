@@ -21,3 +21,5 @@ class Models(Enum):
         Path(__file__).parent.__str__()
         + "/wu_converted_definitif_without_floating_base_template_xyz_offset_with_variables.bioMod"
     )
+
+    HUMANOID_10DOF = (Path(__file__).parent.__str__() + "/Humanoid10Dof.bioMod", "/Humanoid10Dof_left_contact.bioMod")
