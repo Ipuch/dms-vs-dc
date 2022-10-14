@@ -20,7 +20,8 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
 
     if model == Models.LEG:
         # n_shooting = [(20, 20)]
-        n_shooting = [20]
+        # n_shooting = [20]
+        n_shooting = [5, 10, 15, 25]
         run_ocp = RunOCP(
             ocp_class=LegOCP,
             show_optim=show_optim,
@@ -30,7 +31,9 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
         )
         running_function = run_ocp.main
     elif model == Models.ARM:
-        n_shooting = [50]
+        # n_shooting = [50]
+        # n_shooting = [5, 10, 15, 20, 25, 30, 40, 45, 50]
+        n_shooting = [10, 15, 20, 25, 30, 40, 45, 50]
         run_ocp = RunOCP(
             ocp_class=ArmOCP,
             show_optim=show_optim,
@@ -40,7 +43,7 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
         )
         running_function = run_ocp.main
     elif model == Models.ACROBAT:
-        n_shooting = [125]
+        n_shooting = [75, 100, 150]
         run_ocp = RunOCP(
             ocp_class=MillerOcpOnePhase,
             show_optim=show_optim,
@@ -71,7 +74,8 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
     Date = date.today().strftime("%d-%m-%y")
     out_path = Path(
         Path(__file__).parent.__str__()
-        + f"/../../dms-vs-dc-results/{model.name}_{Date}_2"
+        #+ f"/../../dms-vs-dc-results/{model.name}_{Date}_2"
+        + f"/../../dms-vs-dc-results/{model.name}_07-10-22_2"
     )
     try:
         os.mkdir(out_path)
@@ -121,7 +125,7 @@ def main(model: Models = None, iterations=10000, print_level=5, ignore_already_r
 
 
 if __name__ == "__main__":
-    main(model=Models.LEG, iterations=3000, print_level=5, ignore_already_run=False, show_optim=False)
-    main(model=Models.ARM, iterations=3000, print_level=5, ignore_already_run=False, show_optim=False)
-    main(model=Models.ACROBAT, iterations=2500, print_level=5, ignore_already_run=False, show_optim=False)
+    # main(model=Models.LEG, iterations=3000, print_level=5, ignore_already_run=True, show_optim=False)
+    # main(model=Models.ARM, iterations=3000, print_level=5, ignore_already_run=False, show_optim=False)
+    main(model=Models.ACROBAT, iterations=2500, print_level=5, ignore_already_run=True, show_optim=False)
 
