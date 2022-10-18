@@ -270,8 +270,10 @@ def my_traces(
         c1 = px.colors.qualitative.D3[ii % 9] if colors is None else colors[ii]
         fig.add_trace(
             go.Box(
-                x=df["grps"][df["grps"] == d],
-                y=df[key][df["grps"] == d],
+                x=df["ode_solver_defects_labels"][df["ode_solver_defects_labels"] == d],
+                y=df[key][df["ode_solver_defects_labels"] == d],
+                # x=df["grps"][df["grps"] == d],
+                # y=df[key][df["grps"] == d],
                 name=d,
                 boxpoints="all",
                 width=0.4,

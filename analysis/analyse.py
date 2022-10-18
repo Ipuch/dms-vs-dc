@@ -238,6 +238,9 @@ class ResultsAnalyse:
 
                 # labels and groups with ode solvers
                 data["ode_solver_defects"] = f"{data['ode_solver'].__str__()}_{data['defects_type'].value}"
+                # clean ode_solver_defects to display a nice label
+                data["ode_solver_defects_labels"] = data["ode_solver_defects"].replace("_not_applicable", "").replace("_", " ").replace(" legendre 4", "").replace("RK4","ERK4").replace("RK8", "ERK8")
+
                 data["grps"] = f"{data['ode_solver'].__str__()}_{data['defects_type'].value}_{n_shooting}"
 
                 # remove element of the list[dict] data["detailed_cost"] if key name contains "ConstraintFcn"
@@ -276,10 +279,12 @@ class ResultsAnalyse:
         # reindex the dataframe
         df_results = df_results.reset_index(drop=True)
 
+        near_optimal_magnitude = 1.5
+
         # find the global minimum cost whatever the ode_solver_defects
         min_cost = df_results["cost"].min()
         # find the costs that are within 15% of the global minimum cost
-        min_cost_15 = min_cost * 1.15
+        min_cost_15 = min_cost * near_optimal_magnitude
         # find the index of the costs that are within 15% of the global minimum cost
         idx_min_cost_15 = df_results["cost"] < min_cost_15
         # set a new argument "near_optimal" to True else False if the cost is within 15% of the global minimum cost
@@ -291,7 +296,7 @@ class ResultsAnalyse:
             idx = df_results["ode_solver_defects"] == ode_solver_defects
             min_cost = df_results.loc[idx, "cost"].min()
             # find the costs that are within 15% of the global minimum cost
-            min_cost_15 = min_cost * 1.15
+            min_cost_15 = min_cost * near_optimal_magnitude
             # find the index of the costs that are within 15% of the global minimum cost
             idx_min_cost_15 = df_results.loc[idx, "cost"] < min_cost_15
             # set a new argument "near_optimal" to True else False if the cost is within 15% of the global minimum cost
@@ -459,12 +464,14 @@ class ResultsAnalyse:
         # compute the number of near optimal OCPs for each formulation
         for ode in self.df["ode_solver_defects"].unique():
             sub_df = self.df[self.df["ode_solver_defects"] == ode]
+            # only the ones that converged
+            sub_df = sub_df[sub_df["status"] == 0]
             data = dict(
                 n_shooting=sub_df["n_shooting"].unique()[0],
                 ode_solver_defects=sub_df["ode_solver_defects"].unique()[0],
                 number_of_ocp=len(sub_df),
-                number_of_near_optimal_ocp=len(sub_df[sub_df["near_optimal_ode"] == True]),
-                percent_of_near_optimal_ocp=len(sub_df[sub_df["near_optimal_ode"] == True]) / len(sub_df),
+                number_of_near_optimal_ocp=len(sub_df[sub_df["near_optimal"] == True]),
+                percent_of_near_optimal_ocp=len(sub_df[sub_df["near_optimal"] == True]) / len(sub_df),
             )
             df_dictionary = pd.DataFrame([data])
             self.near_optimal = pd.concat([self.near_optimal, df_dictionary], ignore_index=True)
@@ -924,7 +931,7 @@ class ResultsAnalyse:
         if fig is None:
             fig = make_subplots(cols=1, rows=len(keys))
 
-        dyn = self.df["grps"].unique().tolist()
+        dyn = self.df["ode_solver_defects_labels"].unique().tolist()
         grps = dyn
 
         # select only the one who converged
@@ -973,19 +980,6 @@ class ResultsAnalyse:
 
                 # Update axis
                 fig.update_yaxes(title_text=ylabel[i] if ylabel is not None else ylabel, row=row, col=col)
-
-                # # set the colors of the bars with px.colors.qualitative.D3 for each ode_solver
-                # for i, ode_solver in enumerate(self.near_optimal['ode_solver_defects'].unique()):
-                #     fig.data[i].marker.color = px.colors.qualitative.D3[i]
-                #
-                # # bars are transparent a bit
-                # for i in range(len(fig.data)):
-                #     fig.data[i].marker.opacity = 0.9
-                #
-                # # contours of bars are black
-                # for i in range(len(fig.data)):
-                #     fig.data[i].marker.line.color = 'black'
-                #     fig.data[i].marker.line.width = 1
 
                 # y-axis from 0 to 1
                 fig.update_yaxes(range=[0, 1], row=row, col=col)
@@ -1478,7 +1472,7 @@ def big_figure(results_leg: ResultsAnalyse, results_arm: ResultsAnalyse, results
     )
 
     df = ["df", "df", "near_optimal", "df"]
-    keys = ["computation_time", "cost", "near_optimal", "rotation_error"]
+    keys = ["computation_time", "cost", "percent_of_near_optimal_ocp", "rotation_error"]
     # keys = ["computation_time_per_shooting_per_var", "cost", "near_optimal", "rotation_error"]
     # keys = ["computation_time", "cost", "near_optimal", "rotation_error_per_second_per_velocity_max"]
     ylabels = ["CPU time (s)", "Cost function value", "Near optimal frequency (%)", "Rotation error RMSE (deg)"]

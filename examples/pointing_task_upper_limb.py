@@ -26,7 +26,7 @@ def main():
     # humanoid.ocp.print()
 
     solv = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
-    solv.set_maximum_iterations(0)
+    solv.set_maximum_iterations(1000)
     solv.set_linear_solver("ma57")
     solv.set_print_level(5)
     sol = myocp.ocp.solve(solv)

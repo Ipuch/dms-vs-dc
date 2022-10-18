@@ -5,7 +5,6 @@ import numpy as np
 import biorbd_casadi as biorbd
 from bioptim import (
     OdeSolver,
-    Node,
     OptimalControlProgram,
     DynamicsFcn,
     ObjectiveFcn,
@@ -15,11 +14,7 @@ from bioptim import (
     BoundsList,
     InitialGuessList,
     ControlType,
-    Bounds,
     InterpolationType,
-    PhaseTransitionList,
-    BiMappingList,
-    MultinodeConstraintList,
     RigidBodyDynamics,
     NoisedInitialGuess,
     QAndQDotBounds,
@@ -170,7 +165,7 @@ class UpperLimbOCP:
                 self.xn_init = InitialGuessList()
                 self.un_init = InitialGuessList()
 
-                q_noise_magnitude = np.repeat(0.5, self.n_q)
+                q_noise_magnitude = np.repeat(0.1, self.n_q)
                 qdot_noise_magnitude = np.repeat(0.1, self.n_qdot)
                 x_noise_magnitude = np.concatenate((q_noise_magnitude, qdot_noise_magnitude))
 
@@ -189,6 +184,7 @@ class UpperLimbOCP:
                 torque_noise_magnitude = np.repeat(0.1, self.n_tau)
                 torque_noise_magnitude[5:8] = 0
                 muscle_noise_magnitude = np.repeat(0.1, self.n_mus)
+                # muscle_noise_magnitude = np.repeat(0.01, self.n_mus)
                 u_noise_magnitude = np.concatenate((torque_noise_magnitude, muscle_noise_magnitude))
 
                 self.un_init.add(
@@ -362,8 +358,8 @@ class UpperLimbOCP:
 
         # linear interpolation between initial and final states of x_init_ref[0, :] and x_init_ref[-1, :]
         x_init_linear = np.zeros((self.n_q + self.n_qdot, self.n_shooting + 1))
-        for i in range(self.n_q + self.n_qdot):
-            x_init_linear[i, :] = np.linspace(self.x_init_ref[0, i], self.x_init_ref[-1, i], self.n_shooting + 1)
+        for i in range(self.n_q):
+            x_init_linear[i, :] = np.linspace(self.x_init_ref[i, 0], self.x_init_ref[i, -1], self.n_shooting + 1)
 
         self.x_init = InitialGuess(x_init_linear, interpolation=InterpolationType.EACH_FRAME)
         self.u_init = InitialGuess([self.tau_init] * self.n_tau + [self.muscle_init] * self.biorbd_model.nbMuscles())
