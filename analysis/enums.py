@@ -3,6 +3,10 @@ from pathlib import Path
 
 
 class ResultFolders(Enum):
+    LEG_100 = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "LEG_18_10_22_100"
+    ARM_100 = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ARM_18_10_22_100"
+    ACROBAT_100 = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ACROBAT_18_10_22_100"
+
     ALL_LEG = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ALL_LEG"
     ALL_ARM = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ALL_ARM"
     ALL_ACROBAT = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ALL_ACROBAT"
@@ -22,4 +26,3 @@ class ResultFolders(Enum):
     MILLER_TEST = "/home/puchaud/Projets_Python/dms-vs-dc-results/ACROBAT_16-08-22_2"
 
 
-#

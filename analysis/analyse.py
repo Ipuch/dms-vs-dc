@@ -281,8 +281,10 @@ class ResultsAnalyse:
 
         near_optimal_magnitude = 1.5
 
+        # the ones that converges
+        df_results_converged = df_results[df_results["status"] == 0]
         # find the global minimum cost whatever the ode_solver_defects
-        min_cost = df_results["cost"].min()
+        min_cost = df_results_converged["cost"].min()
         # find the costs that are within 15% of the global minimum cost
         min_cost_15 = min_cost * near_optimal_magnitude
         # find the index of the costs that are within 15% of the global minimum cost
@@ -461,17 +463,41 @@ class ResultsAnalyse:
         """
         This function fills the dictionnay self.near_optimal with the number of near optimal OCPs for each formulation
         """
+
+        # the ones that converges
+        df_results_converged = self.df[self.df["status"] == 0]
+        # find the global minimum cost whatever the ode_solver_defects
+        min_cost = df_results_converged["cost"].min()
+
         # compute the number of near optimal OCPs for each formulation
         for ode in self.df["ode_solver_defects"].unique():
+
             sub_df = self.df[self.df["ode_solver_defects"] == ode]
             # only the ones that converged
             sub_df = sub_df[sub_df["status"] == 0]
+
+            # compute cumulative near optimality
+            nb_true_list = []
+            for ii in range(0, 200):
+                near_optimal_magnitude = 1 + ii * 0.01
+                cur_cost_threshold = min_cost * near_optimal_magnitude
+                idx_min_cost_threshold = sub_df["cost"] <= cur_cost_threshold
+                # find the true in idx_min_cost_threshold
+                idx_min_cost_threshold_true = np.where(idx_min_cost_threshold == True)[0]
+                # number of true in idx_min_cost_threshold
+                nb_true = idx_min_cost_threshold_true.shape[0]
+                # store this value in a list
+                nb_true_list.append(nb_true)
+
             data = dict(
                 n_shooting=sub_df["n_shooting"].unique()[0],
                 ode_solver_defects=sub_df["ode_solver_defects"].unique()[0],
                 number_of_ocp=len(sub_df),
                 number_of_near_optimal_ocp=len(sub_df[sub_df["near_optimal"] == True]),
                 percent_of_near_optimal_ocp=len(sub_df[sub_df["near_optimal"] == True]) / len(sub_df),
+                cumulative_near_optimal_ocp=nb_true_list,
+                cumulative_percent_of_near_optimal_ocp=[i / len(sub_df) for i in nb_true_list],
+                cumulative_abscissa=[ii * 0.01 for ii in range(0, 200)],
             )
             df_dictionary = pd.DataFrame([data])
             self.near_optimal = pd.concat([self.near_optimal, df_dictionary], ignore_index=True)
@@ -530,6 +556,71 @@ class ResultsAnalyse:
             fig.show()
         if export:
             self.export(fig, "analyse_near_optimality", export_suffix)
+
+    def plot_near_optimality_cumulative(self, show: bool = True, export: bool = True, export_suffix: str = None):
+        """
+        This function plots the number of near optimal OCPs for each formulation
+
+        Parameters
+        ----------
+        show : bool
+            If True, the figure is shown.
+        export : bool
+            If True, the figure is exported.
+        """
+        # set the n_shooting column as categorical
+        df = self.near_optimal.copy()
+
+        fig = go.Figure()
+        for ode_solver in self.near_optimal["ode_solver_defects"].unique():
+            sub_df = df[df["ode_solver_defects"] == ode_solver]
+            fig.add_trace(go.Scatter(
+                x=sub_df["cumulative_abscissa"].to_list()[0],
+                y=sub_df["cumulative_percent_of_near_optimal_ocp"].to_list()[0],
+                mode="lines",
+                legendgroup=ode_solver,
+                name=ode_solver,
+                            )
+                          )
+            # fig.show()
+
+        fig.update_layout(
+            template="simple_white",
+        )
+        # sh
+
+        # Update axis
+        fig.update_xaxes(title_text="+ x % of the global minimum cost")
+        fig.update_yaxes(title_text="Percentage of optimal solutions (%)")
+
+        # display line grid in light grey
+        fig.update_yaxes(showgrid=True, gridwidth=2, gridcolor="lightgrey")
+        fig.update_xaxes(showgrid=True, gridwidth=2, gridcolor="lightgrey")
+
+        # show ticks on x-axis and y-axis
+        fig.update_xaxes(showticklabels=True)
+        fig.update_yaxes(showticklabels=True)
+
+        # set the colors of the bars with px.colors.qualitative.D3 for each ode_solver
+        # for i, ode_solver in enumerate(self.near_optimal["ode_solver_defects"].unique()):
+        #     fig.data[i].marker.color = self.colors[ode_solver]
+        #
+        # # bars are transparent a bit
+        # for i in range(len(fig.data)):
+        #     fig.data[i].marker.opacity = 0.9
+        #
+        # # contours of bars are black
+        # for i in range(len(fig.data)):
+        #     fig.data[i].marker.line.color = "black"
+        #     fig.data[i].marker.line.width = 1
+        #
+        # # y-axis from 0 to 1
+        # fig.update_yaxes(range=[0, 1])
+
+        if show:
+            fig.show()
+        if export:
+            self.export(fig, "analyse_near_optimality_cumulative", export_suffix)
 
     def animate(self, num: int = 0):
         """
@@ -1420,7 +1511,7 @@ class ResultsAnalyse:
 def generate_results_objects():
     results_leg = ResultsAnalyse.from_folder(
         model_path=Models.LEG.value,
-        path_to_files=ResultFolders.LEG.value,
+        path_to_files=ResultFolders.LEG_100.value,
         export=True,
     )
     results_leg.print()
@@ -1430,7 +1521,7 @@ def generate_results_objects():
 
     results_arm = ResultsAnalyse.from_folder(
         model_path=Models.ARM.value,
-        path_to_files=ResultFolders.ARM.value,
+        path_to_files=ResultFolders.ARM_100.value,
         export=True,
     )
     results_arm.print()
@@ -1440,7 +1531,7 @@ def generate_results_objects():
 
     results_acrobat = ResultsAnalyse.from_folder(
         model_path=Models.ACROBAT.value,
-        path_to_files=ResultFolders.ACROBAT.value,
+        path_to_files=ResultFolders.ACROBAT_100.value,
         export=True,
     )
     results_acrobat.print()
@@ -1521,11 +1612,14 @@ def big_figure(results_leg: ResultsAnalyse, results_arm: ResultsAnalyse, results
 if __name__ == "__main__":
     # results_leg, results_arm, results_acrobat = generate_results_objects()
     results_leg, results_arm, results_acrobat = load_results_objects()
-    big_figure(
-        results_leg=results_leg,
-        results_arm=results_arm,
-        results_acrobat=results_acrobat,
-    )
+    results_leg.plot_near_optimality_cumulative(show=True, export=True)
+    results_arm.plot_near_optimality_cumulative(show=True, export=True)
+    results_acrobat.plot_near_optimality_cumulative(show=True, export=True)
+    # big_figure(
+    #     results_leg=results_leg,
+    #     results_arm=results_arm,
+    #     results_acrobat=results_acrobat,
+    # )
 
     # results_leg.analyse(
     #     show=True,
