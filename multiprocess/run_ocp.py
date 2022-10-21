@@ -212,7 +212,8 @@ class RunOCP:
 
     @staticmethod
     def recompute_qddot(biorbd_model_path, sol):
-
+        if biorbd_model_path.__len__() > 1:
+            biorbd_model_path = biorbd_model_path[0]
         biorbd_model = biorbd.Model(biorbd_model_path)
         qddot = list()
         if len(sol.phase_time) > 2:
