@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import biorbd
+import biorbd_casadi as biorbd
 from bioptim import OdeSolver, CostType, RigidBodyDynamics, Solver, DefectType, PlotType, SolutionIntegrator, Shooting
 
 from robot_leg import HumanoidOCP, Models
@@ -9,10 +9,11 @@ from robot_leg import HumanoidOCP, Models
 
 def main():
     n_shooting = 30
-    ode_solver = OdeSolver.RK4(n_integration_steps=1)
+    ode_solver = OdeSolver.RK4(n_integration_steps=5)
     # ode_solver = OdeSolver.RK4()
+    # ode_solver = OdeSolver.IRK()
     # ode_solver = OdeSolver.COLLOCATION()
-    time = 0.3
+
     n_threads = 8
     # for human in Humanoid2D:
     human = Models.HUMANOID_10DOF
@@ -20,16 +21,16 @@ def main():
     # --- Solve the program --- #
     humanoid = HumanoidOCP(
         biorbd_model_path=human.value,
-        phase_time=time,
         n_shooting=n_shooting,
         ode_solver=ode_solver,
         n_threads=n_threads,
         nb_phases=1,
+        seed=42,
     )
 
     add_custom_plots(humanoid.ocp)
     humanoid.ocp.add_plot_penalty(CostType.ALL)
-    # humanoid.ocp.print()
+    humanoid.ocp.print(to_console=True, to_graph=False)
 
     solv = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
     solv.set_maximum_iterations(1000)
@@ -38,7 +39,7 @@ def main():
     sol = humanoid.ocp.solve(solv)
 
     # --- Show results --- #
-    print(sol.status)
+    sol.graphs(show_bounds=True)
     sol.print_cost()
 
     out = sol.integrate(
@@ -49,13 +50,14 @@ def main():
     )
 
     plt.figure()
-    plt.plot(sol.time, sol.states["q"].T, label="ocp", marker=".")
-    plt.plot(out.time, out.states["q"].T, label="integrated", marker="+")
+    # ocp in blue
+    plt.plot(sol.time, sol.states["q"].T, label="ocp", marker=".", color="blue")
+    # integration in red
+    plt.plot(out.time, out.states["q"].T, label="integrated", marker="+", color="red")
     plt.legend()
     plt.show()
 
     sol.animate(n_frames=0)
-    # sol.graphs(show_bounds=True)
 
 
 def plot_com(x, nlp):

@@ -80,8 +80,8 @@ class UpperLimbOCP:
     def __init__(
         self,
         biorbd_model_path: str = None,
-        n_shooting: int = 100,
-        phase_durations: float = 1,
+        n_shooting: int = 50,
+        phase_durations: float = 0.5,
         n_threads: int = 8,
         ode_solver: OdeSolver = OdeSolver.RK4(),
         rigidbody_dynamics: RigidBodyDynamics = RigidBodyDynamics.ODE,
@@ -165,8 +165,8 @@ class UpperLimbOCP:
                 self.xn_init = InitialGuessList()
                 self.un_init = InitialGuessList()
 
-                q_noise_magnitude = np.repeat(0.1, self.n_q)
-                qdot_noise_magnitude = np.repeat(0.05, self.n_qdot)
+                q_noise_magnitude = np.repeat(0.005, self.n_q)
+                qdot_noise_magnitude = np.repeat(0.001, self.n_qdot)
                 x_noise_magnitude = np.concatenate((q_noise_magnitude, qdot_noise_magnitude))
 
                 self.xn_init.add(
@@ -181,9 +181,9 @@ class UpperLimbOCP:
                     )
                 )
 
-                torque_noise_magnitude = np.repeat(0.05, self.n_tau)
+                torque_noise_magnitude = np.repeat(0.005, self.n_tau)
                 torque_noise_magnitude[5:8] = 0
-                muscle_noise_magnitude = np.repeat(0.1, self.n_mus)
+                muscle_noise_magnitude = np.repeat(0.01, self.n_mus)
                 # muscle_noise_magnitude = np.repeat(0.01, self.n_mus)
                 u_noise_magnitude = np.concatenate((torque_noise_magnitude, muscle_noise_magnitude))
 

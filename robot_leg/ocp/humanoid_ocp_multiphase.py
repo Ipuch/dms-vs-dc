@@ -143,21 +143,28 @@ class HumanoidOcpMultiPhase:
                 self.xn_init = InitialGuessList()
                 self.un_init = InitialGuessList()
 
+                q_noise_magnitude = np.repeat(0.05, self.n_q)
+                qdot_noise_magnitude = np.repeat(0.005, self.n_qdot)
+                x_noise_magnitude = np.concatenate((q_noise_magnitude, qdot_noise_magnitude))
+
                 self.xn_init.add(
                     NoisedInitialGuess(
                         initial_guess=self.x_init[0],
                         bounds=self.x_bounds[0],
-                        noise_magnitude=1,
+                        noise_magnitude=x_noise_magnitude,
                         n_shooting=self.n_shooting[0],
                         bound_push=0.1,
                         seed=seed,
                     )
                 )
+
+                u_noise_magnitude = np.repeat(0.005, self.n_tau)
+
                 self.un_init.add(
                     NoisedInitialGuess(
                         initial_guess=self.u_init[0],
                         bounds=self.u_bounds[0],
-                        noise_magnitude=1,
+                        noise_magnitude=u_noise_magnitude,
                         n_shooting=self.n_shooting[0] - 1,
                         bound_push=0.1,
                         seed=seed,
@@ -523,15 +530,12 @@ class HumanoidOcpMultiPhase:
                 )
 
             # generalized velocities are initialized to 0
-            qdot0 = [0] * self.n_qdot
+            qdot0 = np.array([0] * self.n_qdot)
 
             # concatenate q0 and qdot0
-            X0i = []
-            X0i.extend(self.q0i)
-            X0i.extend(qdot0)
-            X0end = []
-            X0end.extend(self.q0end)
-            X0end.extend(qdot0)
+            X0i = np.concatenate((self.q0i, qdot0),axis=0)
+            X0end = np.concatenate((self.q0end, qdot0), axis=0)
+
             if (
                 self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK
                 or self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK
@@ -547,22 +551,9 @@ class HumanoidOcpMultiPhase:
             x_new = np.linspace(0, self.phase_time[i], self.n_shooting[i] + 1)
             X0 = f(x_new)  # use interpolation function returned by `interp1d`
 
-            self._set_initial_states(X0=X0, n_shooting=self.n_shooting[i])
-            self._set_initial_controls(n_shooting=self.n_shooting[i])
-
-    def _set_initial_states(self, X0: np.array = None, n_shooting: int = None):
-        if X0 is None:
-            self.x_init.add([0] * (self.n_q + self.n_q))
-        else:
-            if X0.shape[1] != n_shooting + 1:
-                X0 = self._interpolate_initial_states(X0)
-
-            if not self.ode_solver.is_direct_shooting:
-                n = self.ode_solver.polynomial_degree
-                X0 = np.repeat(X0, n + 1, axis=1)
-                X0 = X0[:, :-n]
-
+            # self._set_initial_states(X0=X0, n_shooting=self.n_shooting[i])
             self.x_init.add(X0, interpolation=InterpolationType.EACH_FRAME)
+            self._set_initial_controls(n_shooting=self.n_shooting[i])
 
     def _set_initial_controls(self, U0: np.array = None, n_shooting: int = None):
         if U0 is None:
@@ -585,27 +576,7 @@ class HumanoidOcpMultiPhase:
             else:
                 self.u_init.add([self.tau_init] * self.n_tau)
         else:
-            if U0.shape[1] != n_shooting:
-                U0 = self._interpolate_initial_controls(U0)
             self.u_init.add(U0, interpolation=InterpolationType.EACH_FRAME)
-
-    def _interpolate_initial_states(self, X0: np.array):
-        print("interpolating initial states to match the number of shooting nodes")
-        x = np.linspace(0, self.phase_time, X0.shape[1])
-        y = X0
-        f = interpolate.interp1d(x, y)
-        x_new = np.linspace(0, self.phase_time, self.n_shooting + 1)
-        y_new = f(x_new)  # use interpolation function returned by `interp1d`
-        return y_new
-
-    def _interpolate_initial_controls(self, U0: np.array):
-        print("interpolating initial controls to match the number of shooting nodes")
-        x = np.linspace(0, self.phase_time, U0.shape[1])
-        y = U0
-        f = interpolate.interp1d(x, y)
-        x_new = np.linspace(0, self.phase_time, self.n_shooting)
-        y_new = f(x_new)  # use interpolation function returned by `interp1d`
-        return y_new
 
 
 def set_initial_pose(model_path: str, q0: np.ndarray, target_RFoot: np.ndarray, target_LFoot: np.ndarray):
@@ -666,8 +637,8 @@ def set_initial_pose(model_path: str, q0: np.ndarray, target_RFoot: np.ndarray, 
         verbose=1,
         method="trf",
         jac="3-point",
-        ftol=1e-10,
-        gtol=1e-10,
+        ftol=1e-5,
+        gtol=1e-5,
     )
 
     return pos.x
