@@ -165,8 +165,8 @@ class UpperLimbOCP:
                 self.xn_init = InitialGuessList()
                 self.un_init = InitialGuessList()
 
-                q_noise_magnitude = np.repeat(0.1, self.n_q)
-                qdot_noise_magnitude = np.repeat(0.05, self.n_qdot)
+                q_noise_magnitude = np.repeat(0.05, self.n_q)
+                qdot_noise_magnitude = np.repeat(0.01, self.n_qdot)
                 x_noise_magnitude = np.concatenate((q_noise_magnitude, qdot_noise_magnitude))
 
                 self.xn_init.add(
@@ -181,9 +181,9 @@ class UpperLimbOCP:
                     )
                 )
 
-                torque_noise_magnitude = np.repeat(0.05, self.n_tau)
+                torque_noise_magnitude = np.repeat(0.025, self.n_tau)
                 torque_noise_magnitude[5:8] = 0
-                muscle_noise_magnitude = np.repeat(0.1, self.n_mus)
+                muscle_noise_magnitude = np.repeat(0.05, self.n_mus)
                 # muscle_noise_magnitude = np.repeat(0.01, self.n_mus)
                 u_noise_magnitude = np.concatenate((torque_noise_magnitude, muscle_noise_magnitude))
 

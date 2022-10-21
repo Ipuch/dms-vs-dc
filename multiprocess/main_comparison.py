@@ -96,7 +96,7 @@ def main(
         # OdeSolver.IRK(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
     ]
     if model != Models.ACROBAT:
-        if model == Models.HUMANOID_10DOF:  # no implicit
+        if model == Models.HUMANOID_10DOF or model == Models.UPPER_LIMB_XYZ_VARIABLES:  # no implicit
             ode_list = ode_list[1:]
         else:
             ode_list.append(OdeSolver.IRK(defects_type=DefectType.IMPLICIT, polynomial_degree=4))
@@ -157,10 +157,11 @@ def main(
 
 
 if __name__ == "__main__":
-
+    # iteration = 0
+    iteration = 3000
     main(
         model=Models.LEG,
-        iterations=3000,
+        iterations=iteration,
         print_level=5,
         ignore_already_run=True,
         show_optim=False,
@@ -169,16 +170,16 @@ if __name__ == "__main__":
     )
     main(
         model=Models.ARM,
-        iterations=3000,
+        iterations=iteration,
         print_level=5,
-        ignore_already_run=False,
+        ignore_already_run=True,
         show_optim=False,
         seed_start=30,
         calls=70,
     )
     main(
         model=Models.ACROBAT,
-        iterations=2500,
+        iterations=iteration,
         print_level=5,
         ignore_already_run=True,
         show_optim=False,
@@ -188,19 +189,20 @@ if __name__ == "__main__":
 
     main(
         model=Models.UPPER_LIMB_XYZ_VARIABLES,
-        iterations=3000,
+        iterations=iteration,
         print_level=5,
         ignore_already_run=False,
         show_optim=False,
         seed_start=0,
         calls=100,
     )
-    main(
-        model=Models.HUMANOID_10DOF,
-        iterations=3000,
-        print_level=5,
-        ignore_already_run=False,
-        show_optim=False,
-        seed_start=0,
-        calls=100,
-    )
+
+    # main(
+    #     model=Models.HUMANOID_10DOF,
+    #     iterations=iteration,
+    #     print_level=5,
+    #     ignore_already_run=False,
+    #     show_optim=False,
+    #     seed_start=0,
+    #     calls=100,
+    # )

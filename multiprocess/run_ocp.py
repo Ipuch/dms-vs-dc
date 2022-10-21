@@ -95,16 +95,6 @@ class RunOCP:
             out_path_raw = args[5]
             i_rand = args[6]
 
-        # --- Solve the program --- #
-        my_ocp = self.ocp_class(
-            biorbd_model_path=biorbd_model_path,
-            rigidbody_dynamics=dynamics_type,
-            n_shooting=n_shooting,
-            ode_solver=ode_solver,
-            n_threads=n_threads,
-            seed=i_rand,
-        )
-
         str_ode_solver = ode_solver.__str__().replace("\n", "_").replace(" ", "_")
         str_dynamics_type = (
             dynamics_type.__str__().replace("RigidBodyDynamics.", "").replace("\n", "_").replace(" ", "_")
@@ -120,6 +110,16 @@ class RunOCP:
             if os.path.isfile(outpath + ".pckl"):
                 print("Already run ! Skipping...")
                 return
+
+        # --- Solve the program --- #
+        my_ocp = self.ocp_class(
+            biorbd_model_path=biorbd_model_path,
+            rigidbody_dynamics=dynamics_type,
+            n_shooting=n_shooting,
+            ode_solver=ode_solver,
+            n_threads=n_threads,
+            seed=i_rand,
+        )
 
         # --- Solve the program --- #
         print("Show online optimization", self.show_optim)
