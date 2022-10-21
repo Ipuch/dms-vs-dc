@@ -135,3 +135,7 @@ dmypy.json
 *.pickle
 
 *.csv
+
+examples/ocp_graph.gv
+
+examples/ocp_graph.gv.pdf

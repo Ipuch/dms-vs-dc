@@ -69,14 +69,14 @@ class ResultsAnalyse:
     """
 
     def __init__(
-        self,
-        path_to_files: str,
-        model_path: str,
-        df_path: str = None,
-        df: pd.DataFrame = None,
-        ode_solvers: list = None,
-        consistent_threshold: float = 10,
-        colors: dict = None,
+            self,
+            path_to_files: str,
+            model_path: str,
+            df_path: str = None,
+            df: pd.DataFrame = None,
+            ode_solvers: list = None,
+            consistent_threshold: float = 10,
+            colors: dict = None,
     ):
 
         self.path_to_files = path_to_files
@@ -113,11 +113,11 @@ class ResultsAnalyse:
 
     @classmethod
     def from_folder(
-        cls,
-        path_to_files: str,
-        model_path: str,
-        consistent_threshold: float = 10,
-        export: bool = True,
+            cls,
+            path_to_files: str,
+            model_path: str,
+            consistent_threshold: float = 10,
+            export: bool = True,
     ):
         """
         Convert the data to a pandas dataframe.
@@ -192,9 +192,9 @@ class ResultsAnalyse:
 
                 df_results["computation_time_per_shooting"] = df_results["computation_time"] / df_results["n_shooting"]
                 df_results["computation_time_per_shooting_per_var"] = (
-                    df_results["computation_time"]
-                    / df_results["n_shooting"]
-                    / (model.nbQ() + model.nbQdot() + model.nbGeneralizedTorque())
+                        df_results["computation_time"]
+                        / df_results["n_shooting"]
+                        / (model.nbQ() + model.nbQdot() + model.nbGeneralizedTorque())
                 )
 
                 data["n_shooting_per_second"] = data["n_shooting"] / data["time"][-1]
@@ -230,16 +230,17 @@ class ResultsAnalyse:
                 # errors per second
                 data["rotation_error_per_second"] = data["rotation_error"] / data["time"][-1]
                 data["rotation_error_per_second_per_velocity_max"] = (
-                    data["rotation_error"]
-                    / data["time"][-1]
-                    / data["qdot"].max()
-                    / (model.nbQ() + model.nbQdot() + model.nbGeneralizedTorque())
+                        data["rotation_error"]
+                        / data["time"][-1]
+                        / data["qdot"].max()
+                        / (model.nbQ() + model.nbQdot() + model.nbGeneralizedTorque())
                 )
 
                 # labels and groups with ode solvers
                 data["ode_solver_defects"] = f"{data['ode_solver'].__str__()}_{data['defects_type'].value}"
                 # clean ode_solver_defects to display a nice label
-                data["ode_solver_defects_labels"] = data["ode_solver_defects"].replace("_not_applicable", "").replace("_", " ").replace(" legendre 4", "").replace("RK4","ERK4").replace("RK8", "ERK8")
+                data["ode_solver_defects_labels"] = data["ode_solver_defects"].replace("_not_applicable", "").replace(
+                    "_", " ").replace(" legendre 4", "").replace("RK4", "ERK4").replace("RK8", "ERK8")
 
                 data["grps"] = f"{data['ode_solver'].__str__()}_{data['defects_type'].value}_{n_shooting}"
 
@@ -580,8 +581,8 @@ class ResultsAnalyse:
                 mode="lines",
                 legendgroup=ode_solver,
                 name=ode_solver,
-                            )
-                          )
+            )
+            )
             # fig.show()
 
         fig.update_layout(
@@ -769,7 +770,7 @@ class ResultsAnalyse:
             self.export(fig, "analyse_time_iter", export_suffix)
 
     def plot_integration_frame_to_frame_error(
-        self, show: bool = True, export: bool = True, until_consistent: bool = False, export_suffix: str = None
+            self, show: bool = True, export: bool = True, until_consistent: bool = False, export_suffix: str = None
     ):
         """
         This function plots the time and number of iterations need to make the OCP converge
@@ -1008,16 +1009,16 @@ class ResultsAnalyse:
             self.export(fig, "analyse_obj", export_suffix)
 
     def plot_keys(
-        self,
-        keys: List[str],
-        df_list: List[str] = None,
-        ylabel: List[str] = None,
-        ylog: List[bool] = None,
-        fig: go.Figure = None,
-        col: int = 1,
-        show: bool = True,
-        export: bool = True,
-        export_suffix: str = None,
+            self,
+            keys: List[str],
+            df_list: List[str] = None,
+            ylabel: List[str] = None,
+            ylog: List[bool] = None,
+            fig: go.Figure = None,
+            col: int = 1,
+            show: bool = True,
+            export: bool = True,
+            export_suffix: str = None,
     ):
         if fig is None:
             fig = make_subplots(cols=1, rows=len(keys))
@@ -1045,49 +1046,90 @@ class ResultsAnalyse:
                 )
             elif df_list[i] == "near_optimal":
                 df = self.near_optimal.copy()
-                # n_shooting as str
-                df["n_shooting"] = df["n_shooting"].astype(str)
 
-                for j, ode in enumerate(self.ode_solvers):
-                    df_ode = df[df["ode_solver_defects"] == ode]
-                    fig = fig.add_trace(
-                        go.Bar(
-                            x=[1],
-                            y=df_ode["percent_of_near_optimal_ocp"],
+                if key == "cumulative_percent_of_near_optimal_ocp":
+
+                    for j, ode in enumerate(self.ode_solvers):
+                        sub_df = df[df["ode_solver_defects"] == ode]
+                        fig.add_trace(go.Scatter(
+                            x=sub_df["cumulative_abscissa"].to_list()[0],
+                            y=sub_df["cumulative_percent_of_near_optimal_ocp"].to_list()[0],
+                            mode="lines",
                             legendgroup=grps[j],
+                            name=grps[j],
                             showlegend=False,
                         ),
-                        row=row,
-                        col=col,
+                            row=row,
+                            col=col,
+                        )
+
+                        line_colors = self.colors[ode]
+                        fig.update_traces(
+                            line=dict(color=line_colors),
+                            selector=dict(legendgroup=grps[j]),
+                        )
+
+                    fig.update_layout(
+                        template="simple_white",
                     )
-                    marker_colors = self.colors[ode]
-                    # udpate the color of the bar
-                    fig.data[-1].marker.color = marker_colors
-                    # opacity
-                    fig.data[-1].opacity = 0.75
+                    # sh
 
-                # hide x ticks
-                fig.update_xaxes(showticklabels=False, row=row, col=col)
+                    # Update axis
+                    fig.update_xaxes(title_text="+ x % of the global minimum cost", row=row, col=col)
+                    fig.update_yaxes(title_text="Optimal solutions (%)", row=row, col=col)
 
-                # Update axis
-                fig.update_yaxes(title_text=ylabel[i] if ylabel is not None else ylabel, row=row, col=col)
+                    # display line grid in light grey
+                    fig.update_yaxes(showgrid=True, gridwidth=2, gridcolor="lightgrey", row=row, col=col)
+                    fig.update_xaxes(showgrid=True, gridwidth=2, gridcolor="lightgrey", row=row, col=col)
 
-                # y-axis from 0 to 1
-                fig.update_yaxes(range=[0, 1], row=row, col=col)
+                    # show ticks on x-axis and y-axis
+                    fig.update_xaxes(showticklabels=True, row=row, col=col)
+                    fig.update_yaxes(showticklabels=True, row=row, col=col)
+
+                else:
+                    # n_shooting as str
+                    df["n_shooting"] = df["n_shooting"].astype(str)
+
+                    for j, ode in enumerate(self.ode_solvers):
+                        df_ode = df[df["ode_solver_defects"] == ode]
+                        fig = fig.add_trace(
+                            go.Bar(
+                                x=[1],
+                                y=df_ode[key],
+                                legendgroup=grps[j],
+                                showlegend=False,
+                            ),
+                            row=row,
+                            col=col,
+                        )
+                        marker_colors = self.colors[ode]
+                        # udpate the color of the bar
+                        fig.data[-1].marker.color = marker_colors
+                        # opacity
+                        fig.data[-1].opacity = 0.75
+
+                    # hide x ticks
+                    fig.update_xaxes(showticklabels=False, row=row, col=col)
+
+                    # Update axis
+                    fig.update_yaxes(title_text=ylabel[i] if ylabel is not None else ylabel, row=row, col=col)
+
+                    # y-axis from 0 to 1
+                    fig.update_yaxes(range=[0, 1], row=row, col=col)
 
         return fig
 
     def _plot_2_keys(
-        self,
-        key_x: str,
-        key_y: str,
-        x_label: str,
-        y_label: str,
-        x_log: bool = False,
-        y_log: bool = False,
-        show: bool = True,
-        export: bool = True,
-        export_suffix: str = None,
+            self,
+            key_x: str,
+            key_y: str,
+            x_label: str,
+            y_label: str,
+            x_log: bool = False,
+            y_log: bool = False,
+            show: bool = True,
+            export: bool = True,
+            export_suffix: str = None,
     ):
         """
         This function plots the time and number of iterations need to make the OCP converge
@@ -1341,17 +1383,17 @@ class ResultsAnalyse:
             fig.write_html(self.path_to_figures + f"/analyse_obj{export_suffix}.html", include_mathjax="cdn")
 
     def plot_state(
-        self,
-        key: str = None,
-        show: bool = True,
-        export: bool = True,
-        label_dofs: list[str] = None,
-        row_col: tuple[int, int] = None,
-        ylabel_rotations: str = "q",
-        ylabel_translations: str = "q",
-        xlabel: str = "Time (s)",
-        until_consistent: bool = False,
-        export_suffix: str = None,
+            self,
+            key: str = None,
+            show: bool = True,
+            export: bool = True,
+            label_dofs: list[str] = None,
+            row_col: tuple[int, int] = None,
+            ylabel_rotations: str = "q",
+            ylabel_translations: str = "q",
+            xlabel: str = "Time (s)",
+            until_consistent: bool = False,
+            export_suffix: str = None,
     ) -> go.Figure:
         """
         This function plots generalized coordinates of each OCPs
@@ -1557,16 +1599,16 @@ def big_figure(results_leg: ResultsAnalyse, results_arm: ResultsAnalyse, results
     fig = make_subplots(
         rows=4,
         cols=3,
-        vertical_spacing=0.05,
+        vertical_spacing=0.1,
         horizontal_spacing=0.05,
         subplot_titles=("LEG", "ARM", "ACROBAT"),
     )
 
     df = ["df", "df", "near_optimal", "df"]
-    keys = ["computation_time", "cost", "percent_of_near_optimal_ocp", "rotation_error"]
+    keys = ["computation_time", "cost", "cumulative_percent_of_near_optimal_ocp", "rotation_error"]
     # keys = ["computation_time_per_shooting_per_var", "cost", "near_optimal", "rotation_error"]
     # keys = ["computation_time", "cost", "near_optimal", "rotation_error_per_second_per_velocity_max"]
-    ylabels = ["CPU time (s)", "Cost function value", "Near optimal frequency (%)", "Rotation error RMSE (deg)"]
+    ylabels = ["CPU time\n(s)", "Cost function value", "Near optimal frequency (%)", "Rotation error RMSE\n(deg)"]
     ylog = [False, True, False, True]
     fig = results_leg.plot_keys(keys=keys, fig=fig, col=1, ylabel=ylabels, df_list=df, ylog=ylog)
     fig = results_arm.plot_keys(keys=keys, fig=fig, col=2, ylog=ylog, df_list=df)
@@ -1595,16 +1637,24 @@ def big_figure(results_leg: ResultsAnalyse, results_arm: ResultsAnalyse, results
     )
 
     # display the horizontal lines for each grid of the figure
-    for i in range(1, 4):
-        for j in range(1, 4):
+    for i in range(1, 5):
+        for j in range(1, 5):
             fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="lightgrey", row=i, col=j)
+
+    # delete all the yaxis titles if col > 1
+    for i in range(1, 5):
+        for j in range(2, 4):
+            fig.update_yaxes(title="", row=i, col=j)
 
     # custom ranges
     fig.update_yaxes(range=[0, 4], row=1, col=1)
     fig.update_yaxes(range=[0, 0.6e4], row=1, col=3)
+    fig.update_yaxes(range=[np.log10(7.21e-4), np.log10(7.22e-4)], row=2, col=1)
     # todo: case vide quand ça n'a pas tournée ode_solver
-    # todo: regler le pb d'échelle
-    # todo: faire un truc pour le near optimal mauvais pour le leg
+
+    # legend font bigger
+    fig.update_layout(legend=dict(font=dict(size=15)))
+
 
     fig.show()
 
@@ -1612,14 +1662,14 @@ def big_figure(results_leg: ResultsAnalyse, results_arm: ResultsAnalyse, results
 if __name__ == "__main__":
     # results_leg, results_arm, results_acrobat = generate_results_objects()
     results_leg, results_arm, results_acrobat = load_results_objects()
-    results_leg.plot_near_optimality_cumulative(show=True, export=True)
-    results_arm.plot_near_optimality_cumulative(show=True, export=True)
-    results_acrobat.plot_near_optimality_cumulative(show=True, export=True)
-    # big_figure(
-    #     results_leg=results_leg,
-    #     results_arm=results_arm,
-    #     results_acrobat=results_acrobat,
-    # )
+    # results_leg.plot_near_optimality_cumulative(show=True, export=True)
+    # results_arm.plot_near_optimality_cumulative(show=True, export=True)
+    # results_acrobat.plot_near_optimality_cumulative(show=True, export=True)
+    big_figure(
+        results_leg=results_leg,
+        results_arm=results_arm,
+        results_acrobat=results_acrobat,
+    )
 
     # results_leg.analyse(
     #     show=True,
