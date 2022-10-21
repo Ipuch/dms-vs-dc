@@ -20,6 +20,7 @@ from bioptim import (
     QAndQDotBounds,
     InitialGuess,
     Dynamics,
+    Node,
 )
 
 from ..models.utils import thorax_variables
@@ -350,6 +351,8 @@ class UpperLimbOCP:
         else:
             raise NotImplementedError("This task is not implemented yet.")
 
+        self.objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_STATE, key="qdot", weight=100, node=Node.END)
+
     def _set_initial_guesses(self):
         """
         Set the initial guess for the optimal control problem (states and controls)
@@ -370,7 +373,8 @@ class UpperLimbOCP:
         Set the boundary conditions for controls and states for each phase.
         """
         self.x_bounds = QAndQDotBounds(self.biorbd_model)
-        x_slack_start = 0.1 * np.ones(self.x_init_ref[: self.n_q, 0].shape)
+        x_slack_start = 0
+        # x_slack_start = 0.1 * np.ones(self.x_init_ref[: self.n_q, 0].shape)
         self.x_bounds.min[: self.n_q, 0] = self.x_init_ref[: self.n_q, 0] - x_slack_start
         self.x_bounds.max[: self.n_q, 0] = self.x_init_ref[: self.n_q, 0] + x_slack_start
 
@@ -392,8 +396,8 @@ class UpperLimbOCP:
 
         self.x_bounds.min[self.n_q :, 0] = [-1e-3] * self.biorbd_model.nbQdot()
         self.x_bounds.max[self.n_q :, 0] = [1e-3] * self.biorbd_model.nbQdot()
-        self.x_bounds.min[self.n_q :, -1] = [-1e-1] * self.biorbd_model.nbQdot()
-        self.x_bounds.max[self.n_q :, -1] = [1e-1] * self.biorbd_model.nbQdot()
+        self.x_bounds.min[self.n_q :, -1] = [-5e-1] * self.biorbd_model.nbQdot()
+        self.x_bounds.max[self.n_q :, -1] = [5e-1] * self.biorbd_model.nbQdot()
 
         if self.biorbd_model.nbQuat() > 0:
             self.x_bounds.min[8:10, 1], self.x_bounds.min[10, 1] = self.x_bounds.min[9:11, 1], -1

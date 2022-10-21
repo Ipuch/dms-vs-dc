@@ -19,8 +19,8 @@ def main():
         ode_solver=ode_solver,
         rigidbody_dynamics=RigidBodyDynamics.ODE,
         n_threads=n_threads,
-        # seed=0,
-        seed=None,
+        seed=42,
+        # seed=None,
     )
 
     myocp.ocp.add_plot_penalty(CostType.ALL)
