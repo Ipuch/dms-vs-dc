@@ -211,7 +211,7 @@ class ArmOCP:
         )
         self.constraints.add(last_segment_vertical, node=node, phase=0, quadratic=True)
 
-        self.objective_functions.add(
+        self.objective_functions.add( # useless
             ObjectiveFcn.Mayer.MINIMIZE_QDDOT,
             target=np.zeros(self.n_q),
             node=Node.END,

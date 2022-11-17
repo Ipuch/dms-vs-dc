@@ -6,6 +6,8 @@ class ResultFolders(Enum):
     LEG_100 = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "LEG_18_10_22_100"
     ARM_100 = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ARM_18_10_22_100"
     ACROBAT_100 = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ACROBAT_18_10_22_100"
+    WALKING_100 = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "HUMANOID_10DOF_21-10-22_2"
+    UPPER_LIMB_100 = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "UPPER_LIMB_XYZ_VARIABLES_21-10-22_22"
 
     ALL_LEG = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ALL_LEG"
     ALL_ARM = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ALL_ARM"

@@ -174,7 +174,7 @@ class ResultsAnalyse:
         df_results = pd.DataFrame(columns=column_names)
 
         for i, file in enumerate(files):
-            if file.endswith(".pckl"):
+            if file.endswith(".pckl") and "RK8" not in file:
                 print(file)
                 p = Path(f"{path_to_files}/{file}")
                 file_path = open(p, "rb")
@@ -188,6 +188,7 @@ class ResultsAnalyse:
                 data["cost"] = np.array(data["cost"])[0][0]
                 # print(data["n_threads"])
                 # compute error
+                model_path = model_path if isinstance(model_path, str) else model_path[0]
                 model = biorbd.Model(model_path)
 
                 df_results["computation_time_per_shooting"] = df_results["computation_time"] / df_results["n_shooting"]
@@ -477,6 +478,10 @@ class ResultsAnalyse:
             # only the ones that converged
             sub_df = sub_df[sub_df["status"] == 0]
 
+            # check if the sub_df is empty
+            if len(sub_df) == 0:
+                continue
+
             # compute cumulative near optimality
             nb_true_list = []
             for ii in range(0, 200):
@@ -679,6 +684,211 @@ class ResultsAnalyse:
         q = self.df["q"].iloc[num]
         biorbd_viz.load_movement(q)
         biorbd_viz.exec()
+
+    def kinogram(self, num: int = 0, nb_frames: int = 5):
+        """
+        This method animates the motion with bioviz
+
+        Parameters
+        ----------
+        num: int
+        Number of the trial to be visualized
+        """
+        # Name of the model only the end of the path without extension
+        s = self.model_path.split("/")[-1].split(".")[0]
+
+        print(self.df["filename"].iloc[num])
+        print(self.df["grps"].iloc[num])
+
+        model_path = self.df["model_path"].iloc[num]
+        p = Path(model_path[0] if isinstance(model_path, tuple) else model_path)
+        # verify if the path/file exists with pathlib
+        model_path = self.model_path if not p.exists() else p.__str__()
+
+        import bioviz
+
+        # Position camera
+        if s == "hexapod_leg":
+
+            b = bioviz.Viz(
+                model_path,
+                show_now=False,
+                show_meshes=True,
+                show_global_center_of_mass=False,
+                show_gravity_vector=False,
+                show_floor=False,
+                show_segments_center_of_mass=False,
+                show_global_ref_frame=False,
+                show_local_ref_frame=False,
+                show_markers=False,
+                show_muscles=False,
+                show_wrappings=False,
+                background_color=(1, 1, 1),
+                mesh_opacity=0.97,
+            )
+            b.resize(1000, 1000)
+            b.set_camera_roll(-82.89751054930615)
+            b.set_camera_zoom(2.7649491449197656)
+            b.set_camera_position(1.266097531449429, -0.6523601622496974, 0.24962580067391163)
+            b.set_camera_focus_point(0.07447263939980919, 0.025078204682856153, -0.013568198245759833)
+
+        elif s == "robot_arm":
+
+            b = bioviz.Viz(
+                model_path,
+                show_now=False,
+                show_meshes=True,
+                show_global_center_of_mass=False,
+                show_gravity_vector=False,
+                show_floor=False,
+                show_segments_center_of_mass=False,
+                show_global_ref_frame=False,
+                show_local_ref_frame=False,
+                show_markers=True,
+                show_muscles=False,
+                show_wrappings=False,
+                background_color=(1, 1, 1),
+                mesh_opacity=0.97,
+            )
+
+            b.resize(1000, 1000)
+
+            b.set_q([-0.15, 0.24, -0.41, 0.21, 0, 0])
+            b.set_camera_roll(-84.5816885957667)
+            b.set_camera_zoom(2.112003880097381)
+            b.set_camera_position(1.9725681105744026, -1.3204979216430117, 0.35790018139336177)
+            b.set_camera_focus_point(-0.3283876664932833, 0.5733643134562766, 0.018451815011995998)
+
+        elif s == "acrobat":
+
+            b = bioviz.Viz(
+                model_path,
+                show_now=False,
+                show_meshes=True,
+                show_global_center_of_mass=False,
+                show_gravity_vector=False,
+                show_floor=False,
+                show_segments_center_of_mass=False,
+                show_global_ref_frame=False,
+                show_local_ref_frame=False,
+                show_markers=False,
+                show_muscles=False,
+                show_wrappings=False,
+                background_color=(1, 1, 1),
+                mesh_opacity=0.97,
+            )
+
+            b.set_camera_position(-8.782458942185185, 0.486269131372712, 4.362010279585766)
+            b.set_camera_roll(90)
+            b.set_camera_zoom(0.308185240948253)
+            b.set_camera_focus_point(1.624007185850899, 0.009961251074366406, 1.940316420941989)
+
+            b.resize(600, 900)
+        elif s == "wu_converted_definitif_without_floating_base_template_xyz_offset_with_variables":
+
+            b = bioviz.Viz(
+                model_path,
+                show_now=False,
+                show_meshes=True,
+                show_global_center_of_mass=False,
+                show_gravity_vector=False,
+                show_floor=False,
+                show_segments_center_of_mass=False,
+                show_global_ref_frame=False,
+                show_local_ref_frame=False,
+                show_markers=False,
+                show_muscles=True,
+                show_wrappings=False,
+                background_color=(1, 1, 1),
+                mesh_opacity=0.97,
+            )
+
+            b.resize(1000, 1000)
+
+            # b.set_q([-0.15, 0.24, -0.41, 0.21, 0, 0])
+            b.set_camera_roll(-100.90843467296737)
+            b.set_camera_zoom(1.9919059008044755)
+            b.set_camera_position(0.8330547810707182, 2.4792370867179256, 0.1727481994453778)
+            b.set_camera_focus_point(-0.2584435804313228, 0.8474543937884143, 0.2124670559215174)
+
+        elif s == "Humanoid10Dof":
+
+            b = bioviz.Viz(
+                model_path,
+                show_now=False,
+                show_meshes=True,
+                show_global_center_of_mass=False,
+                show_gravity_vector=False,
+                show_floor=False,
+                show_segments_center_of_mass=False,
+                show_global_ref_frame=False,
+                show_local_ref_frame=False,
+                show_markers=False,
+                show_muscles=False,
+                show_wrappings=False,
+                background_color=(1, 1, 1),
+                mesh_opacity=0.97,
+            )
+
+            b.resize(1000, 1000)
+
+            b.set_camera_roll(-91.44517177211645)
+            b.set_camera_zoom(0.7961539827851234)
+            b.set_camera_position(4.639962934524132, 0.4405891958030146, 0.577705598983718)
+            b.set_camera_focus_point(-0.2828701273331326, -0.04065388066757992, 0.9759133347931428)
+
+        q = self.df["q"].iloc[num]
+        b.load_movement(q)
+
+        print("roll")
+        print(b.get_camera_roll())
+        print("zoom")
+        print(b.get_camera_zoom())
+        print("position")
+        print(b.get_camera_position())
+        print("get_camera_focus_point")
+        print(b.get_camera_focus_point())
+
+        start = 0
+        end = self.df["n_shooting"].iloc[num]
+        step = int((end - start) / nb_frames)
+
+        import matplotlib.pyplot as plt
+        import matplotlib.image as mpimg
+        fig, ax = plt.subplots(1,
+                               # compute from end and step, the total number of frames
+                               len(range(start, end, step)),
+                               figsize=(19.20, 5.4))
+        fig.subplots_adjust(hspace=0, wspace=0)
+
+
+
+        # Taking snapshot
+        count = 0
+        for snap in range(start, end, step):
+            b.movement_slider[0].setValue(snap)
+            b.snapshot(f"{self.path_to_figures}/{s}_{snap}.png")
+            # b.refresh_window()
+            img = mpimg.imread(f"{self.path_to_figures}/{s}_{snap}.png")
+
+            ax[count].xaxis.set_major_locator(plt.NullLocator())
+            ax[count].yaxis.set_major_locator(plt.NullLocator())
+            ax[count].imshow(img)
+            ax[count].spines["top"].set_visible(False)
+            ax[count].spines["right"].set_visible(False)
+            ax[count].spines["bottom"].set_visible(False)
+            ax[count].spines["left"].set_visible(False)
+            count += 1
+
+        b.quit()
+        fig.show()
+        fig.savefig(f"{self.path_to_figures}/kinogram_{s}.svg", format="svg", dpi=900, bbox_inches="tight")
+        fig.savefig(f"{self.path_to_figures}/../../kinogram_{s}.svg", format="svg", dpi=900, bbox_inches="tight")
+        fig.savefig(f"{self.path_to_figures}/kinogram_{s}.png", format="png", dpi=900, bbox_inches="tight")
+        fig.savefig(f"{self.path_to_figures}/../..//kinogram_{s}.png", format="svg", dpi=900, bbox_inches="tight")
+        plt.close(fig)
+
+        b.exec()
 
     def plot_time_iter(self, show: bool = True, export: bool = True, time_unit: str = "s", export_suffix: str = None):
         """
@@ -1051,13 +1261,16 @@ class ResultsAnalyse:
 
                     for j, ode in enumerate(self.ode_solvers):
                         sub_df = df[df["ode_solver_defects"] == ode]
+                        if len(sub_df) == 0:
+                            continue
+
                         fig.add_trace(go.Scatter(
                             x=sub_df["cumulative_abscissa"].to_list()[0],
                             y=sub_df["cumulative_percent_of_near_optimal_ocp"].to_list()[0],
                             mode="lines",
                             legendgroup=grps[j],
                             name=grps[j],
-                            showlegend=False,
+                            showlegend=show,
                         ),
                             row=row,
                             col=col,
@@ -1215,7 +1428,7 @@ class ResultsAnalyse:
             key_y="rotation_error",
             x_label="objective function value",
             y_label="final rotation RMSE (degree)",
-            y_log=True,
+            y_log=False,
         )
 
         if show:
@@ -1581,38 +1794,78 @@ def generate_results_objects():
     with open("results_acrobat.pickle", "wb") as f:
         pickle.dump(results_acrobat, f)
 
-    return results_leg, results_arm, results_acrobat
+    results_walker = ResultsAnalyse.from_folder(
+        model_path=Models.HUMANOID_10DOF.value,
+        path_to_files=ResultFolders.WALKING_100.value,
+        export=True,
+    )
+    results_walker.print()
+    # export the entire object results_walker in a pickle file
+    with open("results_walker.pickle", "wb") as f:
+        pickle.dump(results_walker, f)
+
+    results_upper_limb = ResultsAnalyse.from_folder(
+        model_path=Models.UPPER_LIMB_XYZ_VARIABLES.value,
+        path_to_files=ResultFolders.UPPER_LIMB_100.value,
+        export=True,
+    )
+    results_upper_limb.print()
+    # export the entire object results_walker in a pickle file
+    with open("results_upper_limb.pickle", "wb") as f:
+        pickle.dump(results_upper_limb, f)
+
+    return results_leg, results_arm, results_acrobat, results_walker, results_upper_limb
 
 
 def load_results_objects():
     with open("results_leg.pickle", "rb") as f:
         results_leg = pickle.load(f)
+        results_leg.print()
     with open("results_arm.pickle", "rb") as f:
         results_arm = pickle.load(f)
+        results_arm.print()
     with open("results_acrobat.pickle", "rb") as f:
         results_acrobat = pickle.load(f)
+        results_acrobat.print()
+    with open("results_walker.pickle", "rb") as f:
+        results_walker = pickle.load(f)
+        results_walker.print()
+    with open("results_upper_limb.pickle", "rb") as f:
+        results_upper_limb = pickle.load(f)
+        results_upper_limb.print()
 
-    return results_leg, results_arm, results_acrobat
+    return results_leg, results_arm, results_acrobat, results_walker, results_upper_limb
 
 
-def big_figure(results_leg: ResultsAnalyse, results_arm: ResultsAnalyse, results_acrobat: ResultsAnalyse):
+def big_figure(
+        results_leg: ResultsAnalyse,
+        results_arm: ResultsAnalyse,
+        results_acrobat: ResultsAnalyse,
+        results_walker: ResultsAnalyse,
+        results_upper_limb: ResultsAnalyse,
+):
     fig = make_subplots(
         rows=4,
-        cols=3,
+        cols=5,
         vertical_spacing=0.1,
         horizontal_spacing=0.05,
-        subplot_titles=("LEG", "ARM", "ACROBAT"),
+        subplot_titles=("3-DoF Leg", "6-DoF Arm", "Acrobat", "Planar human", "Upper limb"),
     )
 
     df = ["df", "df", "near_optimal", "df"]
     keys = ["computation_time", "cost", "cumulative_percent_of_near_optimal_ocp", "rotation_error"]
-    # keys = ["computation_time_per_shooting_per_var", "cost", "near_optimal", "rotation_error"]
-    # keys = ["computation_time", "cost", "near_optimal", "rotation_error_per_second_per_velocity_max"]
     ylabels = ["CPU time\n(s)", "Cost function value", "Near optimal frequency (%)", "Rotation error RMSE\n(deg)"]
+
+    # df = ["df", "df", "df"]
+    # keys = ["computation_time", "cost", "rotation_error"]
+    # ylabels = ["CPU time\n(s)", "Cost function value", "Rotation error RMSE\n(deg)"]
+
     ylog = [False, True, False, True]
     fig = results_leg.plot_keys(keys=keys, fig=fig, col=1, ylabel=ylabels, df_list=df, ylog=ylog)
     fig = results_arm.plot_keys(keys=keys, fig=fig, col=2, ylog=ylog, df_list=df)
     fig = results_acrobat.plot_keys(keys=keys, fig=fig, col=3, ylog=ylog, df_list=df)
+    fig = results_walker.plot_keys(keys=keys, fig=fig, col=4, ylog=ylog, df_list=df)
+    fig = results_upper_limb.plot_keys(keys=keys, fig=fig, col=5, ylog=ylog, df_list=df)
 
     fig.update_layout(
         height=900,
@@ -1643,33 +1896,305 @@ def big_figure(results_leg: ResultsAnalyse, results_arm: ResultsAnalyse, results
 
     # delete all the yaxis titles if col > 1
     for i in range(1, 5):
-        for j in range(2, 4):
+        for j in range(2, 6):
             fig.update_yaxes(title="", row=i, col=j)
 
     # custom ranges
     fig.update_yaxes(range=[0, 4], row=1, col=1)
+    fig.update_yaxes(range=[np.log10(7.21e-4), np.log10(7.214e-4)], row=2, col=1)
+    fig.update_yaxes(range=[np.log10(884), np.log10(884.2)], row=2, col=4)
     fig.update_yaxes(range=[0, 0.6e4], row=1, col=3)
-    fig.update_yaxes(range=[np.log10(7.21e-4), np.log10(7.22e-4)], row=2, col=1)
-    # todo: case vide quand ça n'a pas tournée ode_solver
+
+    # same format for all y ticks
+    for i in range(6):
+        fig.update_yaxes(tickformat=".2e", row=2, col=i)
+
+    for i in range(6):
+        fig.update_yaxes(tickformat=".0%", row=3, col=i)
+        fig.update_xaxes(tickformat=".0%", row=3, col=i)
+
+    for i in range(6):
+        fig.update_xaxes(range=[0, 1.6], row=3, col=i)
 
     # legend font bigger
     fig.update_layout(legend=dict(font=dict(size=15)))
 
-
     fig.show()
 
 
+def figure_article(
+        results_leg: ResultsAnalyse,
+        results_arm: ResultsAnalyse,
+        results_acrobat: ResultsAnalyse,
+        results_walker: ResultsAnalyse,
+        results_upper_limb: ResultsAnalyse,
+):
+    fig = make_subplots(
+        rows=3,
+        cols=5,
+        vertical_spacing=0.1,
+        horizontal_spacing=0.05,
+        subplot_titles=("3-DoF Leg", "6-DoF Arm", "Acrobat", "Planar human", "Upper limb"),
+    )
+
+    df = ["df", "df", "df"]
+    keys = ["computation_time", "cost", "rotation_error"]
+    ylabels = ["CPU time\n(s)", "Cost function value", "Rotation error RMSE\n(deg)"]
+
+    ylog = [False, True, True]
+    fig = results_leg.plot_keys(keys=keys, fig=fig, col=1, ylabel=ylabels, df_list=df, ylog=ylog)
+    fig = results_arm.plot_keys(keys=keys, fig=fig, col=2, ylog=ylog, df_list=df)
+    fig = results_acrobat.plot_keys(keys=keys, fig=fig, col=3, ylog=ylog, df_list=df)
+    fig = results_walker.plot_keys(keys=keys, fig=fig, col=4, ylog=ylog, df_list=df)
+    fig = results_upper_limb.plot_keys(keys=keys, fig=fig, col=5, ylog=ylog, df_list=df)
+
+    fig.update_layout(
+        height=600,
+        width=1000,
+        paper_bgcolor="rgba(255,255,255,1)",
+        plot_bgcolor="rgba(255,255,255,1)",
+        legend=dict(
+            title_font_family="Times New Roman",
+            font=dict(family="Times New Roman", color="black", size=11),
+            orientation="h",
+            xanchor="center",
+            x=0.5,
+            y=-0.05,
+        ),
+        font=dict(
+            size=12,
+            family="Times New Roman",
+        ),
+        yaxis=dict(color="black"),
+        template="simple_white",
+        boxgap=0.2,
+    )
+
+    # display the horizontal lines for each grid of the figure
+    for i in range(1, 6):
+        for j in range(1, 6):
+            fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="lightgrey", row=i, col=j)
+
+    # 5 ticks on y axis for each subplots
+    for i in range(1, 6):
+        for j in range(1, 6):
+            fig.update_yaxes(nticks=5, row=i, col=j)
+
+    # delete all the yaxis titles if col > 1
+    for i in range(1, 5):
+        for j in range(2, 6):
+            fig.update_yaxes(title="", row=i, col=j)
+
+    # all figure from row 1 start from 0 in ordinal axis and the max limit is automatic
+    for i in range(1, 6):
+        fig.update_yaxes(range=[0, None], row=1, col=i)
+        # show the tick 0 in the y axis
+        fig.update_yaxes(tick0=0, row=1, col=i)
+
+    # custom ranges
+    fig.update_yaxes(range=[0, 4], row=1, col=1)
+    fig.update_yaxes(range=[-1, 1000], nticks=4, tick0=0, row=1, col=2)
+    fig.update_yaxes(range=[-1, 350], row=1, col=4)
+    fig.update_yaxes(range=[-1, 1600], row=1, col=5)
+
+    fig.update_yaxes(range=[np.log10(7.21e-4), np.log10(7.214e-4)], row=2, col=1)
+    fig.update_yaxes(range=[np.log10(884), np.log10(884.2)], row=2, col=4)
+    fig.update_yaxes(range=[0, 0.6e4], row=1, col=3)
+
+    fig.update_yaxes(range=[-9, -5], row=3, col=4)
+    fig.update_yaxes(range=[np.log10(0.005), np.log10(0.01)], row=3, col=5)
+
+
+    fig.update_yaxes(title_standoff=40, row=1, col=1)
+    fig.update_yaxes(title_standoff=0, row=2, col=1)
+    fig.update_yaxes(title_standoff=24, row=3, col=1)
+    # legend font bigger
+    fig.update_layout(legend=dict(font=dict(size=13)))
+
+    # add annotation for the figure 7.24535e+2 on row=2, col=5,
+    fig.add_annotation(
+        x=0,
+        y=1.05,
+        xref="x domain",
+        yref="y domain",
+        text="+7.245352e+2",
+        showarrow=False,
+        font=dict(size=12),
+        xanchor="center",
+        yanchor="middle",
+        row=2,
+        col=5,
+    )
+
+    fig.update_yaxes(showexponent="none", row=2, col=5)
+    # replace the ticklabels of the y axis of row=2, col=5
+    fig.update_yaxes(
+        ticktext=["5.4e-7", "5.2e-7", "5.0e-7", "4.8e-7", "4.6e-7", "4.4e-7"],
+        tickvals=[7.24535254e+2, 7.24535252e+2, 7.2453525e+2, 7.24535248e+2, 7.24535246e+2, 7.24535244e+2],
+        row=2,
+        col=5,
+    )
+
+    # add annotation for the figure 7.24535e+2 on row=2, col=1,
+    fig.add_annotation(
+        x=0,
+        y=1.05,
+        xref="x domain",
+        yref="y domain",
+        text="+7.21e-4",
+        showarrow=False,
+        font=dict(size=12),
+        xanchor="center",
+        yanchor="middle",
+        row=2,
+        col=1,
+    )
+
+    fig.update_yaxes(showexponent="none", row=2,col=1)
+    # replace the ticklabels of the y axis of row=2, col=1
+    fig.update_yaxes(
+        ticktext=["3e-7", "2e-7", "1e-7", "0e-7"],
+        tickvals=[7.213e-4, 7.212e-4, 7.211e-4, 7.210e-4],
+        row=2,
+        col=1,
+    )
+
+    #
+
+    fig.show()
+
+    # export the figure
+    filename="summary_figure"
+    export_suffix =""
+    format_type = ["png", "pdf", "svg", "eps"]
+    for f in format_type:
+        fig.write_image(Path(results_leg.path_to_files).parent.__str__() + f"/{filename}{export_suffix}." + f)
+    fig.write_html(Path(results_leg.path_to_files).parent.__str__() + f"/{filename}{export_suffix}.html", include_mathjax="cdn")
+
+
+def figure_cumulative(
+        results_arm: ResultsAnalyse,
+        results_acrobat: ResultsAnalyse,
+):
+    fig = make_subplots(
+        rows=1,
+        cols=2,
+        vertical_spacing=0.1,
+        horizontal_spacing=0.1,
+        subplot_titles=("6-DoF Arm", "Acrobat"),
+    )
+
+    df = ["near_optimal"]
+    keys = ["cumulative_percent_of_near_optimal_ocp"]
+    ylabels = ["Near optimal frequency (%)"]
+
+    ylog = [False]
+    fig = results_arm.plot_keys(keys=keys, fig=fig, col=1, ylog=ylog, df_list=df, show=True)
+    fig = results_acrobat.plot_keys(keys=keys, fig=fig, col=2, ylog=ylog, df_list=df, show=False)
+
+    fig.update_layout(
+        height=400,
+        width=850,
+        paper_bgcolor="rgba(255,255,255,1)",
+        plot_bgcolor="rgba(255,255,255,1)",
+        legend=dict(
+            title_font_family="Times New Roman",
+            font=dict(family="Times New Roman", color="black", size=12),
+            orientation="h",
+            xanchor="center",
+            x=0.5,
+            y=-0.3,
+        ),
+        font=dict(
+            size=12,
+            family="Times New Roman",
+        ),
+        yaxis=dict(color="black"),
+        template="simple_white",
+        boxgap=0.2,
+    )
+
+    # display the horizontal lines for each grid of the figure
+    for i in range(1, 3):
+        for j in range(1, 3):
+            fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="lightgrey", row=i, col=j)
+
+    # 5 ticks on y axis for each subplots
+    for i in range(1, 3):
+        for j in range(1, 3):
+            fig.update_yaxes(nticks=5, row=i, col=j)
+
+    # delete all the yaxis titles if col > 1
+    for i in range(1, 5):
+        for j in range(2, 6):
+            fig.update_yaxes(title="", row=i, col=j)
+
+    for i in range(1, 3):
+        fig.update_yaxes(tickformat=".0%", row=1, col=i)
+        fig.update_yaxes(range=[0, 1.1], row=1, col=i)
+
+    for i in range(1, 3):
+        fig.update_xaxes(range=[0, 1.6], row=1, col=i)
+
+
+    # custom ranges
+
+    fig.show()
+
+    # export the figure
+    filename = "cumlative_global_optimum"
+    export_suffix = ""
+    format_type = ["png", "pdf", "svg", "eps"]
+    for f in format_type:
+        fig.write_image(Path(results_arm.path_to_files).parent.__str__() + f"/{filename}{export_suffix}." + f, engine="kaleido")
+    fig.write_html(Path(results_arm.path_to_files).parent.__str__() + f"/{filename}{export_suffix}.html",
+                   include_mathjax="cdn")
+
+
 if __name__ == "__main__":
-    # results_leg, results_arm, results_acrobat = generate_results_objects()
-    results_leg, results_arm, results_acrobat = load_results_objects()
+    # results_leg, results_arm, results_acrobat, results_walker, results_upper_limb = generate_results_objects()
+
+    # results_upper_limb = ResultsAnalyse.from_folder(
+    #     model_path=Models.UPPER_LIMB_XYZ_VARIABLES.value,
+    #     path_to_files=ResultFolders.UPPER_LIMB_100.value,
+    #     export=True,
+    # )
+    # results_upper_limb.print()
+    # # export the entire object results_walker in a pickle file
+    # with open("results_upper_limb.pickle", "wb") as f:
+    #     pickle.dump(results_upper_limb, f)
+
+    results_leg, results_arm, results_acrobat, results_walker, results_upper_limb = load_results_objects()
     # results_leg.plot_near_optimality_cumulative(show=True, export=True)
     # results_arm.plot_near_optimality_cumulative(show=True, export=True)
     # results_acrobat.plot_near_optimality_cumulative(show=True, export=True)
-    big_figure(
-        results_leg=results_leg,
-        results_arm=results_arm,
-        results_acrobat=results_acrobat,
-    )
+
+    # big_figure(
+    #     results_leg=results_leg,
+    #     results_arm=results_arm,
+    #     results_acrobat=results_acrobat,
+    #     results_walker=results_walker,
+    #     results_upper_limb=results_upper_limb,
+    # )
+
+    # figure_article(
+    #     results_leg=results_leg,
+    #     results_arm=results_arm,
+    #     results_acrobat=results_acrobat,
+    #     results_walker=results_walker,
+    #     results_upper_limb=results_upper_limb,
+    # )
+    # figure_cumulative(
+    #     results_arm=results_arm,
+    #     results_acrobat=results_acrobat,
+    # )
+    results_leg.kinogram(num=0, nb_frames=10)
+    results_arm.kinogram(num=0, nb_frames=10)
+    results_acrobat.kinogram(num=0, nb_frames=10)
+    results_upper_limb.kinogram(num=0, nb_frames=10)
+    results_walker.kinogram(num=100, nb_frames=10)
+
+    # results_acrobat.plot_cost_vs_consistency(show=True, export=True)
 
     # results_leg.analyse(
     #     show=True,

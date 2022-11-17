@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 
 def main():
 
-    # ode_solver = OdeSolver.RK4(n_integration_steps=5)
-    ode_solver = OdeSolver.COLLOCATION()
+    ode_solver = OdeSolver.RK4(n_integration_steps=5)
+    # ode_solver = OdeSolver.RK4()
 
     n_threads = 32
     model_path = Models.ACROBAT.value
@@ -23,10 +23,15 @@ def main():
     )
 
     miller.ocp.add_plot_penalty(CostType.ALL)
+
+    print("number of states: ", miller.ocp.v.n_all_x)
+    print("number of controls: ", miller.ocp.v.n_all_u)
+
     miller.ocp.print(to_console=True, to_graph=False)
 
+
     solv = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
-    solv.set_maximum_iterations(10000)
+    solv.set_maximum_iterations(0)
     solv.set_linear_solver("ma57")
     solv.set_print_level(5)
     sol = miller.ocp.solve(solv)
@@ -34,6 +39,7 @@ def main():
     # --- Show results --- #
     print(sol.status)
     sol.print_cost()
+    sol.graphs(show_bounds=True)
 
     out = sol.integrate(
         shooting_type=Shooting.SINGLE,
@@ -50,7 +56,7 @@ def main():
     plt.legend()
     plt.show()
 
-    sol.graphs(show_bounds=True)
+    # sol.graphs(show_bounds=True)
 
 
 if __name__ == "__main__":

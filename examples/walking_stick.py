@@ -9,10 +9,10 @@ from robot_leg import HumanoidOCP, Models
 
 def main():
     n_shooting = 30
-    ode_solver = OdeSolver.RK4(n_integration_steps=5)
+    # ode_solver = OdeSolver.RK4(n_integration_steps=5)
     # ode_solver = OdeSolver.RK4()
     # ode_solver = OdeSolver.IRK()
-    # ode_solver = OdeSolver.COLLOCATION()
+    ode_solver = OdeSolver.COLLOCATION()
 
     n_threads = 8
     # for human in Humanoid2D:
@@ -30,6 +30,8 @@ def main():
 
     add_custom_plots(humanoid.ocp)
     humanoid.ocp.add_plot_penalty(CostType.ALL)
+    print("number of states: ", humanoid.ocp.v.n_all_x)
+    print("number of controls: ", humanoid.ocp.v.n_all_u)
     humanoid.ocp.print(to_console=True, to_graph=False)
 
     solv = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))

@@ -21,6 +21,7 @@ from bioptim import (
     InitialGuess,
     Dynamics,
     Node,
+    DefectType,
 )
 
 from ..models.utils import thorax_variables
@@ -84,7 +85,7 @@ class UpperLimbOCP:
         n_shooting: int = 50,
         phase_durations: float = 0.5,
         n_threads: int = 8,
-        ode_solver: OdeSolver = OdeSolver.RK4(),
+        ode_solver: OdeSolver = OdeSolver.COLLOCATION(defects_type=DefectType.IMPLICIT),
         rigidbody_dynamics: RigidBodyDynamics = RigidBodyDynamics.ODE,
         task: Tasks = Tasks.HEAD,
         use_sx: bool = False,

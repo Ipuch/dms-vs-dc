@@ -13,8 +13,8 @@ def main(nb_phases: int = 1):
         n_shooting = (20, 20)
         time = 0.25, 0.25
 
-    ode_solver = OdeSolver.RK4(n_integration_steps=5)
-    # ode_solver = OdeSolver.COLLOCATION()
+    # ode_solver = OdeSolver.RK4(n_integration_steps=5)
+    ode_solver = OdeSolver.COLLOCATION()
 
     n_threads = 8
     model_path = "../robot_leg/models/hexapod_leg.bioMod"
@@ -34,6 +34,9 @@ def main(nb_phases: int = 1):
 
     leg.ocp.add_plot_penalty(CostType.ALL)
     # humanoid.ocp.print()
+
+    print("number of states: ", leg.ocp.v.n_all_x)
+    print("number of controls: ", leg.ocp.v.n_all_u)
 
     solv = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
     solv.set_maximum_iterations(10000)
