@@ -33,7 +33,7 @@ segment Femur_Leg1
 	rtinmatrix 0
     rt 0 0 0 xyz 0.07425     -0.0325     -0.022
     rotations	z
-    ranges 	-pi/2 pi/2
+    ranges 	0 pi/2
     mass 0.0078
     inertia
         3.4616e-06 0 0
@@ -52,7 +52,7 @@ segment Shank_Leg1
 	rtinmatrix 0
     rt 0 0 0 xyz 0.0497293     0     0
     rotations	y
-    ranges 	-pi/2 pi/2
+    ranges 	-pi/2 0
     mass 0.07552
     inertia
         6.3445e-05	0	0
@@ -71,7 +71,7 @@ segment Foot_Leg1
 	rtinmatrix 0
     rt 0 pi/2 0 xyz 0.0654866 0		0
     rotations	y
-    ranges 	-pi/2 pi/2
+    ranges 	-pi/8 pi/2
     mass 0.07552
     inertia
         6.3445e-05	0	0

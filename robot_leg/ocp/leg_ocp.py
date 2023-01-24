@@ -62,7 +62,7 @@ class LegOCP:
             self.n_qdddot = self.n_qddot
             self.n_tau = self.biorbd_model[0].nbGeneralizedTorque()
 
-            self.tau_min, self.tau_init, self.tau_max = -10, 0, 10
+            self.tau_min, self.tau_init, self.tau_max = -0.5, 0, 0.5
             self.qddot_min, self.qddot_init, self.qddot_max = -100, 0, 100
             self.qdddot_min, self.qdddot_init, self.qdddot_max = -10000, 0, 1000
 
@@ -99,18 +99,19 @@ class LegOCP:
                         bounds=self.x_bounds[i],
                         noise_magnitude=1,
                         # noise_magnitude_bounds=0,
-                        n_shooting=self.n_shooting[i],
+                        n_shooting=self.n_shooting[i] + 1,
                         bound_push=0.1,
                         seed=seed,
                     )
                 )
+
                 self.un_init.add(
                     NoisedInitialGuess(
                         initial_guess=self.u_init[i],
                         bounds=self.u_bounds[i],
                         noise_magnitude=0.2,
                         # noise_magnitude=0,
-                        n_shooting=self.n_shooting[i] - 1,
+                        n_shooting=self.n_shooting[i],
                         bound_push=0.1,
                         seed=seed,
                     )
@@ -217,6 +218,12 @@ class LegOCP:
                 or self.rigidbody_dynamics == RigidBodyDynamics.DAE_FORWARD_DYNAMICS_JERK
                 else QAndQDotBounds(self.biorbd_model[i])
             )
+            self.x_bounds[i].max[self.n_q, 1] = 3
+            self.x_bounds[i].min[self.n_q, 1] = -3
+            self.x_bounds[i].max[self.n_q+1, 1] = 10
+            self.x_bounds[i].min[self.n_q+1, 1] = -3
+            self.x_bounds[i].max[self.n_q+2, 1] = 16
+            self.x_bounds[i].min[self.n_q+2, 1] = -16
             self.x_bounds[i].max[self.n_q : self.n_q + self.n_qdot, 0] = 0
             self.x_bounds[i].min[self.n_q : self.n_q + self.n_qdot, 0] = 0
             self.x_bounds[i].max[self.n_q : self.n_q + self.n_qdot, -1] = 0
