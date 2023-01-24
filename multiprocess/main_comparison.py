@@ -90,7 +90,7 @@ def main(
         OdeSolver.COLLOCATION(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
         OdeSolver.COLLOCATION(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
         OdeSolver.RK4(n_integration_steps=5),
-        OdeSolver.RK8(n_integration_steps=2),
+        # OdeSolver.RK8(n_integration_steps=2),
         # # OdeSolver.CVODES(),
         OdeSolver.IRK(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
         # OdeSolver.IRK(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
@@ -165,9 +165,9 @@ if __name__ == "__main__":
         model=Models.LEG,
         iterations=iteration,
         print_level=5,
-        ignore_already_run=True,
+        ignore_already_run=False,
         show_optim=False,
-        seed_start=30,
+        seed_start=0,
         calls=100,
     )
     # main(

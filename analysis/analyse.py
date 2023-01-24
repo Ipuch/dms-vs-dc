@@ -905,7 +905,7 @@ class ResultsAnalyse:
         """
 
         # dyn = [i for i in df_results["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
-        dyn = self.df["grps"].unique().tolist()
+        dyn = self.df["ode_solver_defects_labels"].unique().tolist()
         grps = dyn
 
         fig = make_subplots(rows=1, cols=2)
@@ -996,7 +996,7 @@ class ResultsAnalyse:
         """
 
         # dyn = [i for i in self.df["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
-        dyn = self.df["grps"].unique().tolist()
+        dyn = self.df["ode_solver_defects_labels"].unique().tolist()
         grps = dyn
 
         fig = make_subplots(rows=1, cols=2, subplot_titles=["translation error", "rotation error"])
@@ -1097,7 +1097,7 @@ class ResultsAnalyse:
         """
 
         # dyn = [i for i in self.df["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
-        dyn = self.df["grps"].unique().tolist()
+        dyn = self.df["ode_solver_defects_labels"].unique().tolist()
         grps = dyn
 
         fig = make_subplots(rows=1, cols=1)
@@ -1167,7 +1167,7 @@ class ResultsAnalyse:
         """
 
         # dyn = [i for i in self.df["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
-        dyn = self.df["grps"].unique().tolist()
+        dyn = self.df["ode_solver_defects_labels"].unique().tolist()
         grps = dyn
 
         fig = make_subplots(rows=1, cols=1)
