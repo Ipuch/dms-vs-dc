@@ -28,6 +28,7 @@ from bioptim import (
     MultinodeConstraintFcn,
     MultinodeConstraintList,
     NoisedInitialGuess,
+    BiorbdModel,
 )
 
 
@@ -81,14 +82,14 @@ class HumanoidOcpMultiPhase:
         if biorbd_model_path is not None:
             if nb_phases == 1:
                 self.biorbd_model = (
-                    (biorbd.Model(biorbd_model_path),)
+                    (BiorbdModel(biorbd_model_path),)
                     if isinstance(biorbd_model_path, str)
-                    else (biorbd.Model(biorbd_model_path[0]),)
+                    else (BiorbdModel(biorbd_model_path[0]),)
                 )
                 self.n_shooting = (n_shooting,) if isinstance(n_shooting, int) else (n_shooting[0],)
                 self.phase_time = (phase_time,) if isinstance(phase_time, float) else (phase_time[0],)
             else:
-                self.biorbd_model = biorbd.Model(biorbd_model_path[0]), biorbd.Model(biorbd_model_path[1])
+                self.biorbd_model = BiorbdModel(biorbd_model_path[0]), BiorbdModel(biorbd_model_path[1])
                 self.n_shooting = n_shooting, n_shooting if isinstance(n_shooting, int) else n_shooting
                 self.phase_time = phase_time, phase_time if isinstance(phase_time, float) else phase_time
 
@@ -96,11 +97,11 @@ class HumanoidOcpMultiPhase:
             self._set_knee()
             self._set_shoulder()
 
-            self.n_q = self.biorbd_model[0].nbQ()
-            self.n_qdot = self.biorbd_model[0].nbQdot()
-            self.n_qddot = self.biorbd_model[0].nbQddot()
+            self.n_q = self.biorbd_model[0].nb_q
+            self.n_qdot = self.biorbd_model[0].nb_qdot
+            self.n_qddot = self.biorbd_model[0].nb_qddot
             self.n_qdddot = self.n_qddot
-            self.n_tau = self.biorbd_model[0].nbGeneralizedTorque()
+            self.n_tau = self.biorbd_model[0].nb_tau
 
             self.tau_min, self.tau_init, self.tau_max = -500, 0, 500
             self.qddot_min, self.qddot_init, self.qddot_max = -1000, 0, 1000
@@ -152,7 +153,7 @@ class HumanoidOcpMultiPhase:
                         initial_guess=self.x_init[0],
                         bounds=self.x_bounds[0],
                         noise_magnitude=x_noise_magnitude,
-                        n_shooting=self.n_shooting[0],
+                        n_shooting=self.n_shooting[0] + 1,
                         bound_push=0.1,
                         seed=seed,
                     )
@@ -165,7 +166,7 @@ class HumanoidOcpMultiPhase:
                         initial_guess=self.u_init[0],
                         bounds=self.u_bounds[0],
                         noise_magnitude=u_noise_magnitude,
-                        n_shooting=self.n_shooting[0] - 1,
+                        n_shooting=self.n_shooting[0],
                         bound_push=0.1,
                         seed=seed,
                     )
@@ -192,24 +193,24 @@ class HumanoidOcpMultiPhase:
 
     def _set_head(self):
         self.has_head = False
-        for i in range(self.biorbd_model[0].nbSegment()):
-            seg = self.biorbd_model[0].segment(i)
+        for i in range(self.biorbd_model[0].nb_segments):
+            seg = self.biorbd_model[0].model.segment(i)
             if seg.name().to_string() == "Head":
                 self.has_head = True
                 break
 
     def _set_knee(self):
         self.has_knee = False
-        for i in range(self.biorbd_model[0].nbSegment()):
-            seg = self.biorbd_model[0].segment(i)
+        for i in range(self.biorbd_model[0].nb_segments):
+            seg = self.biorbd_model[0].model.segment(i)
             if seg.name().to_string() == "RShank":
                 self.has_knee = True
                 break
 
     def _set_shoulder(self):
         self.has_shoulder = False
-        for i in range(self.biorbd_model[0].nbSegment()):
-            seg = self.biorbd_model[0].segment(i)
+        for i in range(self.biorbd_model[0].nb_segments):
+            seg = self.biorbd_model[0].model.segment(i)
             if seg.name().to_string() == "RArm":
                 self.has_shoulder = True
                 break
@@ -365,28 +366,30 @@ class HumanoidOcpMultiPhase:
 
         idx_q = [0, 1, 2]
         idx_q = idx_q + [3] if self.has_head else idx_q
-        idx_qdot = [i + self.biorbd_model[0].nbQ() for i in idx_q]
+        idx_qdot = [i + self.biorbd_model[0].nb_q for i in idx_q]
         idx = idx_q + idx_qdot
 
         if self.nb_phases == 2:
-            idx_cyclic = [i for i in range(self.biorbd_model[0].nbQ() * 2) if i not in idx]
+            idx_cyclic = [i for i in range(self.biorbd_model[0].nb_q * 2) if i not in idx]
             self.multinode_constraints.add(
-                MultinodeConstraintFcn.EQUALITY,
+                MultinodeConstraintFcn.STATES_EQUALITY,
                 index=idx_cyclic,
                 phase_first_idx=0,
                 phase_second_idx=1,
                 first_node=Node.END,
                 second_node=Node.START,
                 weight=1e5,
+                key="all",
             )
             self.multinode_constraints.add(
-                MultinodeConstraintFcn.EQUALITY,
+                MultinodeConstraintFcn.STATES_EQUALITY,
                 index=idx_cyclic,
                 phase_first_idx=0,
                 phase_second_idx=1,
                 first_node=Node.START,
                 second_node=Node.END,
                 weight=1e5,
+                key="all",
             )
             self.multinode_constraints.add(
                 MultinodeConstraintFcn.COM_EQUALITY,

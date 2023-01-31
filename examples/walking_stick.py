@@ -63,10 +63,10 @@ def main():
 
 
 def plot_com(x, nlp):
-    com_func = biorbd.to_casadi_func("CoMPlot", nlp.model.com, nlp.states["q"].mx, expand=False)
+    com_func = biorbd.to_casadi_func("CoMPlot", nlp.model.model.CoM, nlp.states["q"].mx, expand=False)
     com_dot_func = biorbd.to_casadi_func(
         "Compute_CoM",
-        nlp.model.comdot,
+        nlp.model.model.CoMdot,
         nlp.states["q"].mx,
         nlp.states["qdot"].mx,
         expand=False,
@@ -85,7 +85,7 @@ def plot_contact_acceleration(x, u, nlp):
     qddot = nlp.states["qddot"] if "qddot" in nlp.states else nlp.controls["qddot"]
     acc_x = biorbd.to_casadi_func(
         "acc_0",
-        nlp.model.rigidContactAcceleration(nlp.states["q"].mx, nlp.states["qdot"].mx, qddot.mx, 0).to_mx(),
+        nlp.model.model.rigidContactAcceleration(nlp.states["q"].mx, nlp.states["qdot"].mx, qddot.mx, 0).to_mx(),
         nlp.states["q"].mx,
         nlp.states["qdot"].mx,
         qddot.mx,
