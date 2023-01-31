@@ -1,7 +1,6 @@
 from enum import Enum
 
 import biorbd_casadi as biorbd
-import biorbd as brd
 import numpy as np
 from scipy import interpolate
 from bioptim import (
@@ -22,6 +21,7 @@ from bioptim import (
     BiMappingList,
     MultinodeConstraintList,
     RigidBodyDynamics,
+    BiorbdModel,
 )
 
 class MillerDynamics(Enum):
@@ -135,12 +135,12 @@ class MillerOcpOnePhase:
 
         if biorbd_model_path is not None:
 
-            self.biorbd_model = (biorbd.Model(biorbd_model_path),)
+            self.biorbd_model = (BiorbdModel(biorbd_model_path),)
             self.rigidbody_dynamics = rigidbody_dynamics
 
-            self.n_q = self.biorbd_model[0].nbQ()
-            self.n_qdot = self.biorbd_model[0].nbQdot()
-            self.nb_root = self.biorbd_model[0].nbRoot()
+            self.n_q = self.biorbd_model[0].nb_q
+            self.n_qdot = self.biorbd_model[0].nb_qdot
+            self.nb_root = self.biorbd_model[0].nb_root
 
             if (
                 self.rigidbody_dynamics == MillerDynamics.IMPLICIT
@@ -148,20 +148,20 @@ class MillerOcpOnePhase:
                 or self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK
                 or self.rigidbody_dynamics == MillerDynamics.ROOT_IMPLICIT_QDDDOT
             ):
-                self.n_qddot = self.biorbd_model[0].nbQddot()
+                self.n_qddot = self.biorbd_model[0].nb_qddot
             elif (
                 self.rigidbody_dynamics == RigidBodyDynamics.ODE
                 or self.rigidbody_dynamics == MillerDynamics.ROOT_EXPLICIT
             ):
-                self.n_qddot = self.biorbd_model[0].nbQddot() - self.biorbd_model[0].nbRoot()
+                self.n_qddot = self.biorbd_model[0].nb_qddot - self.biorbd_model[0].nb_root
 
-            self.n_tau = self.biorbd_model[0].nbGeneralizedTorque() - self.biorbd_model[0].nbRoot()
+            self.n_tau = self.biorbd_model[0].nb_tau - self.biorbd_model[0].nb_root
 
             if (
                 self.rigidbody_dynamics == RigidBodyDynamics.DAE_INVERSE_DYNAMICS_JERK
                 or self.rigidbody_dynamics == MillerDynamics.ROOT_IMPLICIT_QDDDOT
             ):
-                self.n_qdddot = self.biorbd_model[0].nbQddot()
+                self.n_qdddot = self.biorbd_model[0].nb_qddot
 
             self.tau_min, self.tau_init, self.tau_max = -100, 0, 100
             self.tau_hips_min, self.tau_hips_init, self.tau_hips_max = (

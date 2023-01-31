@@ -23,6 +23,7 @@ from bioptim import (
     PhaseTransitionList,
     RigidBodyDynamics,
     NoisedInitialGuess,
+    BiorbdModel,
 )
 
 
@@ -54,13 +55,13 @@ class LegOCP:
             self.n_shooting = [n_shooting] if isinstance(n_shooting, int) else n_shooting
             self.phase_time = phase_time
             self.n_phase = 1 if isinstance(self.n_shooting, int) else len(self.n_shooting)
-            self.biorbd_model = [biorbd.Model(biorbd_model_path) for _ in range(self.n_phase)]
+            self.biorbd_model = [BiorbdModel(biorbd_model_path) for _ in range(self.n_phase)]
 
-            self.n_q = self.biorbd_model[0].nbQ()
-            self.n_qdot = self.biorbd_model[0].nbQdot()
-            self.n_qddot = self.biorbd_model[0].nbQddot()
+            self.n_q = self.biorbd_model[0].nb_q
+            self.n_qdot = self.biorbd_model[0].nb_qdot
+            self.n_qddot = self.biorbd_model[0].nb_qddot
             self.n_qdddot = self.n_qddot
-            self.n_tau = self.biorbd_model[0].nbGeneralizedTorque()
+            self.n_tau = self.biorbd_model[0].nb_tau
 
             self.tau_min, self.tau_init, self.tau_max = -0.5, 0, 0.5
             self.qddot_min, self.qddot_init, self.qddot_max = -100, 0, 100

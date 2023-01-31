@@ -22,6 +22,7 @@ from bioptim import (
     Dynamics,
     Node,
     DefectType,
+    BiorbdModel,
 )
 
 from ..models.utils import thorax_variables
@@ -127,16 +128,15 @@ class UpperLimbOCP:
 
         if biorbd_model_path is not None:
 
-            self.biorbd_model = biorbd.Model(biorbd_model_path)
-            self.marker_labels = [m.to_string() for m in self.biorbd_model.markerNames()]
+            self.biorbd_model = BiorbdModel(biorbd_model_path)
+            self.marker_labels = self.biorbd_model.marker_names
             self.rigidbody_dynamics = rigidbody_dynamics
 
-            self.n_q = self.biorbd_model.nbQ()
-            self.n_qdot = self.biorbd_model.nbQdot()
-            self.nb_root = self.biorbd_model.nbRoot()
-
-            self.n_tau = self.biorbd_model.nbGeneralizedTorque() - self.biorbd_model.nbRoot()
-            self.n_mus = self.biorbd_model.nbMuscleTotal()
+            self.n_q = self.biorbd_model.nb_q
+            self.n_qdot = self.biorbd_model.nb_qdot
+            self.nb_root = self.biorbd_model.nb_root
+            self.n_tau = self.biorbd_model.nb_tau - self.biorbd_model.nb_root
+            self.n_mus = self.biorbd_model.nb_muscles
 
             self.tau_min, self.tau_init, self.tau_max = -50, 0, 50
             self.muscle_min, self.muscle_max, self.muscle_init = 0, 1, 0.10
@@ -155,7 +155,7 @@ class UpperLimbOCP:
 
             self._get_experimental_data()
             # reload it to get the new thorax values
-            self.biorbd_model = biorbd.Model(biorbd_model_path)
+            self.biorbd_model = BiorbdModel(biorbd_model_path)
 
             self._set_boundary_conditions()
             self._set_initial_guesses()
@@ -271,9 +271,9 @@ class UpperLimbOCP:
         self.x_init_ref = np.concatenate([q_ref[6:, :], qdot_ref[6:, :]])  # without floating base
         self.u_init_ref = tau_ref[6:, :]
 
-        nb_q = biorbd_model.nb_q()
-        nb_qdot = biorbd_model.nb_qdot()
-        if biorbd_model.nb_quaternions() > 0:
+        nb_q = biorbd_model.nbQ()
+        nb_qdot = biorbd_model.nbQdot()
+        if biorbd_model.nbQuat() > 0:
             x_init_quat = np.vstack((np.zeros((nb_q, self.n_shooting + 1)), np.ones((nb_qdot, self.n_shooting + 1))))
             for i in range(self.n_shooting + 1):
                 x_quat_shoulder = eul2quat(self.x_init_ref[5:8, i])
@@ -366,7 +366,7 @@ class UpperLimbOCP:
             x_init_linear[i, :] = np.linspace(self.x_init_ref[i, 0], self.x_init_ref[i, -1], self.n_shooting + 1)
 
         self.x_init = InitialGuess(x_init_linear, interpolation=InterpolationType.EACH_FRAME)
-        self.u_init = InitialGuess([self.tau_init] * self.n_tau + [self.muscle_init] * self.biorbd_model.nbMuscles())
+        self.u_init = InitialGuess([self.tau_init] * self.n_tau + [self.muscle_init] * self.biorbd_model.nb_muscles)
         # self.u_init = InitialGuess(self.u_init_ref, interpolation=InterpolationType.EACH_FRAME)
 
     def _set_boundary_conditions(self):
@@ -384,7 +384,7 @@ class UpperLimbOCP:
         self.x_bounds.max[: self.n_q, -1] = self.x_init_ref[: self.n_q, -1] + x_slack_end
 
         # norm of the quaternion should be 1 at the start and at the end
-        if self.biorbd_model.nbQuat() > 0:
+        if self.biorbd_model.nb_quaternions > 0:
             self.x_bounds.min[5:8, 0] = self.x_init_ref[5:8, 0]
             self.x_bounds.max[5:8, 0] = self.x_init_ref[5:8, 0]
             self.x_bounds.min[5:8, -1] = self.x_init_ref[5:8, -1]
@@ -395,18 +395,18 @@ class UpperLimbOCP:
             self.x_bounds.min[10, -1] = self.x_init_ref[10, -1]
             self.x_bounds.max[10, -1] = self.x_init_ref[10, -1]
 
-        self.x_bounds.min[self.n_q :, 0] = [-1e-3] * self.biorbd_model.nbQdot()
-        self.x_bounds.max[self.n_q :, 0] = [1e-3] * self.biorbd_model.nbQdot()
-        self.x_bounds.min[self.n_q :, -1] = [-5e-1] * self.biorbd_model.nbQdot()
-        self.x_bounds.max[self.n_q :, -1] = [5e-1] * self.biorbd_model.nbQdot()
+        self.x_bounds.min[self.n_q :, 0] = [-1e-3] * self.biorbd_model.nb_qdot
+        self.x_bounds.max[self.n_q :, 0] = [1e-3] * self.biorbd_model.nb_qdot
+        self.x_bounds.min[self.n_q :, -1] = [-5e-1] * self.biorbd_model.nb_qdot
+        self.x_bounds.max[self.n_q :, -1] = [5e-1] * self.biorbd_model.nb_qdot
 
-        if self.biorbd_model.nbQuat() > 0:
+        if self.biorbd_model.nb_quaternions > 0:
             self.x_bounds.min[8:10, 1], self.x_bounds.min[10, 1] = self.x_bounds.min[9:11, 1], -1
             self.x_bounds.max[8:10, 1], self.x_bounds.max[10, 1] = self.x_bounds.max[9:11, 1], 1
 
         self.u_bounds.add(
-            [self.tau_min] * self.n_tau + [self.muscle_min] * self.biorbd_model.nbMuscleTotal(),
-            [self.tau_max] * self.n_tau + [self.muscle_max] * self.biorbd_model.nbMuscleTotal(),
+            [self.tau_min] * self.n_tau + [self.muscle_min] * self.biorbd_model.nb_muscles,
+            [self.tau_max] * self.n_tau + [self.muscle_max] * self.biorbd_model.nb_muscles,
         )
         self.u_bounds[0][5:8] = 0
         self.u_bounds[0][5:8] = 0

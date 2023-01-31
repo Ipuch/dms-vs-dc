@@ -1,6 +1,5 @@
 from bioptim import OdeSolver, CostType, RigidBodyDynamics, Solver, DefectType, Shooting, SolutionIntegrator
 from transcriptions import MillerOcpOnePhase, Models
-import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -30,9 +29,10 @@ def main():
     miller.ocp.print(to_console=True, to_graph=False)
 
     solv = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
-    solv.set_maximum_iterations(0)
+    solv.set_maximum_iterations(1000)
     solv.set_linear_solver("ma57")
     solv.set_print_level(5)
+
     sol = miller.ocp.solve(solv)
 
     # --- Show results --- #

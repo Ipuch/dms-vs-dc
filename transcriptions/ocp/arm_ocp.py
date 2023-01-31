@@ -25,6 +25,7 @@ from bioptim import (
     RigidBodyDynamics,
     NoisedInitialGuess,
     PenaltyNodeList,
+    BiorbdModel,
 )
 
 
@@ -52,15 +53,15 @@ class ArmOCP:
         self.rigidbody_dynamics = rigidbody_dynamics
 
         if biorbd_model_path is not None:
-            self.biorbd_model = biorbd.Model(biorbd_model_path)
+            self.biorbd_model = BiorbdModel(biorbd_model_path)
             self.n_shooting = n_shooting
             self.phase_time = phase_time
 
-            self.n_q = self.biorbd_model.nbQ()
-            self.n_qdot = self.biorbd_model.nbQdot()
-            self.n_qddot = self.biorbd_model.nbQddot()
+            self.n_q = self.biorbd_model.nb_q
+            self.n_qdot = self.biorbd_model.nb_qdot
+            self.n_qddot = self.biorbd_model.nb_qddot
             self.n_qdddot = self.n_qddot
-            self.n_tau = self.biorbd_model.nbGeneralizedTorque()
+            self.n_tau = self.biorbd_model.nb_tau
 
             self.tau_min, self.tau_init, self.tau_max = -100, 0, 50
             self.qddot_min, self.qddot_init, self.qddot_max = -100, 0, 100
@@ -97,7 +98,7 @@ class ArmOCP:
                     initial_guess=self.x_init[0],
                     bounds=self.x_bounds[0],
                     noise_magnitude=0.5,
-                    n_shooting=self.n_shooting,
+                    n_shooting=self.n_shooting + 1,
                     interpolation=InterpolationType.EACH_FRAME,
                     bound_push=0.1,
                     seed=seed,
@@ -108,7 +109,7 @@ class ArmOCP:
                     initial_guess=self.u_init[0],
                     bounds=self.u_bounds[0],
                     noise_magnitude=0.5,
-                    n_shooting=self.n_shooting - 1,
+                    n_shooting=self.n_shooting,
                     bound_push=0.1,
                     seed=seed,
                 )
@@ -171,8 +172,8 @@ class ArmOCP:
             The z-axis in global frame of the last segment
             """
 
-            rotation_matrix = all_pn.nlp.model.global_homogeneous_matrices(
-                all_pn.nlp.states["q"].cx, all_pn.nlp.model.nb_segments() - 1
+            rotation_matrix = all_pn.nlp.model.homogeneous_matrices_in_global(
+                all_pn.nlp.states["q"].cx, all_pn.nlp.model.nb_segments - 1
             ).to_mx()
 
             return vertcat(

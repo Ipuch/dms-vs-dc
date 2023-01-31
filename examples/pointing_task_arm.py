@@ -6,11 +6,16 @@ import matplotlib.pyplot as plt
 
 def main():
     n_shooting = 50
+
+    # ode solvers to try out
+    # uncomment the one you want to use
+
     # ode_solver = OdeSolver.RK4(n_integration_steps=5)
     # ode_solver = OdeSolver.IRK(polynomial_degree=4, defects_type=DefectType.IMPLICIT)
     # ode_solver = OdeSolver.COLLOCATION(polynomial_degree=4, defects_type=DefectType.IMPLICIT)
     ode_solver = OdeSolver.RK4()
     # ode_solver = OdeSolver.COLLOCATION(defects_type=DefectType.IMPLICIT)
+
     time = 0.25
     n_threads = 8
     model_path = "../transcriptions/models/robot_arm.bioMod"
@@ -24,14 +29,12 @@ def main():
         rigidbody_dynamics=RigidBodyDynamics.ODE,
         n_threads=n_threads,
         seed=0,
-        # start_point=np.array([0.5, -0.02, 0.1]),
         end_point=np.array([0.63, 0, -0.1]),
     )
     print("number of states: ", arm.ocp.v.n_all_x)
     print("number of controls: ", arm.ocp.v.n_all_u)
 
     arm.ocp.add_plot_penalty(CostType.ALL)
-    # humanoid.ocp.print()
 
     solv = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
     solv.set_maximum_iterations(1000)
