@@ -24,13 +24,13 @@ and includes scripts, models and materials to reproduce figures and results of t
 | Type | Status |
 |---|---|
 | License | <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-success" alt="License"/></a> |
-| Zenodo  | [![DOI](https://zenodo.org/badge/XXXX.svg)](https://zenodo.org/badge/latestdoi/XXXX) |
+| Zenodo  | [![DOI](https://zenodo.org/badge/7591518.svg)](https://zenodo.org/badge/latestdoi/7591518) |
 
 # Requirements
 In order to run the code, you need to install the following packages from pyomeca:
 ```bash
 conda install -c conda-forge biorbd=1.9.9
-conda install -c conda-forge bioviz=2.1.7
+conda install -c conda-forge bioviz=2.3.0
 conda install -c conda-forge bioptim=3.0.0
 ```
 
