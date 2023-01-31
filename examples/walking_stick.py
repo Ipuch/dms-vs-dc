@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import biorbd_casadi as biorbd
-from bioptim import OdeSolver, CostType, RigidBodyDynamics, Solver, DefectType, PlotType, SolutionIntegrator, Shooting
+from bioptim import OdeSolver, CostType, Solver, PlotType, SolutionIntegrator, Shooting
 
 from transcriptions import HumanoidOCP, Models
 

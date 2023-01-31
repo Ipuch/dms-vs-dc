@@ -4,7 +4,7 @@
 import os
 
 
-from multiprocessing import Pool, cpu_count
+from multiprocessing import cpu_count
 from datetime import date
 from pathlib import Path
 import pandas as pd
@@ -27,9 +27,7 @@ def main(
 ):
 
     if model == Models.LEG:
-        # n_shooting = [(20, 20)]
         n_shooting = [20]
-        # n_shooting = [5, 10, 15, 25]
         run_ocp = RunOCP(
             ocp_class=LegOCP,
             show_optim=show_optim,
@@ -40,8 +38,6 @@ def main(
         running_function = run_ocp.main
     elif model == Models.ARM:
         n_shooting = [50]
-        # n_shooting = [5, 10, 15, 20, 25, 30, 40, 45, 50]
-        # n_shooting = [10, 15, 20, 25, 30, 40, 45, 50]
         run_ocp = RunOCP(
             ocp_class=ArmOCP,
             show_optim=show_optim,
@@ -90,10 +86,7 @@ def main(
         OdeSolver.COLLOCATION(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
         OdeSolver.COLLOCATION(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
         OdeSolver.RK4(n_integration_steps=5),
-        # OdeSolver.RK8(n_integration_steps=2),
-        # # OdeSolver.CVODES(),
         OdeSolver.IRK(defects_type=DefectType.EXPLICIT, polynomial_degree=4),
-        # OdeSolver.IRK(defects_type=DefectType.IMPLICIT, polynomial_degree=4),
     ]
     if model != Models.ACROBAT:
         if model == Models.HUMANOID_10DOF:  # no implicit
@@ -105,9 +98,6 @@ def main(
     Date = date.today().strftime("%d-%m-%y")
     out_path = Path(
         Path(__file__).parent.__str__()
-        # + f"/../../dms-vs-dc-results/{model.name}_{Date}_2"
-        # + f"/../../dms-vs-dc-results/{model.name}_07-10-22_2"
-        # + f"/../../dms-vs-dc-results/{model.name}_21-10-22_2"
         + f"/../../dms-vs-dc-results/{model.name}_2023"
     )
     try:
@@ -117,8 +107,8 @@ def main(
 
     # --- Generate the parameters --- #
     n_thread = 8
-    # n_thread = 4
     #  n_thread = 32
+
     param = dict(
         model_str=[
             model.value,
@@ -159,7 +149,6 @@ def main(
 
 
 if __name__ == "__main__":
-    # iteration = 0
     iteration = 3000
     main(
         model=Models.LEG,
@@ -170,51 +159,50 @@ if __name__ == "__main__":
         seed_start=0,
         calls=100,
     )
-    # main(
-    #     model=Models.ARM,
-    #     iterations=iteration,
-    #     print_level=5,
-    #     ignore_already_run=True,
-    #     show_optim=False,
-    #     seed_start=30,
-    #     calls=0,
-    # )
-    # main(
-    #     model=Models.ACROBAT,
-    #     iterations=iteration,
-    #     print_level=5,
-    #     ignore_already_run=True,
-    #     show_optim=False,
-    #     seed_start=30,
-    #     calls=0,
-    # )
-
-    # main(
-    #     model=Models.HUMANOID_10DOF,
-    #     iterations=iteration,
-    #     print_level=5,
-    #     ignore_already_run=True,
-    #     show_optim=False,
-    #     seed_start=0,
-    #     calls=100,
-    # )
-    # main(
-    #     model=Models.UPPER_LIMB_XYZ_VARIABLES,
-    #     iterations=500,
-    #     print_level=5,
-    #     ignore_already_run=True,
-    #     show_optim=False,
-    #     seed_start=0,
-    #     calls=20,
-    # )
-    # main(
-    #     model=Models.UPPER_LIMB_XYZ_VARIABLES,
-    #     iterations=200,
-    #     print_level=5,
-    #     ignore_already_run=True,
-    #     show_optim=False,
-    #     seed_start=35,
-    #     calls=6,
-    # )
+    main(
+        model=Models.ARM,
+        iterations=iteration,
+        print_level=5,
+        ignore_already_run=True,
+        show_optim=False,
+        seed_start=0,
+        calls=100,
+    )
+    main(
+        model=Models.ACROBAT,
+        iterations=iteration,
+        print_level=5,
+        ignore_already_run=True,
+        show_optim=False,
+        seed_start=0,
+        calls=100,
+    )
+    main(
+        model=Models.HUMANOID_10DOF,
+        iterations=iteration,
+        print_level=5,
+        ignore_already_run=True,
+        show_optim=False,
+        seed_start=0,
+        calls=100,
+    )
+    main(
+        model=Models.UPPER_LIMB_XYZ_VARIABLES,
+        iterations=500,
+        print_level=5,
+        ignore_already_run=True,
+        show_optim=False,
+        seed_start=0,
+        calls=100,
+    )
+    main(
+        model=Models.UPPER_LIMB_XYZ_VARIABLES,
+        iterations=200,
+        print_level=5,
+        ignore_already_run=True,
+        show_optim=False,
+        seed_start=0,
+        calls=100,
+    )
 
 
