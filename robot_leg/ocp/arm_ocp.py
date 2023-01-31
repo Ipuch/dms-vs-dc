@@ -171,8 +171,8 @@ class ArmOCP:
             The z-axis in global frame of the last segment
             """
 
-            rotation_matrix = all_pn.nlp.model.globalJCS(
-                all_pn.nlp.states["q"].cx, all_pn.nlp.model.nbSegment() - 1
+            rotation_matrix = all_pn.nlp.model.global_homogeneous_matrices(
+                all_pn.nlp.states["q"].cx, all_pn.nlp.model.nb_segments() - 1
             ).to_mx()
 
             return vertcat(

@@ -726,7 +726,7 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
                 key=f"cost{i}",
                 row=idx_rows[i],
                 col=idx_cols[i],
-                # title_str=df_results[f"cost{i}_name"][0] + " " + key,
+                # title_str=df_results[f"cost{i}name"][0] + " " + key,
                 ylabel="objective value",
             )
 
@@ -805,10 +805,10 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
         """
         if "tau" in key:
             nq = 9
-            list_dof = [dof.to_string() for dof in self.model.nameDof()][6:]
+            list_dof = [dof.to_string() for dof in self.model.name_dof()][6:]
         else:
-            nq = self.model.nbQ()
-            list_dof = [dof.to_string() for dof in self.model.nameDof()]
+            nq = self.model.nb_q()
+            list_dof = [dof.to_string() for dof in self.model.name_dof()]
 
         rows, cols = generate_windows_size(nq) if row_col is None else row_col
 

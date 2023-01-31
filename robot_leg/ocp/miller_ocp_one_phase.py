@@ -22,18 +22,7 @@ from bioptim import (
     BiMappingList,
     MultinodeConstraintList,
     RigidBodyDynamics,
-    NoisedInitialGuess,
-    IntegralApproximation,
 )
-
-# from custom_dynamics.root_explicit_qddot_joint import root_explicit_dynamic, custom_configure_root_explicit
-# from custom_dynamics.root_implicit import root_implicit_dynamic, custom_configure_root_implicit
-# from custom_dynamics.implicit_dynamics_tau_driven_qdddot import (
-#     tau_implicit_qdddot_dynamic,
-#     custom_configure_tau_driven_implicit,
-# )
-# from custom_dynamics.root_implicit_qddot import root_implicit_qdddot_dynamic, custom_configure_root_implicit_qdddot
-
 
 class MillerDynamics(Enum):
     """

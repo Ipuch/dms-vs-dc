@@ -63,10 +63,10 @@ def main():
 
 
 def plot_com(x, nlp):
-    com_func = biorbd.to_casadi_func("CoMPlot", nlp.model.CoM, nlp.states["q"].mx, expand=False)
+    com_func = biorbd.to_casadi_func("CoMPlot", nlp.model.com, nlp.states["q"].mx, expand=False)
     com_dot_func = biorbd.to_casadi_func(
         "Compute_CoM",
-        nlp.model.CoMdot,
+        nlp.model.comdot,
         nlp.states["q"].mx,
         nlp.states["qdot"].mx,
         expand=False,
@@ -105,7 +105,7 @@ def plot_contact_acceleration(x, u, nlp):
 def add_custom_plots(ocp):
     for i, nlp in enumerate(ocp.nlp):
         ocp.add_plot(
-            "CoM",
+            "com",
             lambda t, x, u, p: plot_com(x, nlp),
             phase=i,
             legend=["CoMy", "Comz", "CoM_doty", "CoM_dotz"],

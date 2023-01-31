@@ -79,7 +79,7 @@ class LoadData:
     Attributes
     ----------
     model: biorbd.Model
-        The biorbd Model
+        The biorbd BioModel
     nb_q: int
         The number of generalized coordinates in the model
     nb_qdot: int

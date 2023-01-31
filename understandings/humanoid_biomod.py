@@ -407,4 +407,4 @@ print("hello")
 
 # Write the model and read back
 # biorbd.Writer().writeModel(lukas, "coucou.bioMod")
-# lukas_coucou = biorbd.Model("coucou.bioMod")
+# lukas_coucou = biorbd.BioModel("coucou.bioMod")

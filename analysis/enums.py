@@ -3,7 +3,8 @@ from pathlib import Path
 
 
 class ResultFolders(Enum):
-    LEG_100 = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "LEG_18_10_22_100"
+    # LEG_100 = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "LEG_18_10_22_100"
+    LEG_100 = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "LEG_2023_2"
     ARM_100 = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ARM_18_10_22_100"
     ACROBAT_100 = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "ACROBAT_18_10_22_100"
     WALKING_100 = Path(__file__).parent.parent.parent.__str__() + "/dms-vs-dc-results/" + "HUMANOID_10DOF_21-10-22_2"

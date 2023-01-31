@@ -271,9 +271,9 @@ class UpperLimbOCP:
         self.x_init_ref = np.concatenate([q_ref[6:, :], qdot_ref[6:, :]])  # without floating base
         self.u_init_ref = tau_ref[6:, :]
 
-        nb_q = biorbd_model.nbQ()
-        nb_qdot = biorbd_model.nbQdot()
-        if biorbd_model.nbQuat() > 0:
+        nb_q = biorbd_model.nb_q()
+        nb_qdot = biorbd_model.nb_qdot()
+        if biorbd_model.nb_quaternions() > 0:
             x_init_quat = np.vstack((np.zeros((nb_q, self.n_shooting + 1)), np.ones((nb_qdot, self.n_shooting + 1))))
             for i in range(self.n_shooting + 1):
                 x_quat_shoulder = eul2quat(self.x_init_ref[5:8, i])

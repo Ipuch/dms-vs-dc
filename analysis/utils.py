@@ -29,7 +29,7 @@ def compute_error_single_shooting(
     n_shooting : int
         Number of shooting points
     model : biorbd.Model
-        Model
+        BioModel
     q : np.ndarray
         ocp generalized coordinates
     q_integrated : np.ndarray
@@ -83,7 +83,7 @@ def compute_error_single_shooting_each_frame(
     n_shooting : int
         Number of shooting points
     model : biorbd.Model
-        Model
+        BioModel
     q : np.ndarray
         ocp generalized coordinates
     q_integrated : np.ndarray
@@ -288,7 +288,8 @@ def my_traces(
         )
 
     fig.update_traces(
-        jitter=0.8,  # add some jitter on points for better visibility
+        # jitter=0.8,  # add some jitter on points for better visibility
+        jitter=0.8,
         marker=dict(size=3),
         row=row,
         col=col,
@@ -327,7 +328,7 @@ def my_twokey_traces(
     title_str: str = None,
     ylog: bool = False,
     xlog: bool = False,
-    color: list = None,
+    colors: list = None,
     show_legend: bool = False,
 ):
     """
@@ -375,13 +376,17 @@ def my_twokey_traces(
 
     for ii, d in enumerate(dyn):
         # manage color
-        c = px.colors.hex_to_rgb(px.colors.qualitative.D3[ii % 9]) if color is None else color[ii]
+        c = (
+            px.colors.hex_to_rgb(px.colors.qualitative.D3[ii % 9])
+            if colors is None
+            else px.colors.hex_to_rgb(colors[ii])
+        )
         c = str(f"rgba({c[0]},{c[1]},{c[2]},0.5)")
-        c1 = px.colors.qualitative.D3[ii % 9] if color is None else px.colors.label_rgb(color[ii])
+        c1 = px.colors.qualitative.D3[ii % 9] if colors is None else colors[ii]
         fig.add_trace(
             go.Scatter(
-                x=df[key_x][df["grps"] == d],
-                y=df[key_y][df["grps"] == d],
+                x=df[key_x][df["ode_solver_defects_labels"] == d],
+                y=df[key_y][df["ode_solver_defects_labels"] == d],
                 name=d,
                 # boxpoints="all",
                 # width=0.4,
@@ -820,3 +825,5 @@ def get_all(df: DataFrame, dyn_label: str, data_key: str, key: str = "mean"):
         ]
     else:
         raise ValueError("key must be one of mean, max, min, std, ci_up, ci_low")
+
+

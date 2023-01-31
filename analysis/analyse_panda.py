@@ -127,7 +127,7 @@ df_results[["dynamics_type", "ode_solver", "status", "translation_error", "rotat
 # df_results["T1"] = None
 # df_results["T2"] = None
 
-# m = biorbd.Model(model.value[0])
+# m = biorbd.BioModel(model.value[0])
 # n_step = 5
 # N = 2
 # N_integrated = 2
@@ -149,9 +149,9 @@ df_results[["dynamics_type", "ode_solver", "status", "translation_error", "rotat
 #     #     qddot = stack_controls(row.controls, "qddot")
 #     #
 #     # elif row.rigidbody_dynamics == XX:
-#     #     qddot = np.zeros((m.nbQ(), N))
+#     #     qddot = np.zeros((m.nb_q(), N))
 #     #     for ii in range(N):
-#     #         qddot[:, ii] = m.ForwardDynamicsConstraintsDirect(q[:, ii], qdot[:, ii], tau[:, ii]).to_array()
+#     #         qddot[:, ii] = m.constrained_forward_dynamics(q[:, ii], qdot[:, ii], tau[:, ii]).to_array()
 #     #
 #     # elif (
 #     #     row.rigidbody_dynamics == XX:

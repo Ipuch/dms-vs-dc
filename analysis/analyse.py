@@ -81,7 +81,7 @@ class ResultsAnalyse:
 
         self.path_to_files = path_to_files
         self.model_path = model_path
-        # self.model = biorbd.Model(self.model_path)
+        # self.model = biorbd.BioModel(self.model_path)
 
         # create a subfolder of self.path_to_files to export figures and data
         self.path_to_figures = f"{self.path_to_files}/figures"
@@ -243,6 +243,20 @@ class ResultsAnalyse:
                 data["ode_solver_defects_labels"] = data["ode_solver_defects"].replace("_not_applicable", "").replace(
                     "_", " ").replace(" legendre 4", "").replace("RK4", "ERK4").replace("RK8", "ERK8")
 
+                # replace labels for ode solvers
+                if data["ode_solver_defects_labels"] == "ERK4 5 steps":
+                    data["ode_solver_defects_labels"] = r'$\text{ERK}$'
+                elif data["ode_solver_defects_labels"] == "ERK8":
+                    data["ode_solver_defects_labels"] = r'$\text{ERK8}$'
+                elif data["ode_solver_defects_labels"] == "IRK implicit":
+                    data["ode_solver_defects_labels"] = r'$\text{IRK}^{\text{ID}}$'
+                elif data["ode_solver_defects_labels"] == "IRK explicit":
+                    data["ode_solver_defects_labels"] = r'$\text{IRK}^{\text{FD}}$'
+                elif data["ode_solver_defects_labels"] == "COLLOCATION implicit":
+                    data["ode_solver_defects_labels"] = r'$\text{DC}^{\text{ID}}$'
+                elif data["ode_solver_defects_labels"] == "COLLOCATION explicit":
+                    data["ode_solver_defects_labels"] = r'$\text{DC}^{\text{FD}}$'
+
                 data["grps"] = f"{data['ode_solver'].__str__()}_{data['defects_type'].value}_{n_shooting}"
 
                 # remove element of the list[dict] data["detailed_cost"] if key name contains "ConstraintFcn"
@@ -262,7 +276,6 @@ class ResultsAnalyse:
         # rk4, rk8, irk explicit, irk implicit, collocation explicit, collocation implicit
         ode_solver_defects_list = [
             "RK4 5 steps_not_applicable",
-            "RK8 2 steps_not_applicable",
             "IRK legendre 4_explicit",
             "IRK legendre 4_implicit",
             "COLLOCATION legendre 4_explicit",
@@ -361,7 +374,9 @@ class ResultsAnalyse:
         """
         Prints some info about the dataframe and convergence of OCPs
         """
-
+        print("####################")
+        print("BioModel path: ", self.model_path)
+        print("####################")
         # Did everything converge ?
         a = len(self.df[self.df["status"] == 1])
         b = len(self.df)
@@ -382,6 +397,7 @@ class ResultsAnalyse:
                 number_of_ocp=b,
                 number_of_convergence=a,
                 grps=f,
+                median=round(sub_df["computation_time"].median(), 2),
             )
             df_dictionary = pd.DataFrame([data])
             self.convergence_rate = pd.concat([self.convergence_rate, df_dictionary], ignore_index=True)
@@ -402,6 +418,55 @@ class ResultsAnalyse:
         self.convergence_rate.sort_values(by=["n_shooting", "ode_solver_defects"], ascending=True, inplace=True)
         # reindex the dataframe
         self.convergence_rate = self.convergence_rate.reset_index(drop=True)
+
+        print("####################")
+
+        # compare implicit and explicit time medians
+        sub_df = self.df[self.df["ode_solver_defects_labels"] == r'$\text{DC}^{\text{ID}}$']
+        sub_df = sub_df[sub_df["status"] == 0]
+        median_DCID = sub_df["computation_time"].median()
+        max_DCID = sub_df["computation_time"].max()
+        min_DCID = sub_df["computation_time"].min()
+
+        sub_df = self.df[self.df["ode_solver_defects_labels"] == r'$\text{IRK}^{\text{ID}}$']
+        sub_df = sub_df[sub_df["status"] == 0]
+        median_IRKID = sub_df["computation_time"].median()
+        max_IRKID = sub_df["computation_time"].max()
+        min_IRKID = sub_df["computation_time"].min()
+
+        sub_df = self.df[self.df["ode_solver_defects_labels"] == r'$\text{IRK}^{\text{FD}}$']
+        sub_df = sub_df[sub_df["status"] == 0]
+        median_IRKFD = sub_df["computation_time"].median()
+        max_IRKFD = sub_df["computation_time"].max()
+        min_IRKFD = sub_df["computation_time"].min()
+
+        sub_df = self.df[self.df["ode_solver_defects_labels"] == r'$\text{DC}^{\text{FD}}$']
+        sub_df = sub_df[sub_df["status"] == 0]
+        median_DCFD = sub_df["computation_time"].median()
+        max_DCFD = sub_df["computation_time"].max()
+        min_DCFD = sub_df["computation_time"].min()
+
+        print(f"median computation time for DCID: {median_DCID}, (min: {min_DCID}, max: {max_DCID})")
+        print(f"median computation time for DCFD: {median_DCFD}, (min: {min_DCFD}, max: {max_DCFD})")
+        # print ratio
+        print(f"ratio DCID/DCFD: {median_DCID/median_DCFD}", f"ratio DCFD/DCID: {median_DCFD/median_DCID}")
+
+        print(f"median computation time for IRKID: {median_IRKID}, (min: {min_IRKID}, max: {max_IRKID})")
+        print(f"median computation time for IRKFD: {median_IRKFD}, (min: {min_IRKFD}, max: {max_IRKFD})")
+        # print ratio
+        print(f"ratio IRKID/IRKFD: {median_IRKID/median_IRKFD}", f"ratio IRKFD/IRKID: {median_IRKFD/median_IRKID}")
+
+        print("####################")
+
+        # fastest pb over slowest
+        sub_df = self.df[self.df["status"] == 0]
+        # the faster
+        print("Fastest OCP", sub_df[sub_df["computation_time"] == sub_df["computation_time"].min()])
+        # the slower
+        print("Slowest OCP", sub_df[sub_df["computation_time"] == sub_df["computation_time"].max()])
+        # the ratio
+        print(f"ratio fastest pb over slowest: {sub_df['computation_time'].max()/sub_df['computation_time'].min()}")
+
 
     def plot_convergence_rate(self, show: bool = True, export: bool = True, export_suffix: str = None):
         """
@@ -647,67 +712,8 @@ class ResultsAnalyse:
 
         import bioviz
 
-        biorbd_viz = bioviz.Viz(
-            model_path,
-            show_now=False,
-            show_meshes=True,
-            show_global_center_of_mass=False,
-            show_gravity_vector=False,
-            show_floor=False,
-            show_segments_center_of_mass=False,
-            show_global_ref_frame=False,
-            show_local_ref_frame=False,
-            show_markers=False,
-            show_muscles=False,
-            show_wrappings=False,
-            background_color=(1, 1, 1),
-            mesh_opacity=0.97,
-        )
-
-        biorbd_viz.resize(600, 900)
-
-        # Position camera
-        biorbd_viz.set_camera_position(-8.782458942185185, 0.486269131372712, 4.362010279585766)
-        biorbd_viz.set_camera_roll(90)
-        biorbd_viz.set_camera_zoom(0.308185240948253)
-        biorbd_viz.set_camera_focus_point(1.624007185850899, 0.009961251074366406, 1.940316420941989)
-
-        # print("roll")
-        # print(biorbd_viz.get_camera_roll())
-        # print("zoom")
-        # print(biorbd_viz.get_camera_zoom())
-        # print("position")
-        # print(biorbd_viz.get_camera_position())
-        # print("get_camera_focus_point")
-        # print(biorbd_viz.get_camera_focus_point())
-
-        q = self.df["q"].iloc[num]
-        biorbd_viz.load_movement(q)
-        biorbd_viz.exec()
-
-    def kinogram(self, num: int = 0, nb_frames: int = 5):
-        """
-        This method animates the motion with bioviz
-
-        Parameters
-        ----------
-        num: int
-        Number of the trial to be visualized
-        """
-        # Name of the model only the end of the path without extension
         s = self.model_path.split("/")[-1].split(".")[0]
 
-        print(self.df["filename"].iloc[num])
-        print(self.df["grps"].iloc[num])
-
-        model_path = self.df["model_path"].iloc[num]
-        p = Path(model_path[0] if isinstance(model_path, tuple) else model_path)
-        # verify if the path/file exists with pathlib
-        model_path = self.model_path if not p.exists() else p.__str__()
-
-        import bioviz
-
-        # Position camera
         if s == "hexapod_leg":
 
             b = bioviz.Viz(
@@ -725,6 +731,7 @@ class ResultsAnalyse:
                 show_wrappings=False,
                 background_color=(1, 1, 1),
                 mesh_opacity=0.97,
+                mesh_linewidth=5,
             )
             b.resize(1000, 1000)
             b.set_camera_roll(-82.89751054930615)
@@ -749,6 +756,7 @@ class ResultsAnalyse:
                 show_wrappings=False,
                 background_color=(1, 1, 1),
                 mesh_opacity=0.97,
+                mesh_linewidth=5,
             )
 
             b.resize(1000, 1000)
@@ -828,6 +836,177 @@ class ResultsAnalyse:
                 show_wrappings=False,
                 background_color=(1, 1, 1),
                 mesh_opacity=0.97,
+                mesh_linewidth=5,
+                contacts_size=0.04,
+            )
+
+            b.resize(1000, 1000)
+
+            b.set_camera_roll(-91.44517177211645)
+            b.set_camera_zoom(0.7961539827851234)
+            b.set_camera_position(4.639962934524132, 0.4405891958030146, 0.577705598983718)
+            b.set_camera_focus_point(-0.2828701273331326, -0.04065388066757992, 0.9759133347931428)
+
+        # print("roll")
+        # print(biorbd_viz.get_camera_roll())
+        # print("zoom")
+        # print(biorbd_viz.get_camera_zoom())
+        # print("position")
+        # print(biorbd_viz.get_camera_position())
+        # print("get_camera_focus_point")
+        # print(biorbd_viz.get_camera_focus_point())
+
+        q = self.df["q"].iloc[num]
+        b.load_movement(q)
+        b.exec()
+
+    def kinogram(self, num: int = 0, nb_frames: int = 5):
+        """
+        This method animates the motion with bioviz
+
+        Parameters
+        ----------
+        num: int
+        Number of the trial to be visualized
+        """
+        # Name of the model only the end of the path without extension
+        s = self.model_path.split("/")[-1].split(".")[0]
+
+        print(self.df["filename"].iloc[num])
+        print(self.df["grps"].iloc[num])
+
+        model_path = self.df["model_path"].iloc[num]
+        p = Path(model_path[0] if isinstance(model_path, tuple) else model_path)
+        # verify if the path/file exists with pathlib
+        model_path = self.model_path if not p.exists() else p.__str__()
+
+        import bioviz
+
+        # Position camera
+        if s == "hexapod_leg":
+
+            b = bioviz.Viz(
+                model_path,
+                show_now=False,
+                show_meshes=True,
+                show_global_center_of_mass=False,
+                show_gravity_vector=False,
+                show_floor=False,
+                show_segments_center_of_mass=False,
+                show_global_ref_frame=False,
+                show_local_ref_frame=False,
+                show_markers=False,
+                show_muscles=False,
+                show_wrappings=False,
+                background_color=(1, 1, 1),
+                mesh_opacity=0.97,
+                mesh_linewidth=5,
+            )
+            b.resize(1000, 1000)
+            b.set_camera_roll(-82.89751054930615)
+            b.set_camera_zoom(2.7649491449197656)
+            b.set_camera_position(1.266097531449429, -0.6523601622496974, 0.24962580067391163)
+            b.set_camera_focus_point(0.07447263939980919, 0.025078204682856153, -0.013568198245759833)
+
+        elif s == "robot_arm":
+
+            b = bioviz.Viz(
+                model_path,
+                show_now=False,
+                show_meshes=True,
+                show_global_center_of_mass=False,
+                show_gravity_vector=False,
+                show_floor=False,
+                show_segments_center_of_mass=False,
+                show_global_ref_frame=False,
+                show_local_ref_frame=False,
+                show_markers=True,
+                show_muscles=False,
+                show_wrappings=False,
+                background_color=(1, 1, 1),
+                mesh_opacity=0.97,
+                mesh_linewidth=5,
+            )
+
+            b.resize(1000, 1000)
+
+            b.set_q([-0.15, 0.24, -0.41, 0.21, 0, 0])
+            b.set_camera_roll(-84.5816885957667)
+            b.set_camera_zoom(2.112003880097381)
+            b.set_camera_position(1.9725681105744026, -1.3204979216430117, 0.35790018139336177)
+            b.set_camera_focus_point(-0.3283876664932833, 0.5733643134562766, 0.018451815011995998)
+
+        elif s == "acrobat":
+
+            b = bioviz.Viz(
+                model_path,
+                show_now=False,
+                show_meshes=True,
+                show_global_center_of_mass=False,
+                show_gravity_vector=False,
+                show_floor=False,
+                show_segments_center_of_mass=False,
+                show_global_ref_frame=False,
+                show_local_ref_frame=False,
+                show_markers=False,
+                show_muscles=False,
+                show_wrappings=False,
+                background_color=(1, 1, 1),
+                mesh_opacity=0.97,
+            )
+
+            b.set_camera_position(-8.782458942185185, 0.486269131372712, 4.362010279585766)
+            b.set_camera_roll(90)
+            b.set_camera_zoom(0.308185240948253)
+            b.set_camera_focus_point(1.624007185850899, 0.009961251074366406, 1.940316420941989)
+
+            b.resize(600, 900)
+        elif s == "wu_converted_definitif_without_floating_base_template_xyz_offset_with_variables":
+
+            b = bioviz.Viz(
+                model_path,
+                show_now=False,
+                show_meshes=True,
+                show_global_center_of_mass=False,
+                show_gravity_vector=False,
+                show_floor=False,
+                show_segments_center_of_mass=False,
+                show_global_ref_frame=False,
+                show_local_ref_frame=False,
+                show_markers=False,
+                show_muscles=True,
+                show_wrappings=False,
+                background_color=(1, 1, 1),
+                mesh_opacity=0.97,
+            )
+
+            b.resize(1000, 1000)
+
+            # b.set_q([-0.15, 0.24, -0.41, 0.21, 0, 0])
+            b.set_camera_roll(-100.90843467296737)
+            b.set_camera_zoom(1.9919059008044755)
+            b.set_camera_position(0.8330547810707182, 2.4792370867179256, 0.1727481994453778)
+            b.set_camera_focus_point(-0.2584435804313228, 0.8474543937884143, 0.2124670559215174)
+
+        elif s == "Humanoid10Dof":
+
+            b = bioviz.Viz(
+                model_path,
+                show_now=False,
+                show_meshes=True,
+                show_global_center_of_mass=False,
+                show_gravity_vector=False,
+                show_floor=False,
+                show_segments_center_of_mass=False,
+                show_global_ref_frame=False,
+                show_local_ref_frame=False,
+                show_markers=False,
+                show_muscles=False,
+                show_wrappings=False,
+                background_color=(1, 1, 1),
+                mesh_opacity=0.97,
+                mesh_linewidth=5,
+                contacts_size=0.04,
             )
 
             b.resize(1000, 1000)
@@ -882,13 +1061,17 @@ class ResultsAnalyse:
 
         b.quit()
         fig.show()
-        fig.savefig(f"{self.path_to_figures}/kinogram_{s}.svg", format="svg", dpi=900, bbox_inches="tight")
-        fig.savefig(f"{self.path_to_figures}/../../kinogram_{s}.svg", format="svg", dpi=900, bbox_inches="tight")
+
+        filepath = f"{self.path_to_figures}/kinogram_{s}.svg"
+        filepath_parent = f"{self.path_to_figures}/../../kinogram_{s}.svg"
+        fig.savefig(filepath, format="svg", dpi=900, bbox_inches="tight")
+        fig.savefig(filepath_parent, format="svg", dpi=900, bbox_inches="tight")
         fig.savefig(f"{self.path_to_figures}/kinogram_{s}.png", format="png", dpi=900, bbox_inches="tight")
-        fig.savefig(f"{self.path_to_figures}/../..//kinogram_{s}.png", format="svg", dpi=900, bbox_inches="tight")
         plt.close(fig)
 
         b.exec()
+
+        return filepath
 
     def plot_time_iter(self, show: bool = True, export: bool = True, time_unit: str = "s", export_suffix: str = None):
         """
@@ -1167,7 +1350,7 @@ class ResultsAnalyse:
         """
 
         # dyn = [i for i in self.df["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
-        dyn = self.df["grps"].unique().tolist()
+        dyn = self.df["ode_solver_defects_labels"].unique().tolist()
         grps = dyn
 
         fig = make_subplots(rows=1, cols=1)
@@ -1217,6 +1400,162 @@ class ResultsAnalyse:
             fig.show()
         if export:
             self.export(fig, "analyse_obj", export_suffix)
+
+        return fig
+
+    def plot_obj_value_with_consistency(self, threshold: int = 10, show: bool = True, export: bool = True, export_suffix: str = None):
+        """
+        This function plots the time and number of iterations need to make the OCP converge
+
+        Parameters
+        ----------
+        show : bool
+            If True, the figure is shown.
+        export : bool
+            If True, the figure is exported.
+        """
+
+        # dyn = [i for i in self.df["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
+        dyn = self.df["ode_solver_defects_labels"].unique().tolist()
+        grps = dyn
+
+        fig = self.plot_obj_values(show=False, export=False)
+
+        # select only the one who converged
+        df_results = self.df[self.df["status"] == 0]
+        # add a stripplot on the figure
+        for d in dyn:
+            x = df_results["ode_solver_defects_labels"][
+                (df_results["ode_solver_defects_labels"] == d)
+                & (df_results["rotation_error"] > threshold)
+                ]
+            y = df_results["cost"][
+                (df_results["ode_solver_defects_labels"] == d)
+                & (df_results["rotation_error"] > threshold)
+                ]
+            fig.add_trace(
+                go.Box(
+                    x=x,
+                    y=y,
+                    name="else",
+                    boxpoints="all",
+                    width=0.4,
+                    pointpos=-2,
+                    legendgroup="else",
+                    # fillcolor=c,
+                    jitter=0.4,
+                    marker=dict(color='black', size=3),
+                    line=dict(color='rgba(0,0,0,0)'),
+                    fillcolor='rgba(0,0,0,0)',
+                ),
+                row=1,
+                col=1,
+            )
+
+        if show:
+            fig.show()
+        if export:
+            self.export(fig, "analyse_obj_consistency", export_suffix)
+
+        return fig
+
+    def plot_obj_jitter_with_consistency(
+            self,
+            thresholds: List[float] = None,
+            show: bool = True,
+            export: bool = True,
+            export_suffix: str = None
+    ):
+        """
+        This function plots the time and number of iterations need to make the OCP converge
+
+        Parameters
+        ----------
+        show : bool
+            If True, the figure is shown.
+        export : bool
+            If True, the figure is exported.
+        """
+
+        # dyn = [i for i in self.df["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
+        dyn = self.df["ode_solver_defects_labels"].unique().tolist()
+        grps = dyn
+
+        fig = make_subplots(rows=1, cols=1)
+
+        # select only the one who converged
+        df_results = self.df[self.df["status"] == 0]
+        # add a stripplot on the figure
+        for i_d, d in enumerate(dyn):
+            # init x_tot pd
+            x_tot = pd.DataFrame()
+            y_tot = pd.DataFrame()
+            for i, t in enumerate(thresholds):
+                # isolate the data for the given threshold t
+                x = df_results["ode_solver_defects_labels"][
+                    (df_results["ode_solver_defects_labels"] == d)
+                    & (df_results["rotation_error"] > t)
+                    ]
+                # replace the name in x vector in function of i
+                x = x.replace(d, f"{d} - {t}")
+
+                # y
+                y = df_results["cost"][
+                    (df_results["ode_solver_defects_labels"] == d)
+                    & (df_results["rotation_error"] > t)
+                    ]
+                # concatenate the data for the given threshold t
+                x_tot = x if i == 0 else pd.concat([x_tot, x])
+                y_tot = y if i == 0 else pd.concat([y_tot, y])
+
+            fig.add_trace(
+                go.Box(
+                    x=x_tot,
+                    y=y_tot,
+                    name=d,
+                    boxpoints="all",
+                    width=0.5,
+                    pointpos=0,
+                    legendgroup=d,
+                    # fillcolor=c,
+                    jitter=0.5,
+                    marker=dict(color=self.colors[self.ode_solvers[i_d]], size=8, line=dict(width=1,
+                                        color='DarkSlateGrey')),
+                    line=dict(color='rgba(0,0,0,0)'),
+                    fillcolor='rgba(0,0,0,0)',
+                ),
+                row=1,
+                col=1,
+            )
+
+        fig.update_layout(
+            height=800,
+            width=1500,
+            paper_bgcolor="rgba(255,255,255,1)",
+            plot_bgcolor="rgba(255,255,255,1)",
+            legend=dict(
+                title_font_family="Times New Roman",
+                font=dict(family="Times New Roman", color="black", size=11),
+                orientation="h",
+                xanchor="center",
+                x=0.5,
+                y=-0.05,
+            ),
+            font=dict(
+                size=12,
+                family="Times New Roman",
+            ),
+            yaxis=dict(color="black"),
+            template="simple_white",
+            boxgap=0.2,
+        )
+
+        if show:
+            fig.show()
+        if export:
+            self.export(fig, "analyse_obj_consistency", export_suffix)
+
+        return fig
 
     def plot_keys(
             self,
@@ -1356,7 +1695,7 @@ class ResultsAnalyse:
         """
 
         # dyn = [i for i in self.df["grps"].unique().tolist() if "COLLOCATION" in i and "legendre" in i]
-        dyn = self.df["grps"].unique().tolist()
+        dyn = self.df["ode_solver_defects_labels"].unique().tolist()
         grps = dyn
 
         fig = make_subplots(rows=1, cols=1)
@@ -1377,6 +1716,7 @@ class ResultsAnalyse:
             xlabel=x_label,
             ylog=y_log,
             xlog=x_log,
+            colors=[self.colors[ode] for ode in self.ode_solvers],
         )
 
         fig.update_layout(
@@ -1428,7 +1768,28 @@ class ResultsAnalyse:
             key_y="rotation_error",
             x_label="objective function value",
             y_label="final rotation RMSE (degree)",
-            y_log=False,
+            y_log=True,
+        )
+
+        fig.update_layout(
+            height=700,
+            width=800,
+        )
+        fig.update_layout(
+            font=dict(
+                size=20,
+                family="Times New Roman",
+            ),
+            legend=dict(
+                font=dict(
+                    size=20,
+                    family="Times New Roman",
+                ),
+                yanchor="bottom",
+                y=0.01,
+                xanchor="center",
+                x=0.5,
+            ),
         )
 
         if show:
@@ -1556,7 +1917,7 @@ class ResultsAnalyse:
                 key=f"cost{i}",
                 row=idx_rows[i],
                 col=idx_cols[i],
-                # title_str=df_results[f"cost{i}_name"][0] + " " + key,
+                # title_str=df_results[f"cost{i}name"][0] + " " + key,
                 ylabel="objective value",
             )
 
@@ -1849,7 +2210,12 @@ def big_figure(
         cols=5,
         vertical_spacing=0.1,
         horizontal_spacing=0.05,
-        subplot_titles=("3-DoF Leg", "6-DoF Arm", "Acrobat", "Planar human", "Upper limb"),
+        subplot_titles=(
+            "OCP1 - Leg",
+            "OCP2 - Arm",
+            "OCP3 - Acrobat",
+            "OCP4 - Planar human",
+            "OCP5 - Upper limb"),
     )
 
     df = ["df", "df", "near_optimal", "df"]
@@ -1934,7 +2300,12 @@ def figure_article(
         cols=5,
         vertical_spacing=0.1,
         horizontal_spacing=0.05,
-        subplot_titles=("3-DoF Leg", "6-DoF Arm", "Acrobat", "Planar human", "Upper limb"),
+        subplot_titles=(
+            "OCP1 - Leg",
+            "OCP2 - Arm",
+            "OCP3 - Acrobat",
+            "OCP4 - Planar human",
+            "OCP5 - Upper limb"),
     )
 
     df = ["df", "df", "df"]
@@ -1943,6 +2314,8 @@ def figure_article(
 
     ylog = [False, True, True]
     fig = results_leg.plot_keys(keys=keys, fig=fig, col=1, ylabel=ylabels, df_list=df, ylog=ylog)
+    # move the ylabel to the left to avoid overlapping with yticks
+
     fig = results_arm.plot_keys(keys=keys, fig=fig, col=2, ylog=ylog, df_list=df)
     fig = results_acrobat.plot_keys(keys=keys, fig=fig, col=3, ylog=ylog, df_list=df)
     fig = results_walker.plot_keys(keys=keys, fig=fig, col=4, ylog=ylog, df_list=df)
@@ -1997,7 +2370,7 @@ def figure_article(
     fig.update_yaxes(range=[-1, 350], row=1, col=4)
     fig.update_yaxes(range=[-1, 1600], row=1, col=5)
 
-    fig.update_yaxes(range=[np.log10(7.21e-4), np.log10(7.214e-4)], row=2, col=1)
+    fig.update_yaxes(range=[np.log10(7.21e-4), np.log10(7.22e-4)], row=2, col=1)
     fig.update_yaxes(range=[np.log10(884), np.log10(884.2)], row=2, col=4)
     fig.update_yaxes(range=[0, 0.6e4], row=1, col=3)
 
@@ -2049,23 +2422,25 @@ def figure_article(
         row=2,
         col=1,
     )
-
+    #
     fig.update_yaxes(showexponent="none", row=2,col=1)
     # replace the ticklabels of the y axis of row=2, col=1
     fig.update_yaxes(
-        ticktext=["3e-7", "2e-7", "1e-7", "0e-7"],
-        tickvals=[7.213e-4, 7.212e-4, 7.211e-4, 7.210e-4],
+        ticktext=["0e-7", "2e-7", "4e-7", "6e-7", "8e-7", "1e-6"],
+        tickvals=[7.210e-4, 7.212e-4, 7.214e-4, 7.216e-4, 7.218e-4, 7.22e-4],
         row=2,
         col=1,
     )
 
     #
-
+    fig.update_yaxes(row=1, col=1, title_standoff=13, anchor="x")
+    fig.update_yaxes(row=2, col=1, title_standoff=0, anchor="x")
+    fig.update_yaxes(row=3, col=1, title_standoff=0, anchor="x")
     fig.show()
 
     # export the figure
-    filename="summary_figure"
-    export_suffix =""
+    filename = "summary_figure"
+    export_suffix = ""
     format_type = ["png", "pdf", "svg", "eps"]
     for f in format_type:
         fig.write_image(Path(results_leg.path_to_files).parent.__str__() + f"/{filename}{export_suffix}." + f)
@@ -2165,36 +2540,53 @@ if __name__ == "__main__":
     #     pickle.dump(results_upper_limb, f)
 
     results_leg, results_arm, results_acrobat, results_walker, results_upper_limb = load_results_objects()
+
     # results_leg.plot_near_optimality_cumulative(show=True, export=True)
     # results_arm.plot_near_optimality_cumulative(show=True, export=True)
     # results_acrobat.plot_near_optimality_cumulative(show=True, export=True)
 
-    # big_figure(
-    #     results_leg=results_leg,
-    #     results_arm=results_arm,
-    #     results_acrobat=results_acrobat,
-    #     results_walker=results_walker,
-    #     results_upper_limb=results_upper_limb,
-    # )
+    # results_acrobat.plot_obj_value_with_consistency(threshold=50)
+    # results_acrobat.plot_obj_jitter_with_consistency(thresholds=[0, 50])
+    #
+    figure_article(
+        results_leg=results_leg,
+        results_arm=results_arm,
+        results_acrobat=results_acrobat,
+        results_walker=results_walker,
+        results_upper_limb=results_upper_limb,
+    )
+    # results_leg.plot_obj_values(show=True, export=True)
+    # results_leg.plot_state(key="tau", show=True, export=True)
+    # results_leg.plot_state(key="q", show=True, export=True)
+    # results_leg.plot_state(key="qdot", show=True, export=True)
+    #
+    # # results_arm.plot_state(key="tau", show=True, export=True)
+    # # results_arm.plot_state(key="q", show=True, export=True)
+    # # results_arm.plot_state(key="qdot", show=True, export=True)
+    #
+    # results_walker.plot_obj_values(show=True, export=True)
+    # results_walker.plot_state(key="tau", show=True, export=True)
+    # results_walker.plot_state(key="q", show=True, export=True)
+    # results_walker.plot_state(key="qdot", show=True, export=True)
+    #
+    # results_upper_limb.plot_state(key="tau", show=True, export=True)
+    # results_upper_limb.plot_state(key="q", show=True, export=True)
+    # results_upper_limb.plot_state(key="qdot", show=True, export=True)
 
-    # figure_article(
-    #     results_leg=results_leg,
-    #     results_arm=results_arm,
-    #     results_acrobat=results_acrobat,
-    #     results_walker=results_walker,
-    #     results_upper_limb=results_upper_limb,
-    # )
+    # results_acrobat.plot_cost_vs_consistency(show=True, export=True)
+
     # figure_cumulative(
     #     results_arm=results_arm,
     #     results_acrobat=results_acrobat,
     # )
-    results_leg.kinogram(num=0, nb_frames=10)
-    results_arm.kinogram(num=0, nb_frames=10)
-    results_acrobat.kinogram(num=0, nb_frames=10)
-    results_upper_limb.kinogram(num=0, nb_frames=10)
-    results_walker.kinogram(num=100, nb_frames=10)
+    # image_paths = []
+    # image_paths += results_leg.kinogram(num=0, nb_frames=5)
+    # image_paths += results_arm.kinogram(num=0, nb_frames=5)
+    # image_paths += results_acrobat.kinogram(num=0, nb_frames=5)
+    # image_paths += results_upper_limb.kinogram(num=0, nb_frames=5)
+    # image_paths += results_walker.kinogram(num=100, nb_frames=5)
 
-    # results_acrobat.plot_cost_vs_consistency(show=True, export=True)
+    results_acrobat.plot_cost_vs_consistency(show=True, export=True)
 
     # results_leg.analyse(
     #     show=True,

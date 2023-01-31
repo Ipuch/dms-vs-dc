@@ -250,7 +250,7 @@ class HumanoidOcpMultiPhase:
                     ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", index=3, weight=0.01, phase=i
                 )
 
-            # keep velocity CoM around 1.5 m/s
+            # keep velocity com around 1.5 m/s
             com_velocity = 1.3  # old 1.5
             self.objective_functions.add(
                 ObjectiveFcn.Mayer.MINIMIZE_COM_VELOCITY,
@@ -542,8 +542,8 @@ class HumanoidOcpMultiPhase:
             ):
                 X0i.extend([0] * self.n_qddot)
                 X0end.extend([0] * self.n_qddot)
-                # X0i.extend([0] * self.n_qddot + [0] * self.biorbd_model[i].nbContacts())
-                # X0end.extend([0] * self.n_qddot + [0] * self.biorbd_model[i].nbContacts())
+                # X0i.extend([0] * self.n_qddot + [0] * self.bio_model[i].nbContacts())
+                # X0end.extend([0] * self.n_qddot + [0] * self.bio_model[i].nbContacts())
 
             x = np.linspace(0, self.phase_time[i], 2)
             y = np.array([X0i, X0end]).T

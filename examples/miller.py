@@ -29,7 +29,6 @@ def main():
 
     miller.ocp.print(to_console=True, to_graph=False)
 
-
     solv = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
     solv.set_maximum_iterations(0)
     solv.set_linear_solver("ma57")
