@@ -1,5 +1,5 @@
 import numpy as np
-from robot_leg import Models
+from transcriptions import Models
 import biorbd
 import time
 

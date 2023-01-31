@@ -1,5 +1,5 @@
 """
-robot_leg is a package for the Humanoid2D model.
+transcriptions is a package for the Humanoid2D model.
 -------------------------------------------------------------------------
 
 

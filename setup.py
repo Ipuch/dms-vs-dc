@@ -1,16 +1,16 @@
 from setuptools import setup
 
 setup(
-    name="robot_leg",
-    version="0.1.0",
-    author="Pariterre",
+    name="transcriptions",
+    version="0.2.0",
+    author="Ipuch",
     packages=[
-        "robot_leg",
-        "robot_leg/models",
-        "robot_leg/bioptim_plugin",
-        "robot_leg/ocp",
+        "transcriptions",
+        "transcriptions/models",
+        "transcriptions/bioptim_plugin",
+        "transcriptions/ocp",
     ],
     include_package_data=True,
-    python_requires=">=3.7",
+    python_requires=">=3.10",
     zip_safe=False,
 )

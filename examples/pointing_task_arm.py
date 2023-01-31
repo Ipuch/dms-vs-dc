@@ -1,5 +1,5 @@
 from bioptim import OdeSolver, CostType, RigidBodyDynamics, Solver, DefectType, Shooting, SolutionIntegrator
-from robot_leg import ArmOCP
+from transcriptions import ArmOCP
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -13,7 +13,7 @@ def main():
     # ode_solver = OdeSolver.COLLOCATION(defects_type=DefectType.IMPLICIT)
     time = 0.25
     n_threads = 8
-    model_path = "../robot_leg/models/robot_arm.bioMod"
+    model_path = "../transcriptions/models/robot_arm.bioMod"
 
     # --- Solve the program --- #
     arm = ArmOCP(

@@ -19,7 +19,7 @@ from utils import (
 )
 
 from enums import Results
-from robot_leg import Models
+from transcriptions import Models
 
 out_path_raw = Results.MILLER.value
 model_path = Models.ACROBAT.value

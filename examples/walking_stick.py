@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import biorbd_casadi as biorbd
 from bioptim import OdeSolver, CostType, RigidBodyDynamics, Solver, DefectType, PlotType, SolutionIntegrator, Shooting
 
-from robot_leg import HumanoidOCP, Models
+from transcriptions import HumanoidOCP, Models
 
 
 def main():

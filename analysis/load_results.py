@@ -1,7 +1,5 @@
 import os
-import pickle
-from robot_leg import Models
-from enums import ResultFolders
+from transcriptions import Models
 from bioptim import OptimalControlProgram
 
 

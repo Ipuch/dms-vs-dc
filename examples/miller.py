@@ -1,5 +1,5 @@
 from bioptim import OdeSolver, CostType, RigidBodyDynamics, Solver, DefectType, Shooting, SolutionIntegrator
-from robot_leg import MillerOcpOnePhase, Models
+from transcriptions import MillerOcpOnePhase, Models
 import numpy as np
 import matplotlib.pyplot as plt
 

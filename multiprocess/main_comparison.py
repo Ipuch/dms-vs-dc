@@ -12,7 +12,7 @@ import pandas as pd
 from bioptim import OdeSolver, RigidBodyDynamics, DefectType
 
 from utils import generate_calls, run_pool, run_the_missing_ones
-from robot_leg import ArmOCP, LegOCP, MillerOcpOnePhase, Models, UpperLimbOCP, HumanoidOCP
+from transcriptions import ArmOCP, LegOCP, MillerOcpOnePhase, Models, UpperLimbOCP, HumanoidOCP
 from run_ocp import RunOCP
 
 

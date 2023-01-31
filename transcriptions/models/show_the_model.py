@@ -3,7 +3,7 @@ This file is to display the human model into bioviz
 """
 import os
 import bioviz
-from robot_leg import Models
+from transcriptions import Models
 
 # model_name = Models.LEG
 # model_name = Models.ARM

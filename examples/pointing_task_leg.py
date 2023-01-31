@@ -1,5 +1,5 @@
 from bioptim import OdeSolver, CostType, RigidBodyDynamics, Solver, DefectType, Shooting, SolutionIntegrator
-from robot_leg import LegOCP
+from transcriptions import LegOCP
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -17,7 +17,7 @@ def main(nb_phases: int = 1):
     # ode_solver = OdeSolver.COLLOCATION()
 
     n_threads = 8
-    model_path = "../robot_leg/models/hexapod_leg.bioMod"
+    model_path = "../transcriptions/models/hexapod_leg.bioMod"
 
     # --- Solve the program --- #
     leg = LegOCP(

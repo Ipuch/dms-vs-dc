@@ -32,7 +32,7 @@ from utils import (
 )
 
 from enums import ResultFolders
-from robot_leg import Models
+from transcriptions import Models
 
 
 class ResultsAnalyse:
