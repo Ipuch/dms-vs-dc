@@ -2213,9 +2213,9 @@ def big_figure(
         subplot_titles=(
             "OCP1 - Leg",
             "OCP2 - Arm",
-            "OCP3 - Acrobat",
+            "OCP3 - Upper limb",
             "OCP4 - Planar human",
-            "OCP5 - Upper limb"),
+            "OCP5 - Acrobat"),
     )
 
     df = ["df", "df", "near_optimal", "df"]
@@ -2229,9 +2229,9 @@ def big_figure(
     ylog = [False, True, False, True]
     fig = results_leg.plot_keys(keys=keys, fig=fig, col=1, ylabel=ylabels, df_list=df, ylog=ylog)
     fig = results_arm.plot_keys(keys=keys, fig=fig, col=2, ylog=ylog, df_list=df)
-    fig = results_acrobat.plot_keys(keys=keys, fig=fig, col=3, ylog=ylog, df_list=df)
+    fig = results_upper_limb.plot_keys(keys=keys, fig=fig, col=3, ylog=ylog, df_list=df)
     fig = results_walker.plot_keys(keys=keys, fig=fig, col=4, ylog=ylog, df_list=df)
-    fig = results_upper_limb.plot_keys(keys=keys, fig=fig, col=5, ylog=ylog, df_list=df)
+    fig = results_acrobat.plot_keys(keys=keys, fig=fig, col=5, ylog=ylog, df_list=df)
 
     fig.update_layout(
         height=900,
@@ -2276,11 +2276,11 @@ def big_figure(
         fig.update_yaxes(tickformat=".2e", row=2, col=i)
 
     for i in range(6):
-        fig.update_yaxes(tickformat=".0%", row=3, col=i)
-        fig.update_xaxes(tickformat=".0%", row=3, col=i)
+        fig.update_yaxes(tickformat=".0%", row=5, col=i)
+        fig.update_xaxes(tickformat=".0%", row=5, col=i)
 
     for i in range(6):
-        fig.update_xaxes(range=[0, 1.6], row=3, col=i)
+        fig.update_xaxes(range=[0, 1.6], row=5, col=i)
 
     # legend font bigger
     fig.update_layout(legend=dict(font=dict(size=15)))
@@ -2303,9 +2303,9 @@ def figure_article(
         subplot_titles=(
             "OCP1 - Leg",
             "OCP2 - Arm",
-            "OCP3 - Acrobat",
+            "OCP3 - Upper limb",
             "OCP4 - Planar human",
-            "OCP5 - Upper limb"),
+            "OCP5 - Acrobat"),
     )
 
     df = ["df", "df", "df"]
@@ -2317,9 +2317,9 @@ def figure_article(
     # move the ylabel to the left to avoid overlapping with yticks
 
     fig = results_arm.plot_keys(keys=keys, fig=fig, col=2, ylog=ylog, df_list=df)
-    fig = results_acrobat.plot_keys(keys=keys, fig=fig, col=3, ylog=ylog, df_list=df)
     fig = results_walker.plot_keys(keys=keys, fig=fig, col=4, ylog=ylog, df_list=df)
-    fig = results_upper_limb.plot_keys(keys=keys, fig=fig, col=5, ylog=ylog, df_list=df)
+    fig = results_upper_limb.plot_keys(keys=keys, fig=fig, col=3, ylog=ylog, df_list=df)
+    fig = results_acrobat.plot_keys(keys=keys, fig=fig, col=5, ylog=ylog, df_list=df)
 
     fig.update_layout(
         height=600,
@@ -2368,19 +2368,19 @@ def figure_article(
     fig.update_yaxes(range=[0, 4], row=1, col=1)
     fig.update_yaxes(range=[-1, 1000], nticks=4, tick0=0, row=1, col=2)
     fig.update_yaxes(range=[-1, 350], row=1, col=4)
-    fig.update_yaxes(range=[-1, 1600], row=1, col=5)
+    fig.update_yaxes(range=[-1, 1600], row=1, col=3)
 
     fig.update_yaxes(range=[np.log10(7.21e-4), np.log10(7.22e-4)], row=2, col=1)
     fig.update_yaxes(range=[np.log10(884), np.log10(884.2)], row=2, col=4)
-    fig.update_yaxes(range=[0, 0.6e4], row=1, col=3)
+    fig.update_yaxes(range=[0, 0.6e4], row=1, col=5)
 
     fig.update_yaxes(range=[-9, -5], row=3, col=4)
-    fig.update_yaxes(range=[np.log10(0.005), np.log10(0.01)], row=3, col=5)
+    fig.update_yaxes(range=[np.log10(0.005), np.log10(0.01)], row=3, col=3)
 
 
     fig.update_yaxes(title_standoff=40, row=1, col=1)
     fig.update_yaxes(title_standoff=0, row=2, col=1)
-    fig.update_yaxes(title_standoff=24, row=3, col=1)
+    fig.update_yaxes(title_standoff=24, row=5, col=1)
     # legend font bigger
     fig.update_layout(legend=dict(font=dict(size=13)))
 
@@ -2396,16 +2396,16 @@ def figure_article(
         xanchor="center",
         yanchor="middle",
         row=2,
-        col=5,
+        col=3,
     )
 
-    fig.update_yaxes(showexponent="none", row=2, col=5)
+    fig.update_yaxes(showexponent="none", row=2, col=3)
     # replace the ticklabels of the y axis of row=2, col=5
     fig.update_yaxes(
         ticktext=["5.4e-7", "5.2e-7", "5.0e-7", "4.8e-7", "4.6e-7", "4.4e-7"],
         tickvals=[7.24535254e+2, 7.24535252e+2, 7.2453525e+2, 7.24535248e+2, 7.24535246e+2, 7.24535244e+2],
         row=2,
-        col=5,
+        col=3,
     )
 
     # add annotation for the figure 7.24535e+2 on row=2, col=1,
