@@ -3,7 +3,7 @@ This repository contains the source code for a future article to be submitted.
 It investigates the effect of
 Direct multiple shooting and direct collocation with predictive simulation in biomechanics.
 
-The repository is made available as accompanying material of [the future publication]():
+The repository is made available as accompanying material of [the future publication](), check out the preprint instead [here](https://arxiv.org/abs/2302.07645):
 
 ```bibtex
 @article{Puchaud2023,
