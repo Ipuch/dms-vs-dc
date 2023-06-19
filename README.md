@@ -7,9 +7,9 @@ The repository is made available as accompanying material of [the future publica
 
 ```bibtex
 @article{Puchaud2023,
-  title={},
+  title={Direct multiple shooting and direct collocation perform similarly in biomechanical predictive simulations},
   author={Puchaud, Pierre and Bailly, François and Begon, Mickael},
-  journal={},
+  journal={Computer Methods in Applied Mechanics and Engineering},
   volume={},
   number={},
   pages={},
