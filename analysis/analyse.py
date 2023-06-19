@@ -693,22 +693,27 @@ class ResultsAnalyse:
         if export:
             self.export(fig, "analyse_near_optimality_cumulative", export_suffix)
 
-    def animate(self, num: int = 0):
+    def animate(self, num: int = 0, export: bool = True):
         """
         This method animates the motion with bioviz
 
         Parameters
         ----------
         num: int
-        Number of the trial to be visualized
+            Number of the trial to be visualized
+        export: bool
+            If True, the animation is exported
         """
 
         print(self.df["filename"].iloc[num])
         print(self.df["grps"].iloc[num])
+        path = self.df["model_path"].iloc[num][0] if isinstance(self.df["model_path"].iloc[num], tuple) else self.df["model_path"].iloc[num]
 
-        p = Path(self.df["model_path"].iloc[num])
+        p = Path(path)
         # verify if the path/file exists with pathlib
         model_path = self.model_path if not p.exists() else p.__str__()
+        # remove and change "robot_leg" by "transcriptions"
+        model_path = model_path.replace("robot_leg", "transcriptions")
 
         import bioviz
 
@@ -855,10 +860,24 @@ class ResultsAnalyse:
         # print(biorbd_viz.get_camera_position())
         # print("get_camera_focus_point")
         # print(biorbd_viz.get_camera_focus_point())
+        # Record
 
         q = self.df["q"].iloc[num]
-        b.load_movement(q)
-        b.exec()
+
+        if export:
+            print(f"{self.path_to_figures}/{s}_video.ogv")
+            b.start_recording(f"{self.path_to_figures}/{s}_video.ogv")
+            b.load_movement(q)
+            for f in range(q.shape[1] + 1):
+                b.movement_slider[0].setValue(f)
+                b.add_frame()
+            b.stop_recording()
+            b.quit()
+        else:
+            b.load_movement(q)
+            b.exec()
+
+
 
     def kinogram(self, num: int = 0, nb_frames: int = 5):
         """
@@ -879,6 +898,8 @@ class ResultsAnalyse:
         p = Path(model_path[0] if isinstance(model_path, tuple) else model_path)
         # verify if the path/file exists with pathlib
         model_path = self.model_path if not p.exists() else p.__str__()
+        # remove and change "robot_leg" by "transcriptions"
+        model_path = model_path.replace("robot_leg", "transcriptions")
 
         import bioviz
 
@@ -2301,16 +2322,16 @@ def figure_article(
         vertical_spacing=0.1,
         horizontal_spacing=0.05,
         subplot_titles=(
-            "OCP1 - Leg",
-            "OCP2 - Arm",
-            "OCP3 - Upper limb",
-            "OCP4 - Planar human",
-            "OCP5 - Acrobat"),
+            "<b>OCP1 - Leg</b>",
+            "<b>OCP2 - Arm</b>",
+            "<b>OCP3 - Upper limb</b>",
+            "<b>OCP4 - Planar human</b>",
+            "<b>OCP5 - Acrobat</b>"),
     )
 
     df = ["df", "df", "df"]
     keys = ["computation_time", "cost", "rotation_error"]
-    ylabels = ["CPU time\n(s)", "Cost function value", "Rotation error RMSE\n(deg)"]
+    ylabels = ["CPU time\n(s)", "   Cost function value", "Rotation error RMSE\n(deg)"]
 
     ylog = [False, True, True]
     fig = results_leg.plot_keys(keys=keys, fig=fig, col=1, ylabel=ylabels, df_list=df, ylog=ylog)
@@ -2387,7 +2408,7 @@ def figure_article(
     # add annotation for the figure 7.24535e+2 on row=2, col=5,
     fig.add_annotation(
         x=0,
-        y=1.05,
+        y=1.08,
         xref="x domain",
         yref="y domain",
         text="+7.245352e+2",
@@ -2411,7 +2432,7 @@ def figure_article(
     # add annotation for the figure 7.24535e+2 on row=2, col=1,
     fig.add_annotation(
         x=0,
-        y=1.05,
+        y=1.08,
         xref="x domain",
         yref="y domain",
         text="+7.21e-4",
@@ -2442,9 +2463,244 @@ def figure_article(
     filename = "summary_figure"
     export_suffix = ""
     format_type = ["png", "pdf", "svg", "eps"]
+    print(f"exported in {Path(results_leg.path_to_files).parent.__str__()}")
     for f in format_type:
         fig.write_image(Path(results_leg.path_to_files).parent.__str__() + f"/{filename}{export_suffix}." + f)
     fig.write_html(Path(results_leg.path_to_files).parent.__str__() + f"/{filename}{export_suffix}.html", include_mathjax="cdn")
+
+def figure_article_split1(
+        results_leg: ResultsAnalyse,
+        results_arm: ResultsAnalyse,
+):
+    fig = make_subplots(
+        rows=3,
+        cols=2,
+        vertical_spacing=0.1,
+        horizontal_spacing=0.15,
+        subplot_titles=(
+            "<b>OCP1 - Leg</b>",
+            "<b>OCP2 - Arm</b>")
+    )
+
+    df = ["df", "df", "df"]
+    keys = ["computation_time", "cost", "rotation_error"]
+    ylabels = ["CPU time\n(s)", "   Cost function value", "Rotation error RMSE\n(deg)"]
+
+    ylog = [False, True, True]
+    fig = results_leg.plot_keys(keys=keys, fig=fig, col=1, ylabel=ylabels, df_list=df, ylog=ylog)
+    # move the ylabel to the left to avoid overlapping with yticks
+    fig = results_arm.plot_keys(keys=keys, fig=fig, col=2, ylog=ylog, df_list=df, ylabel=["" for i in range(3)])
+
+    fig.update_layout(
+        height=600,
+        width=600,
+        paper_bgcolor="rgba(255,255,255,1)",
+        plot_bgcolor="rgba(255,255,255,1)",
+        legend=dict(
+            title_font_family="Times New Roman",
+            font=dict(family="Times New Roman", color="black", size=11),
+            orientation="h",
+            xanchor="center",
+            x=0.5,
+            y=-0.05,
+        ),
+        font=dict(
+            size=12,
+            family="Times New Roman",
+        ),
+        yaxis=dict(color="black"),
+        template="simple_white",
+        boxgap=0.2,
+    )
+
+    # display the horizontal lines for each grid of the figure
+    for i in range(1, 3):
+        for j in range(1, 3):
+            fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="lightgrey", row=i, col=j)
+
+    # 5 ticks on y axis for each subplots
+    for i in range(1, 3):
+        for j in range(1, 3):
+            fig.update_yaxes(nticks=5, row=i, col=j)
+
+    # delete all the yaxis titles if col > 1
+    for i in range(1, 2):
+        for j in range(2, 3):
+            fig.update_yaxes(title="", row=i, col=j)
+
+    # all figure from row 1 start from 0 in ordinal axis and the max limit is automatic
+    for i in range(1, 3):
+        fig.update_yaxes(range=[0, None], row=1, col=i)
+        # show the tick 0 in the y axis
+        fig.update_yaxes(tick0=0, row=1, col=i)
+
+    # custom ranges
+    fig.update_yaxes(range=[0, 4], row=1, col=1)
+    fig.update_yaxes(range=[-1, 1000], nticks=4, tick0=0, row=1, col=2)
+
+    fig.update_yaxes(range=[np.log10(7.21e-4), np.log10(7.22e-4)], row=2, col=1)
+
+
+    fig.update_yaxes(title_standoff=40, row=1, col=1)
+    fig.update_yaxes(title_standoff=0, row=2, col=1)
+    fig.update_yaxes(title_standoff=24, row=5, col=1)
+    # legend font bigger
+    fig.update_layout(legend=dict(font=dict(size=13)))
+
+    # add annotation for the figure 7.24535e+2 on row=2, col=1,
+    fig.add_annotation(
+        x=0,
+        y=1.08,
+        xref="x domain",
+        yref="y domain",
+        text="+7.21e-4",
+        showarrow=False,
+        font=dict(size=12),
+        xanchor="center",
+        yanchor="middle",
+        row=2,
+        col=1,
+    )
+    #
+    fig.update_yaxes(showexponent="none", row=2,col=1)
+    # replace the ticklabels of the y axis of row=2, col=1
+    fig.update_yaxes(
+        ticktext=["0e-7", "2e-7", "4e-7", "6e-7", "8e-7", "1e-6"],
+        tickvals=[7.210e-4, 7.212e-4, 7.214e-4, 7.216e-4, 7.218e-4, 7.22e-4],
+        row=2,
+        col=1,
+    )
+
+    #
+    fig.update_yaxes(row=1, col=1, title_standoff=13, anchor="x")
+    fig.update_yaxes(row=2, col=1, title_standoff=0, anchor="x")
+    fig.update_yaxes(row=3, col=1, title_standoff=0, anchor="x")
+    fig.show()
+
+    # export the figure
+    filename = "summary_figure"
+    export_suffix = ""
+    format_type = ["png", "pdf", "svg", "eps"]
+    print(f"exported in {Path(results_leg.path_to_files).parent.__str__()}")
+    for f in format_type:
+        fig.write_image(Path(results_leg.path_to_files).parent.__str__() + f"/{filename}_split1{export_suffix}." + f)
+    fig.write_html(Path(results_leg.path_to_files).parent.__str__() + f"/{filename}_split1{export_suffix}.html", include_mathjax="cdn")
+
+def figure_article_split2(
+        results_acrobat: ResultsAnalyse,
+        results_walker: ResultsAnalyse,
+        results_upper_limb: ResultsAnalyse,
+):
+    fig = make_subplots(
+        rows=3,
+        cols=3,
+        vertical_spacing=0.1,
+        horizontal_spacing=0.08,
+        subplot_titles=(
+            "<b>OCP3 - Upper limb</b>",
+            "<b>OCP4 - Planar human</b>",
+            "<b>OCP5 - Acrobat</b>"),
+    )
+
+    df = ["df", "df", "df"]
+    keys = ["computation_time", "cost", "rotation_error"]
+    ylabels = ["CPU time\n(s)", "   Cost function value", "Rotation error RMSE\n(deg)"]
+
+    ylog = [False, True, True]
+    fig = results_upper_limb.plot_keys(keys=keys, fig=fig, col=3 - 2, ylog=ylog, df_list=df, ylabel=ylabels)
+    fig = results_walker.plot_keys(keys=keys, fig=fig, col=4-2, ylog=ylog, df_list=df)
+    fig = results_acrobat.plot_keys(keys=keys, fig=fig, col=5-2, ylog=ylog, df_list=df)
+
+    fig.update_layout(
+        height=600,
+        width=700,
+        paper_bgcolor="rgba(255,255,255,1)",
+        plot_bgcolor="rgba(255,255,255,1)",
+        legend=dict(
+            title_font_family="Times New Roman",
+            font=dict(family="Times New Roman", color="black", size=11),
+            orientation="h",
+            xanchor="center",
+            x=0.5,
+            y=-0.05,
+        ),
+        font=dict(
+            size=12,
+            family="Times New Roman",
+        ),
+        yaxis=dict(color="black"),
+        template="simple_white",
+        boxgap=0.2,
+    )
+
+    # display the horizontal lines for each grid of the figure
+    for i in range(1, 4):
+        for j in range(3, 6):
+            fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="lightgrey", row=i, col=j-2)
+
+    # 5 ticks on y axis for each subplots
+    for i in range(1, 4):
+        for j in range(3, 6):
+            fig.update_yaxes(nticks=5, row=i, col=j-2)
+
+    # delete all the yaxis titles if col > 1
+    for i in range(1, 4):
+        for j in range(4, 6):
+            fig.update_yaxes(title="", row=i, col=j-2)
+
+    # all figure from row 1 start from 0 in ordinal axis and the max limit is automatic
+    for i in range(3, 6):
+        fig.update_yaxes(range=[0, None], row=1, col=i-2)
+        # show the tick 0 in the y axis
+        fig.update_yaxes(tick0=0, row=1, col=i-2)
+
+    # custom ranges
+    fig.update_yaxes(range=[-1, 350], row=1, col=4-2)
+    fig.update_yaxes(range=[-1, 1600], row=1, col=3-2)
+
+    fig.update_yaxes(range=[np.log10(884), np.log10(884.2)], row=2, col=4-2)
+    fig.update_yaxes(range=[0, 0.6e4], row=1, col=5-2)
+
+    fig.update_yaxes(range=[-9, -5], row=3, col=4-2)
+    fig.update_yaxes(range=[np.log10(0.005), np.log10(0.01)], row=3, col=3-2)
+
+    # legend font bigger
+    fig.update_layout(legend=dict(font=dict(size=13)))
+
+    # add annotation for the figure 7.24535e+2 on row=2, col=5,
+    fig.add_annotation(
+        x=0,
+        y=1.08,
+        xref="x domain",
+        yref="y domain",
+        text="+7.245352e+2",
+        showarrow=False,
+        font=dict(size=12),
+        xanchor="center",
+        yanchor="middle",
+        row=2,
+        col=3-2,
+    )
+
+    fig.update_yaxes(showexponent="none", row=2, col=3-2)
+    # replace the ticklabels of the y axis of row=2, col=5
+    fig.update_yaxes(
+        ticktext=["5.4e-7", "5.2e-7", "5.0e-7", "4.8e-7", "4.6e-7", "4.4e-7"],
+        tickvals=[7.24535254e+2, 7.24535252e+2, 7.2453525e+2, 7.24535248e+2, 7.24535246e+2, 7.24535244e+2],
+        row=2,
+        col=3-2,
+    )
+
+    fig.show()
+
+    # export the figure
+    filename = "summary_figure"
+    export_suffix = ""
+    format_type = ["png", "pdf", "svg", "eps"]
+    print(f"exported in {Path(results_leg.path_to_files).parent.__str__()}")
+    for f in format_type:
+        fig.write_image(Path(results_leg.path_to_files).parent.__str__() + f"/{filename}_split2{export_suffix}." + f)
+    fig.write_html(Path(results_leg.path_to_files).parent.__str__() + f"/{filename}_split2{export_suffix}.html", include_mathjax="cdn")
 
 
 def figure_cumulative(
@@ -2548,9 +2804,20 @@ if __name__ == "__main__":
     # results_acrobat.plot_obj_value_with_consistency(threshold=50)
     # results_acrobat.plot_obj_jitter_with_consistency(thresholds=[0, 50])
     #
-    figure_article(
+
+    # figure_article(
+    #     results_leg=results_leg,
+    #     results_arm=results_arm,
+    #     results_acrobat=results_acrobat,
+    #     results_walker=results_walker,
+    #     results_upper_limb=results_upper_limb,
+    # )
+
+    figure_article_split1(
         results_leg=results_leg,
         results_arm=results_arm,
+    )
+    figure_article_split2(
         results_acrobat=results_acrobat,
         results_walker=results_walker,
         results_upper_limb=results_upper_limb,
@@ -2579,21 +2846,27 @@ if __name__ == "__main__":
     #     results_arm=results_arm,
     #     results_acrobat=results_acrobat,
     # )
-    # image_paths = []
+    image_paths = []
     # image_paths += results_leg.kinogram(num=0, nb_frames=5)
     # image_paths += results_arm.kinogram(num=0, nb_frames=5)
     # image_paths += results_acrobat.kinogram(num=0, nb_frames=5)
+    image_paths += results_acrobat.kinogram(num=0, nb_frames=9)
     # image_paths += results_upper_limb.kinogram(num=0, nb_frames=5)
     # image_paths += results_walker.kinogram(num=100, nb_frames=5)
 
-    results_acrobat.plot_cost_vs_consistency(show=True, export=True)
+
+    # results_acrobat.plot_cost_vs_consistency(show=True, export=True)
 
     # results_leg.analyse(
     #     show=True,
     #     export=True,
     # )
 
-    # results.animate(num=5)
+    # results_leg.animate(num=5, export=True)
+    # results_arm.animate(num=5, export=True)
+    # results_acrobat.animate(num=5, export=True)
+    # results_walker.animate(num=5, export=True)
+    # results_upper_limb.animate(num=5, export=True)
     # results_arm.analyse(
     #     show=True,
     #     export=True,

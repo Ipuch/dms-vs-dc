@@ -300,7 +300,9 @@ def my_traces(
         type=ylog,
         row=row,
         col=col,
-        title=ylabel,
+        title=f"<b>{ylabel}</b>",
+        title_font=dict(size=14,
+                        color="black"),
         title_standoff=2,
         exponentformat="e",
     )

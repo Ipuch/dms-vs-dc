@@ -113,6 +113,8 @@ class ResultsAnalyseConvergence(ResultsAnalyse):
         p = Path(self.df["model_path"].iloc[num])
         # verify if the path/file exists with pathlib
         model_path = self.model_path if not p.exists() else p.__str__()
+        # remove and change "robot_leg" by "transcriptions"
+        model_path = model_path.replace("robot_leg", "transcriptions")
 
         import bioviz
 
