@@ -30,7 +30,11 @@ and includes scripts, models and materials to reproduce figures and results of t
 In order to run the code, you need to install the following packages from pyomeca:
 ```bash
 conda install -c conda-forge biorbd=1.9.9
+```
+```bash
 conda install -c conda-forge bioviz=2.3.0
+```
+```bash
 conda install -c conda-forge bioptim=3.0.0
 ```
 
